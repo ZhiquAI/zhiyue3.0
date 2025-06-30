@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Steps, Form, Input, Select, Upload, Button, message, Progress } from 'antd';
 import { FileImageOutlined, FileDoneOutlined, InboxOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
@@ -18,6 +18,26 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
     paper: null as any,
     answer: null as any
   });
+  const [formValues, setFormValues] = useState({
+    name: '',
+    subject: '',
+    grade: ''
+  });
+
+  // 监听表单值变化
+  const handleFormChange = () => {
+    const values = form.getFieldsValue(['name', 'subject', 'grade']);
+    setFormValues(values);
+  };
+
+  // 重置状态
+  const resetModal = () => {
+    form.resetFields();
+    setCurrentStep(0);
+    setUploadedFiles({ paper: null, answer: null });
+    setFormValues({ name: '', subject: '', grade: '' });
+    setLoading(false);
+  };
 
   const handleCreate = async () => {
     try {
@@ -68,10 +88,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
       message.success('考试创建成功！AI正在后台分析试卷内容...');
       
       // 重置表单和状态
-      form.resetFields();
-      setCurrentStep(0);
-      setUploadedFiles({ paper: null, answer: null });
-      setLoading(false);
+      resetModal();
       onClose();
       
     } catch (err) {
@@ -133,7 +150,17 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
       icon: <CheckCircleOutlined />,
       content: (
         <div className="py-6">
-          <Form form={form} layout="vertical" name="exam_form">
+          <Form 
+            form={form} 
+            layout="vertical" 
+            name="exam_form"
+            onValuesChange={handleFormChange}
+            initialValues={{
+              name: '',
+              subject: '',
+              grade: ''
+            }}
+          >
             <Form.Item
               name="name"
               label="考试名称"
@@ -279,15 +306,24 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
     }
   ];
 
+  // 检查是否可以进行下一步
   const canProceed = () => {
     if (currentStep === 0) {
-      const values = form.getFieldsValue(['name', 'subject', 'grade']);
-      return values.name?.trim() && values.subject && values.grade;
+      // 检查基本信息是否完整
+      return formValues.name?.trim() && formValues.subject && formValues.grade;
     } else if (currentStep === 1) {
+      // 检查试卷是否已上传
       return uploadedFiles.paper;
     }
     return true;
   };
+
+  // 当模态框关闭时重置状态
+  useEffect(() => {
+    if (!visible) {
+      resetModal();
+    }
+  }, [visible]);
 
   return (
     <Modal
@@ -325,6 +361,13 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
       <div className="flex justify-between items-center pt-6 border-t border-gray-200">
         <div className="text-sm text-gray-500">
           步骤 {currentStep + 1} / {steps.length}
+          {currentStep === 0 && (
+            <span className="ml-2 text-xs">
+              ({formValues.name?.trim() ? '✓' : '✗'} 名称 
+              {formValues.subject ? ' ✓' : ' ✗'} 科目 
+              {formValues.grade ? ' ✓' : ' ✗'} 年级)
+            </span>
+          )}
         </div>
         
         <div className="flex gap-3">
