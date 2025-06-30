@@ -198,20 +198,6 @@ const LandingPage: React.FC = () => {
               </Paragraph>
             </div>
             
-            {/* 描述文字 - 保持较小字号 */}
-            <div className="mb-12">
-              <Paragraph 
-                className="text-gray-600 max-w-3xl mx-auto leading-relaxed"
-                style={{ 
-                  margin: 0,
-                  fontSize: 'clamp(1rem, 2vw, 1.25rem)', // 描述文字：手机1rem，桌面1.25rem
-                  lineHeight: '1.6'
-                }}
-              >
-                让您从繁重的阅卷工作中解脱，专注于更有价值的教学活动
-              </Paragraph>
-            </div>
-            
             {/* CTA按钮 - 突出主要操作 */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16">
               <Button 
