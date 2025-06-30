@@ -156,7 +156,7 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Hero Section - 调整主标题字号 */}
+      {/* Hero Section - 优化标题字号层次 */}
       <section className="relative overflow-hidden min-h-screen flex items-center">
         {/* 背景装饰 */}
         <div className="absolute inset-0">
@@ -167,15 +167,15 @@ const LandingPage: React.FC = () => {
         
         <div className="relative max-w-7xl mx-auto px-6 py-20">
           <div className="text-center">
-            {/* 主标题 - 调整字号为更合适的大小 */}
-            <div className="mb-8">
+            {/* 主标题 - 调整为更平衡的字号 */}
+            <div className="mb-6">
               <Title 
                 level={1} 
                 className="font-bold mb-0 leading-none tracking-tight"
                 style={{ 
                   margin: 0,
-                  fontSize: 'clamp(3rem, 12vw, 10rem)', // 调整为更合适的大小
-                  lineHeight: '0.9'
+                  fontSize: 'clamp(4rem, 8vw, 8rem)', // 主标题：手机4rem，桌面8rem
+                  lineHeight: '0.85'
                 }}
               >
                 <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 bg-clip-text text-transparent">
@@ -184,17 +184,31 @@ const LandingPage: React.FC = () => {
               </Title>
             </div>
             
-            {/* 副标题 - 简化并突出核心价值 */}
-            <div className="mb-12">
+            {/* 副标题 - 调整为合适的字号层次 */}
+            <div className="mb-8">
               <Paragraph 
-                className="text-xl sm:text-2xl lg:text-3xl text-gray-600 max-w-4xl mx-auto leading-relaxed font-normal"
-                style={{ margin: 0 }}
+                className="text-gray-700 max-w-4xl mx-auto leading-relaxed font-medium"
+                style={{ 
+                  margin: 0,
+                  fontSize: 'clamp(1.25rem, 3vw, 2rem)', // 副标题：手机1.25rem，桌面2rem
+                  lineHeight: '1.3'
+                }}
               >
                 专为初中历史教师设计的智能阅卷助手
-                <br className="hidden sm:block" />
-                <span className="block mt-3 text-blue-700 font-medium">
-                  让您从繁重的阅卷工作中解脱，专注于更有价值的教学活动
-                </span>
+              </Paragraph>
+            </div>
+            
+            {/* 描述文字 - 保持较小字号 */}
+            <div className="mb-12">
+              <Paragraph 
+                className="text-gray-600 max-w-3xl mx-auto leading-relaxed"
+                style={{ 
+                  margin: 0,
+                  fontSize: 'clamp(1rem, 2vw, 1.25rem)', // 描述文字：手机1rem，桌面1.25rem
+                  lineHeight: '1.6'
+                }}
+              >
+                让您从繁重的阅卷工作中解脱，专注于更有价值的教学活动
               </Paragraph>
             </div>
             
