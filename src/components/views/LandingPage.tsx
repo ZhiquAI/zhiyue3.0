@@ -167,16 +167,6 @@ const LandingPage: React.FC = () => {
         
         <div className="relative max-w-7xl mx-auto px-6 py-20">
           <div className="text-center">
-            {/* 品牌标识 - 保持简洁 */}
-            <div className="flex justify-center mb-8">
-              <div className="flex items-center gap-3 bg-white/95 backdrop-blur-sm rounded-full px-5 py-2.5 shadow-lg border border-blue-100">
-                <div className="w-7 h-7 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <Text className="text-sm font-medium text-gray-700">智阅AI - 智能历史阅卷助手</Text>
-              </div>
-            </div>
-            
             {/* 主标题 - 大幅放大 */}
             <div className="mb-6">
               <Title 
