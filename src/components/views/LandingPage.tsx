@@ -156,7 +156,7 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Hero Section - 更新主标题 */}
+      {/* Hero Section - 调整主标题字号 */}
       <section className="relative overflow-hidden min-h-screen flex items-center">
         {/* 背景装饰 */}
         <div className="absolute inset-0">
@@ -167,15 +167,15 @@ const LandingPage: React.FC = () => {
         
         <div className="relative max-w-7xl mx-auto px-6 py-20">
           <div className="text-center">
-            {/* 主标题 - 更新为"智阅AI" */}
+            {/* 主标题 - 调整字号为更合适的大小 */}
             <div className="mb-8">
               <Title 
                 level={1} 
                 className="font-bold mb-0 leading-none tracking-tight"
                 style={{ 
                   margin: 0,
-                  fontSize: 'clamp(4rem, 15vw, 16rem)', // 进一步放大
-                  lineHeight: '0.85'
+                  fontSize: 'clamp(3rem, 12vw, 10rem)', // 调整为更合适的大小
+                  lineHeight: '0.9'
                 }}
               >
                 <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 bg-clip-text text-transparent">
