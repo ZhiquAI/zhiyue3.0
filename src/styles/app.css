@@ -1,0 +1,252 @@
+/* Custom styles for Zhiyue AI */
+.ant-layout-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.ant-card-hoverable:hover {
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+.ant-progress-line {
+  margin-bottom: 0;
+}
+
+.ant-segmented {
+  background: #f0f2f5;
+}
+
+.ant-segmented-item-selected {
+  background: #1677ff;
+  color: white !important;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.cursor-pointer:hover {
+  background-color: #f5f5f5;
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Animation utilities */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced tabs styling */
+.ant-tabs-large > .ant-tabs-nav .ant-tabs-tab {
+  padding: 12px 20px;
+  font-weight: 500;
+  border-radius: 8px 8px 0 0;
+  margin-right: 4px;
+  transition: all 0.3s ease;
+}
+
+.ant-tabs-large > .ant-tabs-nav .ant-tabs-tab:hover {
+  background-color: #f0f7ff;
+}
+
+.ant-tabs-large > .ant-tabs-nav .ant-tabs-tab-active {
+  background-color: #e6f7ff;
+  border-color: #1677ff;
+}
+
+.ant-tabs-large > .ant-tabs-nav .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #1677ff;
+  font-weight: 600;
+}
+
+/* Navigation header styling */
+.navigation-header {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.navigation-header .ant-card-body {
+  background: transparent;
+}
+
+/* Select dropdown enhancements */
+.ant-select-dropdown {
+  border-radius: 8px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08);
+}
+
+.ant-select-item-option-selected {
+  background-color: #e6f7ff;
+  font-weight: 500;
+}
+
+.ant-select-item-option:hover {
+  background-color: #f0f7ff;
+}
+
+/* Badge enhancements */
+.ant-badge-count {
+  font-weight: 600;
+  min-width: 24px;
+  height: 24px;
+  line-height: 22px;
+}
+
+.ant-badge-status-text {
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+/* Table enhancements */
+.ant-table-tbody > tr:hover > td {
+  background-color: #f0f7ff !important;
+}
+
+.ant-table-tbody > tr.ant-table-row-selected > td {
+  background-color: #e6f7ff !important;
+}
+
+/* Empty state styling */
+.ant-empty {
+  margin: 40px 0;
+}
+
+.ant-empty-description {
+  color: #8c8c8c;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* Dropdown menu styling */
+.ant-dropdown-menu {
+  border-radius: 8px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08);
+  padding: 8px 0;
+}
+
+.ant-dropdown-menu-item {
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.ant-dropdown-menu-item:hover {
+  background-color: #f0f7ff;
+}
+
+/* Tab bar extra content */
+.ant-tabs-extra-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Statistic enhancements */
+.ant-statistic-title {
+  font-weight: 500;
+  color: #666;
+}
+
+.ant-statistic-content {
+  font-weight: 600;
+}
+
+/* Card title enhancements */
+.ant-card-head-title {
+  font-weight: 600;
+  color: #262626;
+}
+
+/* Button enhancements */
+.ant-btn-primary.ant-btn-background-ghost {
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.ant-btn-primary.ant-btn-background-ghost:hover {
+  background-color: #f0f7ff;
+  border-color: #4096ff;
+  color: #4096ff;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .ant-layout-content {
+    padding: 16px !important;
+  }
+  
+  .ant-card {
+    margin-bottom: 16px;
+  }
+  
+  .ant-tabs-large > .ant-tabs-nav .ant-tabs-tab {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  
+  .navigation-header .ant-card-body {
+    padding: 12px 16px;
+  }
+  
+  .ant-tabs-extra-content {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .ant-col-xs-24 {
+    margin-bottom: 16px;
+  }
+  
+  .ant-statistic {
+    text-align: center;
+  }
+  
+  .ant-tabs-large > .ant-tabs-nav {
+    margin-bottom: 16px;
+  }
+  
+  .ant-tabs-large > .ant-tabs-nav .ant-tabs-tab {
+    flex: 1;
+    text-align: center;
+    margin-right: 0;
+    margin-bottom: 4px;
+  }
+}
