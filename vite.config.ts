@@ -6,5 +6,14 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],
+    include: ['pdfjs-dist']
   },
+  define: {
+    global: 'globalThis',
+  },
+  server: {
+    fs: {
+      allow: ['..']
+    }
+  }
 });

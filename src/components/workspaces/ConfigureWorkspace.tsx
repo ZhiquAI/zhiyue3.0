@@ -4,6 +4,7 @@ import { CheckCircleOutlined, FileImageOutlined, FileDoneOutlined, EyeOutlined, 
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam } from '../../types/exam';
 import { mockConfigureData } from '../../data/mockData';
+import PDFViewer from '../common/PDFViewer';
 
 interface ConfigureWorkspaceProps {
   exam: Exam;
@@ -14,7 +15,7 @@ interface UploadedFile {
   url: string;
   type: string;
   size: number;
-  originalFile?: File;
+  originalFile: File;
   pages?: string[];
 }
 
@@ -55,32 +56,6 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
     message.success('所有配置已保存！');
   };
 
-  // 将PDF文件转换为图片页面
-  const convertPdfToImages = async (file: File): Promise<string[]> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        // 模拟PDF转换 - 实际项目中使用PDF.js
-        // 这里我们创建一个基于文件内容的预览
-        const dataUrl = reader.result as string;
-        
-        // 对于PDF文件，我们模拟多页转换
-        if (file.type === 'application/pdf') {
-          // 模拟PDF的多页内容
-          const mockPages = [
-            dataUrl, // 第一页使用实际文件的预览
-            dataUrl  // 第二页也使用相同内容（实际中会是不同页面）
-          ];
-          resolve(mockPages);
-        } else {
-          // 图片文件直接返回
-          resolve([dataUrl]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
   // 处理文件上传
   const handleFileUpload = (type: 'paper' | 'answer') => async (info: any) => {
     const { file, fileList } = info;
@@ -105,16 +80,12 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
       try {
         setProcessingStatus(prev => ({ ...prev, [type]: 'processing' }));
         
-        // 转换文件为预览图片
-        const pages = await convertPdfToImages(fileObj);
-        
         const newFile: UploadedFile = {
           name: fileObj.name,
-          url: pages[0], // 主预览图
+          url: URL.createObjectURL(fileObj),
           type: fileObj.type,
           size: fileObj.size,
-          originalFile: fileObj,
-          pages: pages
+          originalFile: fileObj
         };
         
         setUploadedFiles(prev => ({ ...prev, [type]: newFile }));
@@ -132,16 +103,121 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
 
   // 删除文件
   const handleDeleteFile = (type: 'paper' | 'answer') => {
+    const file = uploadedFiles[type];
+    if (file?.url) {
+      URL.revokeObjectURL(file.url);
+    }
     setUploadedFiles(prev => ({ ...prev, [type]: null }));
     setProcessingStatus(prev => ({ ...prev, [type]: 'none' }));
     setCurrentPage(prev => ({ ...prev, [type]: 0 }));
     message.success(`${type === 'paper' ? '试卷' : '参考答案'}文件已删除`);
   };
 
+  // 渲染图片预览
+  const renderImagePreview = (file: UploadedFile, type: 'paper' | 'answer') => {
+    return (
+      <div className="relative h-full bg-gray-100 rounded-lg overflow-hidden">
+        {/* 文件信息栏 */}
+        <div className="absolute top-0 left-0 right-0 bg-white/95 backdrop-blur-sm p-3 border-b border-gray-200 z-20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Tag color={type === 'paper' ? 'blue' : 'green'}>
+                {type === 'paper' ? '试卷原件' : '参考答案'}
+              </Tag>
+              <span className="text-sm font-medium text-gray-700">{file.name}</span>
+              <span className="text-xs text-gray-500">
+                {(file.size / 1024 / 1024).toFixed(2)} MB
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <Button 
+                  type="text" 
+                  size="small" 
+                  icon={<ZoomOutOutlined />}
+                  disabled={zoomLevel <= 50}
+                  onClick={() => setZoomLevel(prev => Math.max(50, prev - 25))}
+                />
+                <span className="text-xs px-1">{zoomLevel}%</span>
+                <Button 
+                  type="text" 
+                  size="small" 
+                  icon={<ZoomInOutlined />}
+                  disabled={zoomLevel >= 200}
+                  onClick={() => setZoomLevel(prev => Math.min(200, prev + 25))}
+                />
+              </div>
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<EyeOutlined />}
+                onClick={() => window.open(file.url, '_blank')}
+              >
+                全屏查看
+              </Button>
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<DeleteOutlined />}
+                onClick={() => handleDeleteFile(type)}
+                danger
+              >
+                删除
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* 图片预览区域 */}
+        <div className="pt-16 h-full overflow-auto">
+          <div className="flex justify-center p-4">
+            <div 
+              className="relative bg-white shadow-lg rounded-lg overflow-hidden"
+              style={{ 
+                transform: `scale(${zoomLevel / 100})`,
+                transformOrigin: 'top center',
+                transition: 'transform 0.3s ease'
+              }}
+            >
+              <img
+                src={file.url}
+                alt={`${type === 'paper' ? '试卷' : '参考答案'}`}
+                className="max-w-full h-auto"
+                style={{ maxHeight: '800px' }}
+              />
+              
+              {/* 题目标注区域（仅试卷显示） */}
+              {type === 'paper' && (
+                <div className="absolute inset-0">
+                  {mockConfigureData.questions.map(q => (
+                    <Tooltip key={q.id} title={q.title}>
+                      <div
+                        className={`absolute border-2 transition-all duration-300 cursor-pointer ${
+                          selectedQuestionId === q.id
+                            ? 'border-blue-500 bg-blue-500/30 ring-4 ring-blue-300'
+                            : 'border-dashed border-gray-400 hover:border-blue-300 hover:bg-blue-100/20'
+                        }`}
+                        style={{ ...q.area }}
+                        onClick={() => setSelectedQuestionId(q.id)}
+                      >
+                        <div className="absolute -top-6 left-0 bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                          {q.title}
+                        </div>
+                      </div>
+                    </Tooltip>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderFilePreview = (fileType: 'paper' | 'answer') => {
     const file = uploadedFiles[fileType];
     const status = processingStatus[fileType];
-    const currentPageIndex = currentPage[fileType];
     
     if (status === 'none' || !file) {
       return (
@@ -229,133 +305,21 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
       );
     }
 
-    if (status === 'completed' && file.pages && file.pages.length > 0) {
-      const currentImage = file.pages[currentPageIndex];
-      
-      return (
-        <div className="relative h-full bg-gray-100 rounded-lg overflow-hidden">
-          {/* 文件信息栏 */}
-          <div className="absolute top-0 left-0 right-0 bg-white/95 backdrop-blur-sm p-3 border-b border-gray-200 z-20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Tag color={fileType === 'paper' ? 'blue' : 'green'}>
-                  {fileType === 'paper' ? '试卷原件' : '参考答案'}
-                </Tag>
-                <span className="text-sm font-medium text-gray-700">{file.name}</span>
-                {file.type === 'application/pdf' && (
-                  <Tag icon={<FilePdfOutlined />} color="red">PDF</Tag>
-                )}
-                <span className="text-xs text-gray-500">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {file.pages.length > 1 && (
-                  <div className="flex items-center gap-1 text-sm">
-                    <Button 
-                      type="text" 
-                      size="small"
-                      disabled={currentPageIndex === 0}
-                      onClick={() => setCurrentPage(prev => ({ ...prev, [fileType]: Math.max(0, prev[fileType] - 1) }))}
-                    >
-                      ←
-                    </Button>
-                    <span className="px-2">
-                      {currentPageIndex + 1} / {file.pages.length}
-                    </span>
-                    <Button 
-                      type="text" 
-                      size="small"
-                      disabled={currentPageIndex === file.pages.length - 1}
-                      onClick={() => setCurrentPage(prev => ({ ...prev, [fileType]: Math.min(file.pages!.length - 1, prev[fileType] + 1) }))}
-                    >
-                      →
-                    </Button>
-                  </div>
-                )}
-                <div className="flex items-center gap-1">
-                  <Button 
-                    type="text" 
-                    size="small" 
-                    icon={<ZoomOutOutlined />}
-                    disabled={zoomLevel <= 50}
-                    onClick={() => setZoomLevel(prev => Math.max(50, prev - 25))}
-                  />
-                  <span className="text-xs px-1">{zoomLevel}%</span>
-                  <Button 
-                    type="text" 
-                    size="small" 
-                    icon={<ZoomInOutlined />}
-                    disabled={zoomLevel >= 200}
-                    onClick={() => setZoomLevel(prev => Math.min(200, prev + 25))}
-                  />
-                </div>
-                <Button 
-                  type="text" 
-                  size="small" 
-                  icon={<EyeOutlined />}
-                  onClick={() => window.open(currentImage, '_blank')}
-                >
-                  全屏查看
-                </Button>
-                <Button 
-                  type="text" 
-                  size="small" 
-                  icon={<DeleteOutlined />}
-                  onClick={() => handleDeleteFile(fileType)}
-                  danger
-                >
-                  删除
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* 文件预览区域 */}
-          <div className="pt-16 h-full overflow-auto">
-            <div className="flex justify-center p-4">
-              <div 
-                className="relative bg-white shadow-lg rounded-lg overflow-hidden"
-                style={{ 
-                  transform: `scale(${zoomLevel / 100})`,
-                  transformOrigin: 'top center',
-                  transition: 'transform 0.3s ease'
-                }}
-              >
-                <img
-                  src={currentImage}
-                  alt={`${fileType === 'paper' ? '试卷' : '参考答案'}第${currentPageIndex + 1}页`}
-                  className="max-w-full h-auto"
-                  style={{ maxHeight: '800px' }}
-                />
-                
-                {/* 题目标注区域（仅试卷显示） */}
-                {fileType === 'paper' && currentPageIndex === 0 && (
-                  <div className="absolute inset-0">
-                    {mockConfigureData.questions.map(q => (
-                      <Tooltip key={q.id} title={q.title}>
-                        <div
-                          className={`absolute border-2 transition-all duration-300 cursor-pointer ${
-                            selectedQuestionId === q.id
-                              ? 'border-blue-500 bg-blue-500/30 ring-4 ring-blue-300'
-                              : 'border-dashed border-gray-400 hover:border-blue-300 hover:bg-blue-100/20'
-                          }`}
-                          style={{ ...q.area }}
-                          onClick={() => setSelectedQuestionId(q.id)}
-                        >
-                          <div className="absolute -top-6 left-0 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                            {q.title}
-                          </div>
-                        </div>
-                      </Tooltip>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+    if (status === 'completed' && file) {
+      // 根据文件类型选择渲染方式
+      if (file.type === 'application/pdf') {
+        return (
+          <PDFViewer
+            file={file.originalFile}
+            onDelete={() => handleDeleteFile(fileType)}
+            showControls={true}
+            className="h-full"
+          />
+        );
+      } else {
+        // 图片文件使用原有的预览方式
+        return renderImagePreview(file, fileType);
+      }
     }
 
     return (
@@ -410,27 +374,43 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
       children: (
         <div className="h-full">
           {processingStatus.paper === 'completed' && processingStatus.answer === 'completed' && 
-           uploadedFiles.paper?.pages && uploadedFiles.answer?.pages ? (
+           uploadedFiles.paper && uploadedFiles.answer ? (
             <div className="grid grid-cols-2 gap-4 h-full p-4">
               <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="absolute top-2 left-2 z-10">
                   <Tag color="blue">试卷原件</Tag>
                 </div>
-                <img
-                  src={uploadedFiles.paper.pages[currentPage.paper]}
-                  alt="试卷预览"
-                  className="w-full h-full object-contain"
-                />
+                {uploadedFiles.paper.type === 'application/pdf' ? (
+                  <PDFViewer
+                    file={uploadedFiles.paper.originalFile}
+                    showControls={false}
+                    className="h-full"
+                  />
+                ) : (
+                  <img
+                    src={uploadedFiles.paper.url}
+                    alt="试卷预览"
+                    className="w-full h-full object-contain"
+                  />
+                )}
               </div>
               <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="absolute top-2 left-2 z-10">
                   <Tag color="green">参考答案</Tag>
                 </div>
-                <img
-                  src={uploadedFiles.answer.pages[currentPage.answer]}
-                  alt="参考答案预览"
-                  className="w-full h-full object-contain"
-                />
+                {uploadedFiles.answer.type === 'application/pdf' ? (
+                  <PDFViewer
+                    file={uploadedFiles.answer.originalFile}
+                    showControls={false}
+                    className="h-full"
+                  />
+                ) : (
+                  <img
+                    src={uploadedFiles.answer.url}
+                    alt="参考答案预览"
+                    className="w-full h-full object-contain"
+                  />
+                )}
               </div>
             </div>
           ) : (
@@ -456,6 +436,17 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
       disabled: processingStatus.paper !== 'completed' || processingStatus.answer !== 'completed'
     }
   ];
+
+  // 清理URL对象
+  useEffect(() => {
+    return () => {
+      Object.values(uploadedFiles).forEach(file => {
+        if (file?.url) {
+          URL.revokeObjectURL(file.url);
+        }
+      });
+    };
+  }, []);
 
   return (
     <div>
@@ -486,7 +477,7 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
             <div>
               {processingStatus.paper === 'none' && <p>• 试卷文件是必需的，请先上传试卷原件（支持PDF、JPG、PNG格式）</p>}
               {processingStatus.answer === 'none' && <p>• 参考答案是可选的，上传后可以自动生成评分标准</p>}
-              <p>• 上传的文件将实时显示在预览区域，支持缩放和分页浏览</p>
+              <p>• 上传的PDF文件将自动解析并显示，支持分页浏览和缩放操作</p>
             </div>
           }
           type="info"
