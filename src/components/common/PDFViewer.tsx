@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button, Spin, Alert, Progress, Tag } from 'antd';
 import { ZoomInOutlined, ZoomOutOutlined, EyeOutlined, LeftOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-// 设置PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// 设置PDF.js worker - 使用Vite兼容的方式
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).href;
 
 interface PDFViewerProps {
   file: File;
