@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, Button, message, Card, Space } from 'antd';
-import { CheckCircleOutlined, BookOutlined, GraduationCapOutlined, FileTextOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, BookOutlined, ReadOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam, ExamStatus } from '../../types/exam';
 
@@ -161,7 +161,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
               name="grade"
               label={
                 <div className="flex items-center gap-2">
-                  <GraduationCapOutlined className="text-purple-500" />
+                  <ReadOutlined className="text-purple-500" />
                   <span className="font-medium">年级</span>
                 </div>
               }
