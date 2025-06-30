@@ -137,8 +137,24 @@ const DashboardView: React.FC = () => {
                           style={{ backgroundColor: '#ff9800' }} 
                         />
                       }
-                      title={<a onClick={() => handleNavigate('handle', item)}>{item.name}</a>}
-                      description={`状态: ${item.status} | 创建于: ${item.createdAt}`}
+                      title={
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-base text-gray-800 mb-1">
+                            {item.name}
+                          </span>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Tag color="orange" size="small">{item.status}</Tag>
+                            <span>{item.subject}</span>
+                            <span>·</span>
+                            <span>{item.grade}</span>
+                          </div>
+                        </div>
+                      }
+                      description={
+                        <div className="text-gray-400 text-xs mt-2">
+                          创建于: {item.createdAt}
+                        </div>
+                      }
                     />
                   </List.Item>
                 )}
