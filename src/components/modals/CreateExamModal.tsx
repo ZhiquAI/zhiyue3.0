@@ -20,12 +20,19 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
       const values = await form.validateFields();
       setLoading(true);
       
+      // 确保所有必需字段都有值
+      if (!values.name || !values.subject || !values.grade) {
+        message.error('请填写完整的考试信息');
+        setLoading(false);
+        return;
+      }
+      
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const newExam: Exam = {
         id: Date.now().toString(),
-        name: values.name,
+        name: values.name.trim(), // 确保名称被正确设置并去除空格
         subject: values.subject,
         grade: values.grade,
         status: '待配置' as ExamStatus,
@@ -38,6 +45,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
         avgScore: null
       };
 
+      console.log('Creating exam with data:', newExam); // 调试日志
+      
       addExam(newExam);
       setLoading(false);
       message.success('考试创建成功，AI正在后台处理！');
@@ -48,7 +57,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
       onClose();
     } catch (err) {
       setLoading(false);
-      console.log('Validate Failed:', err);
+      console.error('Create exam error:', err);
+      message.error('创建考试失败，请重试');
     }
   };
 
@@ -60,9 +70,17 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
           <Form.Item
             name="name"
             label="考试名称"
-            rules={[{ required: true, message: '请输入考试名称' }]}
+            rules={[
+              { required: true, message: '请输入考试名称' },
+              { min: 2, message: '考试名称至少2个字符' },
+              { max: 50, message: '考试名称不能超过50个字符' }
+            ]}
           >
-            <Input placeholder="例如：初二期中历史考试" />
+            <Input 
+              placeholder="例如：初二期中历史考试" 
+              showCount
+              maxLength={50}
+            />
           </Form.Item>
           <Form.Item
             name="subject"
@@ -130,6 +148,20 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
     }
   ];
 
+  const handleNext = async () => {
+    if (currentStep === 0) {
+      // 在第一步验证基本信息
+      try {
+        await form.validateFields(['name', 'subject', 'grade']);
+        setCurrentStep(currentStep + 1);
+      } catch (error) {
+        console.error('Form validation failed:', error);
+      }
+    } else {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
   return (
     <Modal
       title="创建新考试"
@@ -158,7 +190,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
         {currentStep < steps.length - 1 && (
           <Button
             type="primary"
-            onClick={() => setCurrentStep(currentStep + 1)}
+            onClick={handleNext}
           >
             下一步
           </Button>

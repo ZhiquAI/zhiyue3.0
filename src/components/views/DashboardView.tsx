@@ -139,9 +139,12 @@ const DashboardView: React.FC = () => {
                       }
                       title={
                         <div className="flex flex-col">
-                          <span className="font-semibold text-base text-gray-800 mb-1">
-                            {item.name}
-                          </span>
+                          <a 
+                            onClick={() => handleNavigate('handle', item)}
+                            className="font-semibold text-base text-gray-800 mb-1 hover:text-blue-600"
+                          >
+                            {item.name || '未命名考试'}
+                          </a>
                           <div className="flex items-center gap-2 text-sm text-gray-500">
                             <Tag color="orange" size="small">{item.status}</Tag>
                             <span>{item.subject}</span>
