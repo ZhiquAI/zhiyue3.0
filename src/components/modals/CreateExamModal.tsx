@@ -27,6 +27,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
   // 监听表单值变化
   const handleFormChange = () => {
     const values = form.getFieldsValue(['name', 'subject', 'grade']);
+    console.log('Form values changed:', values);
     setFormValues(values);
   };
 
@@ -43,18 +44,40 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
     try {
       setLoading(true);
       
-      // 获取所有表单数据
-      const values = form.getFieldsValue();
-      console.log('Form values:', values);
+      // 获取当前表单数据
+      const currentValues = form.getFieldsValue();
+      console.log('Creating exam with current form values:', currentValues);
+      console.log('Form state values:', formValues);
+      console.log('Uploaded files:', uploadedFiles);
       
-      // 验证基本信息字段
-      if (!values.name?.trim() || !values.subject || !values.grade) {
-        message.error('请确保基本信息已完整填写');
+      // 使用当前表单值，如果为空则使用状态中的值
+      const finalValues = {
+        name: currentValues.name || formValues.name,
+        subject: currentValues.subject || formValues.subject,
+        grade: currentValues.grade || formValues.grade
+      };
+      
+      console.log('Final values for creation:', finalValues);
+      
+      // 验证数据完整性
+      if (!finalValues.name?.trim()) {
+        message.error('考试名称不能为空');
         setLoading(false);
         return;
       }
       
-      // 验证试卷上传
+      if (!finalValues.subject) {
+        message.error('请选择科目');
+        setLoading(false);
+        return;
+      }
+      
+      if (!finalValues.grade) {
+        message.error('请选择年级');
+        setLoading(false);
+        return;
+      }
+      
       if (!uploadedFiles.paper) {
         message.error('请上传试卷文件');
         setLoading(false);
@@ -62,14 +85,14 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
       }
       
       // 模拟文件上传和处理
-      message.loading('正在上传文件并创建考试...', 0);
+      message.loading('正在创建考试并处理文件...', 0);
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const newExam: Exam = {
         id: Date.now().toString(),
-        name: values.name.trim(),
-        subject: values.subject,
-        grade: values.grade,
+        name: finalValues.name.trim(),
+        subject: finalValues.subject,
+        grade: finalValues.grade,
         status: '待配置' as ExamStatus,
         createdAt: new Date().toISOString().split('T')[0],
         tasks: { 
@@ -109,6 +132,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
           message.error('请输入考试名称');
           return;
         }
+        console.log('Step 0 validation passed, moving to step 1');
         setCurrentStep(1);
       } else if (currentStep === 1) {
         // 验证试卷上传
@@ -116,6 +140,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
           message.error('请先上传试卷文件');
           return;
         }
+        console.log('Step 1 validation passed, moving to step 2');
         setCurrentStep(2);
       }
     } catch (error) {
@@ -135,7 +160,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
         ...prev,
         [type]: file
       }));
-      message.success(`${type === 'paper' ? '试卷' : '答案'}文件上传成功`);
+      console.log(`${type} file uploaded:`, file);
+      message.success(`${type === 'paper' ? '试卷' : '参考答案'}文件上传成功`);
     } else {
       setUploadedFiles(prev => ({
         ...prev,
@@ -160,6 +186,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
               subject: '',
               grade: ''
             }}
+            preserve={false}
           >
             <Form.Item
               name="name"
@@ -310,12 +337,34 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
   const canProceed = () => {
     if (currentStep === 0) {
       // 检查基本信息是否完整
-      return formValues.name?.trim() && formValues.subject && formValues.grade;
+      const hasName = formValues.name?.trim() || form.getFieldValue('name')?.trim();
+      const hasSubject = formValues.subject || form.getFieldValue('subject');
+      const hasGrade = formValues.grade || form.getFieldValue('grade');
+      return hasName && hasSubject && hasGrade;
     } else if (currentStep === 1) {
       // 检查试卷是否已上传
       return uploadedFiles.paper;
     }
     return true;
+  };
+
+  // 检查是否可以完成创建
+  const canComplete = () => {
+    const hasName = formValues.name?.trim() || form.getFieldValue('name')?.trim();
+    const hasSubject = formValues.subject || form.getFieldValue('subject');
+    const hasGrade = formValues.grade || form.getFieldValue('grade');
+    const hasPaper = uploadedFiles.paper;
+    
+    console.log('Can complete check:', {
+      hasName,
+      hasSubject,
+      hasGrade,
+      hasPaper,
+      formValues,
+      currentFormValues: form.getFieldsValue()
+    });
+    
+    return hasName && hasSubject && hasGrade && hasPaper;
   };
 
   // 当模态框关闭时重置状态
@@ -363,9 +412,19 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
           步骤 {currentStep + 1} / {steps.length}
           {currentStep === 0 && (
             <span className="ml-2 text-xs">
-              ({formValues.name?.trim() ? '✓' : '✗'} 名称 
-              {formValues.subject ? ' ✓' : ' ✗'} 科目 
-              {formValues.grade ? ' ✓' : ' ✗'} 年级)
+              ({(formValues.name?.trim() || form.getFieldValue('name')?.trim()) ? '✓' : '✗'} 名称 
+              {(formValues.subject || form.getFieldValue('subject')) ? ' ✓' : ' ✗'} 科目 
+              {(formValues.grade || form.getFieldValue('grade')) ? ' ✓' : ' ✗'} 年级)
+            </span>
+          )}
+          {currentStep === 1 && (
+            <span className="ml-2 text-xs">
+              ({uploadedFiles.paper ? '✓' : '✗'} 试卷文件)
+            </span>
+          )}
+          {currentStep === 2 && (
+            <span className="ml-2 text-xs">
+              ({canComplete() ? '✓' : '✗'} 准备就绪)
             </span>
           )}
         </div>
@@ -392,6 +451,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
               size="large"
               loading={loading}
               onClick={handleCreate}
+              disabled={!canComplete()}
               icon={<CheckCircleOutlined />}
             >
               完成并创建
