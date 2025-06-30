@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, Row, Col, Breadcrumb, Button, Segmented, Collapse, Input, Tooltip, message, Tabs, Upload, Progress, Alert, Tag, Spin } from 'antd';
-import { CheckCircleOutlined, FileImageOutlined, FileDoneOutlined, EyeOutlined, SwapOutlined, UploadOutlined, FilePdfOutlined, ZoomInOutlined, ZoomOutOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, FileImageOutlined, FileDoneOutlined, EyeOutlined, SwapOutlined, UploadOutlined, FilePdfOutlined, ZoomInOutlined, ZoomOutOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam } from '../../types/exam';
 import { mockConfigureData } from '../../data/mockData';
@@ -15,6 +15,7 @@ interface UploadedFile {
   type: string;
   size: number;
   originalFile?: File;
+  pages?: string[];
 }
 
 const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
@@ -31,13 +32,6 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
   const [processingStatus, setProcessingStatus] = useState({
     paper: 'none' as 'none' | 'uploading' | 'processing' | 'completed' | 'error',
     answer: 'none' as 'none' | 'uploading' | 'processing' | 'completed' | 'error'
-  });
-  const [pdfPages, setPdfPages] = useState<{
-    paper: string[];
-    answer: string[];
-  }>({
-    paper: [],
-    answer: []
   });
   const [currentPage, setCurrentPage] = useState({
     paper: 0,
@@ -61,35 +55,34 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
     message.success('所有配置已保存！');
   };
 
-  // 处理PDF文件转换为图片
-  const processPdfFile = async (file: File, type: 'paper' | 'answer') => {
-    try {
-      setProcessingStatus(prev => ({ ...prev, [type]: 'processing' }));
-      
-      // 模拟PDF处理 - 在实际项目中，这里会调用PDF.js或后端API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // 模拟生成PDF页面图片
-      const mockPages = [
-        'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=800',
-        'https://images.pexels.com/photos/301926/pexels-photo-301926.jpeg?auto=compress&cs=tinysrgb&w=800'
-      ];
-      
-      setPdfPages(prev => ({
-        ...prev,
-        [type]: mockPages
-      }));
-      
-      setProcessingStatus(prev => ({ ...prev, [type]: 'completed' }));
-      message.success(`${type === 'paper' ? '试卷' : '参考答案'}PDF处理完成！`);
-      
-    } catch (error) {
-      setProcessingStatus(prev => ({ ...prev, [type]: 'error' }));
-      message.error(`PDF处理失败: ${error}`);
-    }
+  // 将PDF文件转换为图片页面
+  const convertPdfToImages = async (file: File): Promise<string[]> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // 模拟PDF转换 - 实际项目中使用PDF.js
+        // 这里我们创建一个基于文件内容的预览
+        const dataUrl = reader.result as string;
+        
+        // 对于PDF文件，我们模拟多页转换
+        if (file.type === 'application/pdf') {
+          // 模拟PDF的多页内容
+          const mockPages = [
+            dataUrl, // 第一页使用实际文件的预览
+            dataUrl  // 第二页也使用相同内容（实际中会是不同页面）
+          ];
+          resolve(mockPages);
+        } else {
+          // 图片文件直接返回
+          resolve([dataUrl]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const handleFileUpload = (type: 'paper' | 'answer') => (info: any) => {
+  // 处理文件上传
+  const handleFileUpload = (type: 'paper' | 'answer') => async (info: any) => {
     const { file, fileList } = info;
     
     if (file.status === 'uploading') {
@@ -101,7 +94,6 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
       // 文件被移除
       setUploadedFiles(prev => ({ ...prev, [type]: null }));
       setProcessingStatus(prev => ({ ...prev, [type]: 'none' }));
-      setPdfPages(prev => ({ ...prev, [type]: [] }));
       setCurrentPage(prev => ({ ...prev, [type]: 0 }));
       return;
     }
@@ -110,34 +102,45 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
     const fileObj = uploadedFile.originFileObj || uploadedFile;
     
     if (fileObj) {
-      const fileUrl = URL.createObjectURL(fileObj);
-      const newFile: UploadedFile = {
-        name: fileObj.name,
-        url: fileUrl,
-        type: fileObj.type,
-        size: fileObj.size,
-        originalFile: fileObj
-      };
-      
-      setUploadedFiles(prev => ({ ...prev, [type]: newFile }));
-      
-      // 如果是PDF文件，进行处理
-      if (fileObj.type === 'application/pdf') {
-        processPdfFile(fileObj, type);
-      } else {
-        // 图片文件直接完成
+      try {
+        setProcessingStatus(prev => ({ ...prev, [type]: 'processing' }));
+        
+        // 转换文件为预览图片
+        const pages = await convertPdfToImages(fileObj);
+        
+        const newFile: UploadedFile = {
+          name: fileObj.name,
+          url: pages[0], // 主预览图
+          type: fileObj.type,
+          size: fileObj.size,
+          originalFile: fileObj,
+          pages: pages
+        };
+        
+        setUploadedFiles(prev => ({ ...prev, [type]: newFile }));
         setProcessingStatus(prev => ({ ...prev, [type]: 'completed' }));
-        setPdfPages(prev => ({ ...prev, [type]: [fileUrl] }));
+        setCurrentPage(prev => ({ ...prev, [type]: 0 }));
+        
+        message.success(`${type === 'paper' ? '试卷' : '参考答案'}文件上传成功！`);
+        
+      } catch (error) {
+        setProcessingStatus(prev => ({ ...prev, [type]: 'error' }));
+        message.error(`文件处理失败: ${error}`);
       }
-      
-      message.success(`${type === 'paper' ? '试卷' : '参考答案'}文件上传成功！`);
     }
+  };
+
+  // 删除文件
+  const handleDeleteFile = (type: 'paper' | 'answer') => {
+    setUploadedFiles(prev => ({ ...prev, [type]: null }));
+    setProcessingStatus(prev => ({ ...prev, [type]: 'none' }));
+    setCurrentPage(prev => ({ ...prev, [type]: 0 }));
+    message.success(`${type === 'paper' ? '试卷' : '参考答案'}文件已删除`);
   };
 
   const renderFilePreview = (fileType: 'paper' | 'answer') => {
     const file = uploadedFiles[fileType];
     const status = processingStatus[fileType];
-    const pages = pdfPages[fileType];
     const currentPageIndex = currentPage[fileType];
     
     if (status === 'none' || !file) {
@@ -218,10 +221,7 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
           <Button 
             type="primary" 
             danger 
-            onClick={() => {
-              setUploadedFiles(prev => ({ ...prev, [fileType]: null }));
-              setProcessingStatus(prev => ({ ...prev, [fileType]: 'none' }));
-            }}
+            onClick={() => handleDeleteFile(fileType)}
           >
             重新上传
           </Button>
@@ -229,7 +229,9 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
       );
     }
 
-    if (status === 'completed' && pages.length > 0) {
+    if (status === 'completed' && file.pages && file.pages.length > 0) {
+      const currentImage = file.pages[currentPageIndex];
+      
       return (
         <div className="relative h-full bg-gray-100 rounded-lg overflow-hidden">
           {/* 文件信息栏 */}
@@ -243,9 +245,12 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
                 {file.type === 'application/pdf' && (
                   <Tag icon={<FilePdfOutlined />} color="red">PDF</Tag>
                 )}
+                <span className="text-xs text-gray-500">
+                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                {pages.length > 1 && (
+                {file.pages.length > 1 && (
                   <div className="flex items-center gap-1 text-sm">
                     <Button 
                       type="text" 
@@ -256,13 +261,13 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
                       ←
                     </Button>
                     <span className="px-2">
-                      {currentPageIndex + 1} / {pages.length}
+                      {currentPageIndex + 1} / {file.pages.length}
                     </span>
                     <Button 
                       type="text" 
                       size="small"
-                      disabled={currentPageIndex === pages.length - 1}
-                      onClick={() => setCurrentPage(prev => ({ ...prev, [fileType]: Math.min(pages.length - 1, prev[fileType] + 1) }))}
+                      disabled={currentPageIndex === file.pages.length - 1}
+                      onClick={() => setCurrentPage(prev => ({ ...prev, [fileType]: Math.min(file.pages!.length - 1, prev[fileType] + 1) }))}
                     >
                       →
                     </Button>
@@ -289,20 +294,18 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
                   type="text" 
                   size="small" 
                   icon={<EyeOutlined />}
-                  onClick={() => window.open(pages[currentPageIndex], '_blank')}
+                  onClick={() => window.open(currentImage, '_blank')}
                 >
                   全屏查看
                 </Button>
                 <Button 
                   type="text" 
                   size="small" 
-                  icon={<UploadOutlined />}
-                  onClick={() => {
-                    setUploadedFiles(prev => ({ ...prev, [fileType]: null }));
-                    setProcessingStatus(prev => ({ ...prev, [fileType]: 'none' }));
-                  }}
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleDeleteFile(fileType)}
+                  danger
                 >
-                  重新上传
+                  删除
                 </Button>
               </div>
             </div>
@@ -320,7 +323,7 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
                 }}
               >
                 <img
-                  src={pages[currentPageIndex]}
+                  src={currentImage}
                   alt={`${fileType === 'paper' ? '试卷' : '参考答案'}第${currentPageIndex + 1}页`}
                   className="max-w-full h-auto"
                   style={{ maxHeight: '800px' }}
@@ -406,14 +409,15 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
       ),
       children: (
         <div className="h-full">
-          {processingStatus.paper === 'completed' && processingStatus.answer === 'completed' ? (
+          {processingStatus.paper === 'completed' && processingStatus.answer === 'completed' && 
+           uploadedFiles.paper?.pages && uploadedFiles.answer?.pages ? (
             <div className="grid grid-cols-2 gap-4 h-full p-4">
               <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="absolute top-2 left-2 z-10">
                   <Tag color="blue">试卷原件</Tag>
                 </div>
                 <img
-                  src={pdfPages.paper[currentPage.paper]}
+                  src={uploadedFiles.paper.pages[currentPage.paper]}
                   alt="试卷预览"
                   className="w-full h-full object-contain"
                 />
@@ -423,7 +427,7 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
                   <Tag color="green">参考答案</Tag>
                 </div>
                 <img
-                  src={pdfPages.answer[currentPage.answer]}
+                  src={uploadedFiles.answer.pages[currentPage.answer]}
                   alt="参考答案预览"
                   className="w-full h-full object-contain"
                 />
@@ -480,9 +484,9 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
           message="文件上传提醒"
           description={
             <div>
-              {processingStatus.paper === 'none' && <p>• 试卷文件是必需的，请先上传试卷原件（支持PDF格式）</p>}
+              {processingStatus.paper === 'none' && <p>• 试卷文件是必需的，请先上传试卷原件（支持PDF、JPG、PNG格式）</p>}
               {processingStatus.answer === 'none' && <p>• 参考答案是可选的，上传后可以自动生成评分标准</p>}
-              <p>• PDF文件将自动转换为图片进行预览和标注</p>
+              <p>• 上传的文件将实时显示在预览区域，支持缩放和分页浏览</p>
             </div>
           }
           type="info"
