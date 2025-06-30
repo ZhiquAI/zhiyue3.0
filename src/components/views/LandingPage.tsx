@@ -156,7 +156,7 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Hero Section - 优化标题层级 */}
+      {/* Hero Section - 大幅放大标题 */}
       <section className="relative overflow-hidden min-h-screen flex items-center">
         {/* 背景装饰 */}
         <div className="absolute inset-0">
@@ -167,67 +167,71 @@ const LandingPage: React.FC = () => {
         
         <div className="relative max-w-7xl mx-auto px-6 py-20">
           <div className="text-center">
-            {/* 品牌标识 - 简化设计 */}
-            <div className="flex justify-center mb-12">
-              <div className="flex items-center gap-3 bg-white/95 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg border border-blue-100">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
+            {/* 品牌标识 - 保持简洁 */}
+            <div className="flex justify-center mb-8">
+              <div className="flex items-center gap-3 bg-white/95 backdrop-blur-sm rounded-full px-5 py-2.5 shadow-lg border border-blue-100">
+                <div className="w-7 h-7 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <Text className="text-base font-medium text-gray-700">智阅AI - 智能历史阅卷助手</Text>
+                <Text className="text-sm font-medium text-gray-700">智阅AI - 智能历史阅卷助手</Text>
               </div>
             </div>
             
-            {/* 主标题 - 简洁有力 */}
-            <div className="mb-8">
+            {/* 主标题 - 大幅放大 */}
+            <div className="mb-6">
               <Title 
                 level={1} 
-                className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold mb-0 leading-tight tracking-tight"
-                style={{ margin: 0 }}
+                className="font-bold mb-0 leading-none tracking-tight"
+                style={{ 
+                  margin: 0,
+                  fontSize: 'clamp(3.5rem, 12vw, 12rem)', // 响应式超大字体
+                  lineHeight: '0.9'
+                }}
               >
                 <div className="bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900 bg-clip-text text-transparent">
                   让AI成为您的
                 </div>
-                <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 bg-clip-text text-transparent mt-2">
+                <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 bg-clip-text text-transparent mt-4">
                   阅卷助手
                 </div>
               </Title>
             </div>
             
-            {/* 副标题 - 清晰简洁 */}
-            <div className="mb-16">
+            {/* 副标题 - 适当调整 */}
+            <div className="mb-12">
               <Paragraph 
-                className="text-lg sm:text-xl lg:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed font-normal"
+                className="text-xl sm:text-2xl lg:text-3xl text-gray-600 max-w-5xl mx-auto leading-relaxed font-normal"
                 style={{ margin: 0 }}
               >
                 专为初中历史教师设计的智能阅卷系统，结合先进的OCR识别和NLP技术
                 <br className="hidden sm:block" />
-                <span className="block mt-2 text-blue-700 font-medium">
+                <span className="block mt-3 text-blue-700 font-medium">
                   让您从繁重的阅卷工作中解脱，专注于更有价值的教学活动
                 </span>
               </Paragraph>
             </div>
             
             {/* CTA按钮 - 突出主要操作 */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16">
               <Button 
                 type="primary" 
                 size="large" 
-                className="h-14 px-10 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 rounded-full"
+                className="h-16 px-12 text-xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 rounded-full"
                 onClick={handleGetStarted}
               >
                 立即开始使用
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <ArrowRight className="w-6 h-6 ml-3" />
               </Button>
               <Button 
                 size="large" 
-                className="h-14 px-10 text-lg font-medium border-2 border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 transition-all duration-300 rounded-full bg-white/90 backdrop-blur-sm"
+                className="h-16 px-12 text-xl font-medium border-2 border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 transition-all duration-300 rounded-full bg-white/90 backdrop-blur-sm"
               >
-                <Play className="w-5 h-5 mr-2" />
+                <Play className="w-6 h-6 mr-3" />
                 观看演示
               </Button>
             </div>
 
-            {/* 统计数据卡片 - 简化设计 */}
+            {/* 统计数据卡片 */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 max-w-5xl mx-auto">
               {stats.map((stat, index) => (
                 <div key={index} className="group">
