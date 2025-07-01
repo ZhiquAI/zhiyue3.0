@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Table, Button, Tag, Progress, Tooltip, Breadcrumb, message, Empty } from 'antd';
-import { EditOutlined, ClockCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { EditOutlined, ClockCircleOutlined, CheckCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam } from '../../types/exam';
 
@@ -14,16 +14,16 @@ const MarkingCenterView: React.FC = () => {
   const handleEnterMarking = (exam: Exam) => {
     if (exam.status === '待阅卷') {
       message.info('请先上传答题卡后再开始阅卷');
-      // 这里可以跳转到上传答题卡的界面
+      // 跳转到答题卡上传界面
+      setSubViewInfo({ view: 'upload', exam });
       return;
     }
     setSubViewInfo({ view: 'marking', exam });
   };
 
   const handleUploadAnswerSheets = (exam: Exam) => {
-    message.info('答题卡上传功能开发中...');
-    // 这里应该打开答题卡上传界面
-    // 上传完成后将考试状态更新为"阅卷中"
+    // 跳转到答题卡上传界面
+    setSubViewInfo({ view: 'upload', exam });
   };
 
   const columns = [
@@ -116,6 +116,7 @@ const MarkingCenterView: React.FC = () => {
             <div className="space-x-2">
               <Button 
                 type="primary"
+                icon={<UploadOutlined />}
                 onClick={() => handleUploadAnswerSheets(record)}
               >
                 上传答题卡
@@ -179,7 +180,7 @@ const MarkingCenterView: React.FC = () => {
 
       {/* 阅卷流程说明 */}
       <Card title="阅卷流程说明" className="mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="text-center p-4 bg-blue-50 rounded-lg">
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
               <span className="text-blue-600 font-bold text-lg">1</span>
@@ -207,6 +208,16 @@ const MarkingCenterView: React.FC = () => {
             <h4 className="font-medium text-gray-800 mb-2">AI辅助阅卷</h4>
             <p className="text-sm text-gray-600">
               AI自动评分主观题，教师复核确认，确保评分准确性
+            </p>
+          </div>
+
+          <div className="text-center p-4 bg-orange-50 rounded-lg">
+            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-orange-600 font-bold text-lg">4</span>
+            </div>
+            <h4 className="font-medium text-gray-800 mb-2">生成报告</h4>
+            <p className="text-sm text-gray-600">
+              自动生成详细的分析报告，为教学决策提供数据支撑
             </p>
           </div>
         </div>

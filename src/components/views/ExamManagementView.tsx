@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Tag, Space, Form, Input, Select, Breadcrumb, Modal, message, Popconfirm } from 'antd';
-import { PlusOutlined, BarChartOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, BarChartOutlined, DeleteOutlined, EditOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { useAsyncOperation } from '../../hooks/useAsyncOperation';
 import { useDebounce } from '../../utils/performance';
@@ -53,6 +53,7 @@ const ExamManagementView: React.FC = () => {
   const handleNavigate = (type: string, exam: Exam) => {
     const navigationMap = {
       '待配置': 'configure',
+      '待阅卷': 'upload', // 待阅卷状态跳转到上传答题卡
       '阅卷中': 'marking',
       '已完成': 'analysis'
     };
@@ -85,17 +86,28 @@ const ExamManagementView: React.FC = () => {
   const getActionButton = (exam: Exam) => {
     const actionMap: Record<string, JSX.Element> = {
       '待配置': (
-        <Button type="primary" onClick={() => handleNavigate('configure', exam)}>
+        <Button 
+          type="primary" 
+          icon={<FileTextOutlined />}
+          onClick={() => handleNavigate('configure', exam)}
+        >
           配置试卷
         </Button>
       ),
       '待阅卷': (
-        <Button type="primary" onClick={() => handleNavigate('upload', exam)}>
+        <Button 
+          type="primary" 
+          icon={<UploadOutlined />}
+          onClick={() => handleNavigate('upload', exam)}
+        >
           上传答题卡
         </Button>
       ),
       '阅卷中': (
-        <Button type="primary" onClick={() => handleNavigate('marking', exam)}>
+        <Button 
+          type="primary" 
+          onClick={() => handleNavigate('marking', exam)}
+        >
           进入阅卷
         </Button>
       ),
@@ -113,19 +125,34 @@ const ExamManagementView: React.FC = () => {
     return actionMap[exam.status] || null;
   };
 
+  const getStatusDescription = (exam: Exam) => {
+    const descriptions: Record<string, string> = {
+      '待配置': '需要上传试卷并配置评分标准',
+      '待阅卷': '试卷已配置，等待上传答题卡',
+      '阅卷中': `阅卷进行中 (${exam.tasks.completed}/${exam.tasks.total})`,
+      '已完成': `阅卷已完成，平均分 ${exam.avgScore}分`
+    };
+    return descriptions[exam.status] || '';
+  };
+
   const columns = [
     {
       title: '考试名称',
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: Exam) => (
-        <Button 
-          type="link" 
-          onClick={() => handleNavigate('view', record)} 
-          className="p-0 h-auto font-semibold text-left"
-        >
-          {text}
-        </Button>
+        <div>
+          <Button 
+            type="link" 
+            onClick={() => handleNavigate('view', record)} 
+            className="p-0 h-auto font-semibold text-left"
+          >
+            {text}
+          </Button>
+          <div className="text-xs text-gray-500 mt-1">
+            {getStatusDescription(record)}
+          </div>
+        </div>
       ),
       sorter: (a: Exam, b: Exam) => a.name.localeCompare(b.name),
     },
@@ -162,8 +189,20 @@ const ExamManagementView: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)}>{status}</Tag>
+      render: (status: string, record: Exam) => (
+        <div>
+          <Tag color={getStatusColor(status)}>{status}</Tag>
+          {status === '阅卷中' && record.tasks.total > 0 && (
+            <div className="text-xs text-gray-500 mt-1">
+              进度: {Math.round((record.tasks.completed / record.tasks.total) * 100)}%
+            </div>
+          )}
+          {record.tasks.hasError && (
+            <Tag color="red" size="small" className="mt-1">
+              有异常
+            </Tag>
+          )}
+        </div>
       ),
       filters: [
         { text: '待配置', value: '待配置' },

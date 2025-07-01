@@ -8,6 +8,7 @@ import LandingPage from '../views/LandingPage';
 import ConfigureWorkspace from '../workspaces/ConfigureWorkspace';
 import MarkingWorkspace from '../workspaces/MarkingWorkspace';
 import AnalysisWorkspace from '../workspaces/AnalysisWorkspace';
+import AnswerSheetUploadWorkspace from '../workspaces/AnswerSheetUploadWorkspace';
 
 const ContentRouter: React.FC = () => {
   const { currentView, subViewInfo } = useAppContext();
@@ -17,6 +18,8 @@ const ContentRouter: React.FC = () => {
     switch (subViewInfo.view) {
       case 'configure':
         return <ConfigureWorkspace exam={subViewInfo.exam} />;
+      case 'upload':
+        return <AnswerSheetUploadWorkspace exam={subViewInfo.exam} />;
       case 'marking':
         return <MarkingWorkspace exam={subViewInfo.exam} />;
       case 'analysis':
