@@ -4,10 +4,8 @@ import { ZoomInOutlined, ZoomOutOutlined, EyeOutlined, LeftOutlined, RightOutlin
 import * as pdfjsLib from 'pdfjs-dist';
 
 // 设置PDF.js worker - 使用Vite兼容的方式
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url
-).toString();
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface PDFViewerProps {
   file: File;
