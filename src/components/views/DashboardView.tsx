@@ -146,6 +146,21 @@ const DashboardView: React.FC = () => {
       </Card>
 
       <Row gutter={[24, 24]}>
+        {/* 左侧：通知中心 */}
+        <Col xs={24} lg={10}>
+          <Card title="通知中心" extra={<Button type="link">查看全部</Button>}>
+            <Timeline>
+              {mockNotifications.map((item, index) => (
+                <Timeline.Item key={index} color={item.color}>
+                  <p>{item.text}</p>
+                  <p className="text-xs text-gray-400">{item.time}</p>
+                </Timeline.Item>
+              ))}
+            </Timeline>
+          </Card>
+        </Col>
+        
+        {/* 右侧：待办事项 */}
         <Col xs={24} lg={14}>
           <Card title="待办事项" extra={<Tag color="red">{todoExams.length}</Tag>}>
             {todoExams.length > 0 ? (
@@ -212,19 +227,6 @@ const DashboardView: React.FC = () => {
                 </Button>
               </div>
             )}
-          </Card>
-        </Col>
-        
-        <Col xs={24} lg={10}>
-          <Card title="通知中心" extra={<Button type="link">查看全部</Button>}>
-            <Timeline>
-              {mockNotifications.map((item, index) => (
-                <Timeline.Item key={index} color={item.color}>
-                  <p>{item.text}</p>
-                  <p className="text-xs text-gray-400">{item.time}</p>
-                </Timeline.Item>
-              ))}
-            </Timeline>
           </Card>
         </Col>
       </Row>
