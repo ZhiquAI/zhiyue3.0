@@ -1,5 +1,5 @@
 """
-配置文件 - 智阅AI后端配置
+配置文件 - 智阅AI后端配置 (更新Gemini配置)
 """
 
 import os
@@ -25,14 +25,29 @@ class Settings:
     MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", "50")) * 1024 * 1024  # 50MB
     ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.tif']
     
-    # OCR配置
+    # Gemini 2.5 Pro OCR配置
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+    GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
+    GEMINI_MAX_TOKENS = int(os.getenv("GEMINI_MAX_TOKENS", "8192"))
+    GEMINI_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.1"))  # OCR任务使用低温度
+    GEMINI_TOP_P = float(os.getenv("GEMINI_TOP_P", "0.8"))
+    GEMINI_TOP_K = int(os.getenv("GEMINI_TOP_K", "40"))
+    
+    # OCR特定配置
+    OCR_MAX_IMAGE_SIZE = int(os.getenv("OCR_MAX_IMAGE_SIZE", "2048"))  # 最大图像尺寸
+    OCR_BATCH_SIZE = int(os.getenv("OCR_BATCH_SIZE", "3"))  # 批处理并发数
+    OCR_RETRY_ATTEMPTS = int(os.getenv("OCR_RETRY_ATTEMPTS", "3"))  # 重试次数
+    OCR_TIMEOUT = int(os.getenv("OCR_TIMEOUT", "60"))  # 超时时间(秒)
+    
+    # 传统OCR配置(备用)
     TESSERACT_PATH = os.getenv("TESSERACT_PATH", "/usr/bin/tesseract")
     EASYOCR_GPU = os.getenv("EASYOCR_GPU", "False").lower() == "true"
     
     # AI服务配置
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
-    GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
+    AI_GRADING_ENABLED = os.getenv("AI_GRADING_ENABLED", "True").lower() == "true"
+    AI_ANALYSIS_ENABLED = os.getenv("AI_ANALYSIS_ENABLED", "True").lower() == "true"
+    AI_SUGGESTION_ENABLED = os.getenv("AI_SUGGESTION_ENABLED", "True").lower() == "true"
     
     # 安全配置
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
@@ -49,5 +64,34 @@ class Settings:
     # 监控配置
     SENTRY_DSN = os.getenv("SENTRY_DSN")
     ENABLE_METRICS = os.getenv("ENABLE_METRICS", "True").lower() == "true"
+    
+    # WebSocket配置
+    WS_URL = os.getenv("WS_URL", "ws://localhost:8000")
+    
+    @classmethod
+    def validate_gemini_config(cls) -> bool:
+        """验证Gemini配置"""
+        if not cls.GEMINI_API_KEY:
+            return False
+        
+        if not cls.GEMINI_MODEL:
+            return False
+            
+        return True
+    
+    @classmethod
+    def get_ocr_config(cls) -> dict:
+        """获取OCR配置"""
+        return {
+            "primary_engine": "gemini-2.5-pro",
+            "api_key_configured": bool(cls.GEMINI_API_KEY),
+            "model": cls.GEMINI_MODEL,
+            "max_tokens": cls.GEMINI_MAX_TOKENS,
+            "temperature": cls.GEMINI_TEMPERATURE,
+            "max_image_size": cls.OCR_MAX_IMAGE_SIZE,
+            "batch_size": cls.OCR_BATCH_SIZE,
+            "retry_attempts": cls.OCR_RETRY_ATTEMPTS,
+            "timeout": cls.OCR_TIMEOUT
+        }
 
 settings = Settings()

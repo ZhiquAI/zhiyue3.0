@@ -1,71 +1,38 @@
 """
-OCR识别服务 - 处理试卷和答题卡的文字识别
+OCR识别服务 - 更新为使用Gemini 2.5 Pro
 """
 
 import asyncio
 import logging
 from typing import Dict, List, Any, Optional
 from pathlib import Path
-import cv2
-import numpy as np
-from PIL import Image
-import pytesseract
-import easyocr
+import time
 
 from sqlalchemy.orm import Session
 from models.file_storage import FileStorage, PaperDocument, AnswerSheet
-from services.gemini_service import GeminiService
+from services.gemini_ocr_service import GeminiOCRService
 from config import settings
 
 logger = logging.getLogger(__name__)
 
 class OCRService:
-    """OCR识别服务类"""
+    """OCR识别服务类 - 基于Gemini 2.5 Pro"""
     
     def __init__(self, db: Session):
         self.db = db
-        self.gemini_service = GeminiService()
+        self.gemini_ocr = GeminiOCRService()
         
-        # 初始化EasyOCR
-        self.easyocr_reader = easyocr.Reader(['ch_sim', 'en'])
-        
-        # OCR配置
-        self.tesseract_config = '--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz一二三四五六七八九十'
-    
-    def preprocess_image(self, image_path: Path) -> np.ndarray:
-        """图像预处理"""
-        # 读取图像
-        image = cv2.imread(str(image_path))
-        
-        # 转换为灰度图
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        
-        # 去噪
-        denoised = cv2.fastNlMeansDenoising(gray)
-        
-        # 自适应阈值处理
-        binary = cv2.adaptiveThreshold(
-            denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
-        )
-        
-        # 形态学操作
-        kernel = np.ones((1, 1), np.uint8)
-        processed = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
-        
-        return processed
-    
     async def process_paper_document(self, file_record: FileStorage) -> Dict[str, Any]:
-        """处理试卷文档OCR"""
+        """处理试卷文档OCR - 使用Gemini"""
+        start_time = time.time()
+        
         try:
-            # 图像预处理
+            # 获取文件路径
             image_path = Path(settings.STORAGE_BASE_PATH) / file_record.file_path
-            processed_image = self.preprocess_image(image_path)
             
-            # 执行OCR识别
-            ocr_results = await self._perform_ocr(processed_image)
-            
-            # 使用AI分析试卷内容
-            ai_analysis = await self._analyze_paper_with_ai(ocr_results['text'])
+            # 使用Gemini进行试卷识别
+            ocr_results = await self.gemini_ocr.process_paper_document(str(image_path))
+            ocr_results['processing_time'] = time.time() - start_time
             
             # 创建或更新试卷文档记录
             paper_doc = self.db.query(PaperDocument).filter(
@@ -83,32 +50,39 @@ class OCRService:
             # 更新OCR结果
             paper_doc.ocr_status = 'completed'
             paper_doc.ocr_result = ocr_results
-            paper_doc.ocr_confidence = ocr_results.get('confidence', 0)
-            paper_doc.questions_parsed = ai_analysis.get('questions', [])
-            paper_doc.total_questions = len(ai_analysis.get('questions', []))
-            paper_doc.total_points = ai_analysis.get('total_points', 0)
+            paper_doc.ocr_confidence = int(ocr_results.get('quality_assessment', {}).get('confidence', 0.8) * 100)
+            
+            # 解析题目信息
+            questions = ocr_results.get('questions', [])
+            paper_doc.questions_parsed = questions
+            paper_doc.total_questions = len(questions)
+            paper_doc.total_points = ocr_results.get('total_points', 0)
+            paper_doc.page_count = 1  # 单页处理
             
             # 评估图像质量
-            quality_score = self._assess_image_quality(processed_image)
-            paper_doc.image_quality_score = quality_score
+            quality_score = ocr_results.get('quality_assessment', {}).get('clarity_score', 8)
+            paper_doc.image_quality_score = quality_score * 10  # 转换为100分制
+            paper_doc.clarity_score = quality_score * 10
             
             self.db.commit()
             
             # 更新文件处理状态
             file_record.processing_status = 'completed'
             file_record.processing_result = {
-                'ocr_confidence': ocr_results.get('confidence', 0),
-                'questions_count': len(ai_analysis.get('questions', [])),
-                'quality_score': quality_score
+                'ocr_confidence': paper_doc.ocr_confidence,
+                'questions_count': len(questions),
+                'quality_score': quality_score * 10,
+                'ocr_engine': 'gemini-2.5-pro'
             }
             self.db.commit()
             
-            logger.info(f"Paper OCR completed: {file_record.id}")
+            logger.info(f"Paper OCR completed with Gemini: {file_record.id}")
             return {
                 'status': 'success',
                 'ocr_result': ocr_results,
-                'ai_analysis': ai_analysis,
-                'quality_score': quality_score
+                'questions_count': len(questions),
+                'quality_score': quality_score * 10,
+                'processing_time': ocr_results['processing_time']
             }
             
         except Exception as e:
@@ -116,27 +90,26 @@ class OCRService:
             
             # 更新错误状态
             file_record.processing_status = 'failed'
-            file_record.error_message = str(e)
+            file_record.error_message = f"Gemini OCR error: {str(e)}"
             self.db.commit()
             
             return {
                 'status': 'error',
-                'error': str(e)
+                'error': str(e),
+                'ocr_engine': 'gemini-2.5-pro'
             }
     
     async def process_answer_sheet(self, file_record: FileStorage) -> Dict[str, Any]:
-        """处理答题卡OCR"""
+        """处理答题卡OCR - 使用Gemini"""
+        start_time = time.time()
+        
         try:
-            # 图像预处理
+            # 获取文件路径
             image_path = Path(settings.STORAGE_BASE_PATH) / file_record.file_path
-            processed_image = self.preprocess_image(image_path)
             
-            # 执行OCR识别
-            ocr_results = await self._perform_ocr(processed_image)
-            
-            # 提取学生信息和答案
-            student_info = self._extract_student_info(ocr_results)
-            answers = self._extract_answers(ocr_results, processed_image)
+            # 使用Gemini进行答题卡识别
+            ocr_results = await self.gemini_ocr.process_answer_sheet(str(image_path))
+            ocr_results['processing_time'] = time.time() - start_time
             
             # 创建或更新答题卡记录
             answer_sheet = self.db.query(AnswerSheet).filter(
@@ -153,14 +126,37 @@ class OCRService:
             # 更新识别结果
             answer_sheet.recognition_status = 'completed'
             answer_sheet.recognition_result = ocr_results
-            answer_sheet.recognition_confidence = ocr_results.get('confidence', 0)
+            answer_sheet.recognition_confidence = int(ocr_results.get('confidence', 0.8) * 100)
+            
+            # 提取学生信息
+            student_info = ocr_results.get('student_info', {})
             answer_sheet.student_id = student_info.get('student_id')
-            answer_sheet.student_name = student_info.get('student_name')
-            answer_sheet.class_name = student_info.get('class_name')
-            answer_sheet.extracted_answers = answers
+            answer_sheet.student_name = student_info.get('name')
+            answer_sheet.class_name = student_info.get('class')
+            
+            # 提取答案
+            objective_answers = ocr_results.get('objective_answers', {})
+            subjective_answers = ocr_results.get('subjective_answers', {})
+            
+            # 合并答案
+            all_answers = {**objective_answers, **subjective_answers}
+            answer_sheet.extracted_answers = all_answers
             
             # 质量检查
-            quality_issues = self._check_answer_sheet_quality(ocr_results, answers)
+            quality_assessment = ocr_results.get('quality_assessment', {})
+            quality_issues = quality_assessment.get('issues', [])
+            
+            # 添加基于置信度的质量检查
+            confidence = ocr_results.get('confidence', 0.8)
+            if confidence < 0.7:
+                quality_issues.append('识别置信度较低')
+            
+            if not student_info.get('student_id'):
+                quality_issues.append('未识别到学号')
+            
+            if not student_info.get('name'):
+                quality_issues.append('未识别到姓名')
+            
             answer_sheet.quality_issues = quality_issues
             answer_sheet.needs_manual_review = len(quality_issues) > 0
             
@@ -170,17 +166,21 @@ class OCRService:
             file_record.processing_status = 'completed'
             file_record.processing_result = {
                 'student_info': student_info,
-                'answers_count': len(answers),
-                'quality_issues': len(quality_issues)
+                'answers_count': len(all_answers),
+                'quality_issues': len(quality_issues),
+                'confidence': int(confidence * 100),
+                'ocr_engine': 'gemini-2.5-pro'
             }
             self.db.commit()
             
-            logger.info(f"Answer sheet OCR completed: {file_record.id}")
+            logger.info(f"Answer sheet OCR completed with Gemini: {file_record.id}")
             return {
                 'status': 'success',
                 'student_info': student_info,
-                'answers': answers,
-                'quality_issues': quality_issues
+                'answers': all_answers,
+                'quality_issues': quality_issues,
+                'confidence': confidence,
+                'processing_time': ocr_results['processing_time']
             }
             
         except Exception as e:
@@ -188,175 +188,137 @@ class OCRService:
             
             # 更新错误状态
             file_record.processing_status = 'failed'
-            file_record.error_message = str(e)
+            file_record.error_message = f"Gemini OCR error: {str(e)}"
             self.db.commit()
             
             return {
                 'status': 'error',
-                'error': str(e)
+                'error': str(e),
+                'ocr_engine': 'gemini-2.5-pro'
             }
     
-    async def _perform_ocr(self, image: np.ndarray) -> Dict[str, Any]:
-        """执行OCR识别"""
+    async def batch_process_answer_sheets(self, file_records: List[FileStorage]) -> Dict[str, Any]:
+        """批量处理答题卡"""
         try:
-            # 使用EasyOCR进行识别
-            easyocr_results = self.easyocr_reader.readtext(image)
+            # 准备文件路径列表
+            image_paths = []
+            file_map = {}
             
-            # 使用Tesseract进行识别
-            pil_image = Image.fromarray(image)
-            tesseract_text = pytesseract.image_to_string(pil_image, config=self.tesseract_config)
+            for file_record in file_records:
+                image_path = str(Path(settings.STORAGE_BASE_PATH) / file_record.file_path)
+                image_paths.append(image_path)
+                file_map[image_path] = file_record
             
-            # 合并结果
-            combined_text = self._combine_ocr_results(easyocr_results, tesseract_text)
+            # 使用Gemini批量处理
+            batch_results = await self.gemini_ocr.batch_process_images(
+                image_paths, 
+                task_type="answer_sheet"
+            )
             
-            # 计算置信度
-            confidence = self._calculate_ocr_confidence(easyocr_results)
+            # 处理结果
+            success_count = 0
+            failed_count = 0
+            results = []
+            
+            for result in batch_results:
+                file_path = result.get('file_path')
+                file_record = file_map.get(file_path)
+                
+                if not file_record:
+                    continue
+                
+                if result.get('status') == 'completed':
+                    # 更新数据库记录
+                    await self._update_answer_sheet_record(file_record, result)
+                    success_count += 1
+                else:
+                    # 记录错误
+                    file_record.processing_status = 'failed'
+                    file_record.error_message = result.get('error', 'Unknown error')
+                    self.db.commit()
+                    failed_count += 1
+                
+                results.append({
+                    'file_id': file_record.id,
+                    'filename': file_record.original_filename,
+                    'status': result.get('status'),
+                    'student_info': result.get('student_info'),
+                    'error': result.get('error')
+                })
             
             return {
-                'text': combined_text,
-                'easyocr_results': easyocr_results,
-                'tesseract_text': tesseract_text,
-                'confidence': confidence,
-                'regions': self._extract_text_regions(easyocr_results)
+                'total': len(file_records),
+                'success_count': success_count,
+                'failed_count': failed_count,
+                'results': results,
+                'ocr_engine': 'gemini-2.5-pro'
             }
             
         except Exception as e:
-            logger.error(f"OCR processing failed: {str(e)}")
+            logger.error(f"Batch processing failed: {str(e)}")
             raise
     
-    def _combine_ocr_results(self, easyocr_results: List, tesseract_text: str) -> str:
-        """合并OCR结果"""
-        # 提取EasyOCR文本
-        easyocr_text = ' '.join([result[1] for result in easyocr_results])
+    async def _update_answer_sheet_record(self, file_record: FileStorage, ocr_result: Dict):
+        """更新答题卡记录"""
+        # 创建或更新答题卡记录
+        answer_sheet = self.db.query(AnswerSheet).filter(
+            AnswerSheet.file_id == file_record.id
+        ).first()
         
-        # 简单的文本合并策略
-        # 在实际应用中，可以使用更复杂的算法来选择最佳结果
-        if len(easyocr_text) > len(tesseract_text):
-            return easyocr_text
-        else:
-            return tesseract_text
+        if not answer_sheet:
+            answer_sheet = AnswerSheet(
+                exam_id=file_record.exam_id,
+                file_id=file_record.id
+            )
+            self.db.add(answer_sheet)
+        
+        # 更新字段
+        answer_sheet.recognition_status = 'completed'
+        answer_sheet.recognition_result = ocr_result
+        answer_sheet.recognition_confidence = int(ocr_result.get('confidence', 0.8) * 100)
+        
+        # 学生信息
+        student_info = ocr_result.get('student_info', {})
+        answer_sheet.student_id = student_info.get('student_id')
+        answer_sheet.student_name = student_info.get('name')
+        answer_sheet.class_name = student_info.get('class')
+        
+        # 答案
+        objective_answers = ocr_result.get('objective_answers', {})
+        subjective_answers = ocr_result.get('subjective_answers', {})
+        all_answers = {**objective_answers, **subjective_answers}
+        answer_sheet.extracted_answers = all_answers
+        
+        # 质量检查
+        quality_issues = ocr_result.get('quality_assessment', {}).get('issues', [])
+        answer_sheet.quality_issues = quality_issues
+        answer_sheet.needs_manual_review = len(quality_issues) > 0
+        
+        # 更新文件记录
+        file_record.processing_status = 'completed'
+        file_record.processing_result = {
+            'student_info': student_info,
+            'answers_count': len(all_answers),
+            'quality_issues': len(quality_issues),
+            'ocr_engine': 'gemini-2.5-pro'
+        }
+        
+        self.db.commit()
     
-    def _calculate_ocr_confidence(self, easyocr_results: List) -> int:
-        """计算OCR置信度"""
-        if not easyocr_results:
-            return 0
+    def get_service_status(self) -> Dict[str, Any]:
+        """获取OCR服务状态"""
+        gemini_status = self.gemini_ocr.get_health_status()
         
-        confidences = [result[2] for result in easyocr_results]
-        average_confidence = sum(confidences) / len(confidences)
-        return int(average_confidence * 100)
-    
-    def _extract_text_regions(self, easyocr_results: List) -> List[Dict]:
-        """提取文本区域信息"""
-        regions = []
-        for result in easyocr_results:
-            bbox, text, confidence = result
-            regions.append({
-                'text': text,
-                'bbox': bbox,
-                'confidence': confidence
-            })
-        return regions
-    
-    async def _analyze_paper_with_ai(self, text: str) -> Dict[str, Any]:
-        """使用AI分析试卷内容"""
-        try:
-            # 调用Gemini API分析试卷
-            analysis = await self.gemini_service.analyze_paper_content(text)
-            return analysis
-        except Exception as e:
-            logger.error(f"AI paper analysis failed: {str(e)}")
-            # 返回默认分析结果
-            return {
-                'questions': [],
-                'total_points': 0,
-                'question_types': [],
-                'knowledge_areas': []
-            }
-    
-    def _extract_student_info(self, ocr_results: Dict) -> Dict[str, str]:
-        """从OCR结果中提取学生信息"""
-        text = ocr_results.get('text', '')
-        
-        # 使用正则表达式提取学生信息
-        import re
-        
-        student_info = {}
-        
-        # 提取学号
-        student_id_pattern = r'学号[：:]\s*(\d+)'
-        student_id_match = re.search(student_id_pattern, text)
-        if student_id_match:
-            student_info['student_id'] = student_id_match.group(1)
-        
-        # 提取姓名
-        name_pattern = r'姓名[：:]\s*([^\s\d]+)'
-        name_match = re.search(name_pattern, text)
-        if name_match:
-            student_info['student_name'] = name_match.group(1)
-        
-        # 提取班级
-        class_pattern = r'班级[：:]\s*([^\s]+)'
-        class_match = re.search(class_pattern, text)
-        if class_match:
-            student_info['class_name'] = class_match.group(1)
-        
-        return student_info
-    
-    def _extract_answers(self, ocr_results: Dict, image: np.ndarray) -> Dict[str, str]:
-        """从OCR结果中提取答案"""
-        # 这里需要根据具体的答题卡格式来实现
-        # 可能需要使用模板匹配、区域检测等技术
-        
-        answers = {}
-        regions = ocr_results.get('regions', [])
-        
-        # 简化的答案提取逻辑
-        for i, region in enumerate(regions):
-            if self._is_answer_region(region):
-                question_num = self._extract_question_number(region)
-                if question_num:
-                    answers[question_num] = region['text']
-        
-        return answers
-    
-    def _is_answer_region(self, region: Dict) -> bool:
-        """判断是否为答案区域"""
-        # 简化的判断逻辑
-        text = region.get('text', '')
-        return len(text) > 5 and not any(keyword in text for keyword in ['姓名', '学号', '班级'])
-    
-    def _extract_question_number(self, region: Dict) -> Optional[str]:
-        """从区域中提取题号"""
-        # 简化的题号提取逻辑
-        import re
-        text = region.get('text', '')
-        match = re.search(r'(\d+)[.、]', text)
-        return match.group(1) if match else None
-    
-    def _check_answer_sheet_quality(self, ocr_results: Dict, answers: Dict) -> List[str]:
-        """检查答题卡质量"""
-        issues = []
-        
-        # 检查OCR置信度
-        confidence = ocr_results.get('confidence', 0)
-        if confidence < 70:
-            issues.append('OCR识别置信度较低')
-        
-        # 检查答案完整性
-        if len(answers) < 5:  # 假设至少应该有5道题
-            issues.append('识别到的答案数量过少')
-        
-        # 检查学生信息完整性
-        # 这里可以添加更多的质量检查逻辑
-        
-        return issues
-    
-    def _assess_image_quality(self, image: np.ndarray) -> int:
-        """评估图像质量"""
-        # 计算图像清晰度（拉普拉斯方差）
-        laplacian_var = cv2.Laplacian(image, cv2.CV_64F).var()
-        
-        # 将方差映射到0-100的分数
-        quality_score = min(100, int(laplacian_var / 10))
-        
-        return quality_score
+        return {
+            'service': 'ocr_service',
+            'primary_engine': 'gemini-2.5-pro',
+            'status': gemini_status['status'],
+            'capabilities': gemini_status['capabilities'],
+            'features': [
+                'multimodal_recognition',
+                'handwriting_ocr',
+                'structured_extraction',
+                'quality_assessment',
+                'batch_processing'
+            ]
+        }
