@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Card, Row, Col, Breadcrumb, Button, Segmented, Alert, Slider, Space, Tag, Progress, Statistic } from 'antd';
-import { InfoCircleOutlined, UserOutlined, FileTextOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Breadcrumb, Button, Segmented, Alert, Slider, Space, Tag, Progress, Statistic, Empty } from 'antd';
+import { InfoCircleOutlined, UserOutlined, FileTextOutlined, CheckCircleOutlined, RobotOutlined } from '@ant-design/icons';
 import { Sparkles } from 'lucide-react';
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam } from '../../types/exam';
-import { mockConfigureData, mockMarkingData } from '../../data/mockData';
 
 interface MarkingWorkspaceProps {
   exam: Exam;
@@ -12,16 +11,9 @@ interface MarkingWorkspaceProps {
 
 const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
   const { setSubViewInfo } = useAppContext();
-  const [currentQuestionId, setCurrentQuestionId] = useState('q13');
-  const [scores, setScores] = useState(mockMarkingData.subjectiveScores);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
 
-  const currentRubric = mockConfigureData.rubrics[currentQuestionId];
-  const currentScores = scores[currentQuestionId];
-  const totalSubjectiveScore = Object.values(scores).reduce((sum, q) => sum + q.totalScore, 0);
-  const finalScore = mockMarkingData.objectiveScore + totalSubjectiveScore;
-
-  // 模拟学生列表
+  // 模拟学生列表 - 实际应该从后端获取
   const students = [
     { id: '2024001', name: '王同学', status: 'current' },
     { id: '2024002', name: '李同学', status: 'pending' },
@@ -32,21 +24,6 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
 
   const handleBack = () => {
     setSubViewInfo({ view: null, exam: null });
-  };
-
-  const handleScoreChange = (dimensionId: string, newScore: number) => {
-    setScores(prev => ({
-      ...prev,
-      [currentQuestionId]: {
-        ...prev[currentQuestionId],
-        dimensionScores: prev[currentQuestionId].dimensionScores.map(dim =>
-          dim.id === dimensionId ? { ...dim, score: newScore } : dim
-        ),
-        totalScore: prev[currentQuestionId].dimensionScores.reduce((sum, dim) => 
-          sum + (dim.id === dimensionId ? newScore : dim.score), 0
-        )
-      }
-    }));
   };
 
   const handleNextStudent = () => {
@@ -63,7 +40,7 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
 
   const handleSubmitGrading = () => {
     // 提交当前学生的评分
-    console.log('提交评分:', { student: students[currentStudentIndex], scores, finalScore });
+    console.log('提交评分:', { student: students[currentStudentIndex] });
     // 自动跳转到下一个学生
     if (currentStudentIndex < students.length - 1) {
       handleNextStudent();
@@ -147,7 +124,7 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
             }
             className="h-full"
           >
-            {/* 答题卡显示区域 - 移除模拟数据，显示空白状态 */}
+            {/* 答题卡显示区域 - 显示空白状态 */}
             <div className="relative w-full bg-gray-100 rounded-md overflow-hidden flex items-center justify-center" style={{ height: '600px' }}>
               <div className="text-center text-gray-500">
                 <FileTextOutlined style={{ fontSize: '64px', color: '#d9d9d9' }} className="mb-4" />
@@ -184,12 +161,12 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
             }
             className="h-full"
           >
-            {/* 总分统计 - 三项在同一排显示 */}
+            {/* 总分统计 - 三项在同一排显示，但显示空状态 */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <Card size="small" className="text-center bg-blue-50">
                 <Statistic
                   title="客观题得分"
-                  value={mockMarkingData.objectiveScore}
+                  value={0}
                   suffix="分"
                   valueStyle={{ color: '#1677ff', fontSize: '18px' }}
                 />
@@ -197,7 +174,7 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
               <Card size="small" className="text-center bg-purple-50">
                 <Statistic
                   title="主观题得分"
-                  value={totalSubjectiveScore}
+                  value={0}
                   suffix="分"
                   valueStyle={{ color: '#722ed1', fontSize: '18px' }}
                 />
@@ -205,111 +182,69 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
               <Card size="small" className="text-center bg-green-50">
                 <Statistic
                   title="总分"
-                  value={finalScore}
+                  value={0}
                   suffix="分"
                   valueStyle={{ color: '#52c41a', fontSize: '18px', fontWeight: 'bold' }}
                 />
               </Card>
             </div>
 
-            {/* 题目选择 */}
-            <div className="mb-4">
-              <div className="text-sm font-medium text-gray-700 mb-2">选择评分题目:</div>
-              <Segmented
-                options={mockConfigureData.questions.map(q => ({
-                  label: q.title.replace('第', '').replace('题：', ''),
-                  value: q.id
-                }))}
-                value={currentQuestionId}
-                onChange={setCurrentQuestionId}
-                size="small"
-                block
-              />
-            </div>
-
-            {/* 当前题目评分 */}
-            <div className="space-y-4">
-              <div className="text-sm font-medium text-gray-700 border-b pb-2">
-                {mockConfigureData.questions.find(q => q.id === currentQuestionId)?.title} 评分详情
-              </div>
-
-              {currentRubric?.dimensions.map(dim => {
-                const score = currentScores?.dimensionScores.find(s => s.id === dim.id);
-                if (!score) return null;
-
-                return (
-                  <div
-                    key={dim.id}
-                    className="p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow bg-white"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="font-medium text-base text-gray-800">
-                        {dim.name}
-                      </div>
-                      <div className="text-right">
-                        <span className="font-bold text-xl text-purple-600">
-                          {score.score}
-                        </span>
-                        <span className="text-gray-400 text-sm"> / {dim.points}</span>
-                      </div>
-                    </div>
-                    
-                    <Slider
-                      min={0}
-                      max={dim.points}
-                      value={score.score}
-                      onChange={(value) => handleScoreChange(dim.id, value)}
-                      className="mb-3"
-                      tooltip={{ formatter: (value) => `${value}分` }}
-                    />
-                    
-                    <div className="bg-blue-50 p-3 rounded text-sm">
-                      <div className="flex items-start gap-2">
-                        <InfoCircleOutlined className="text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-blue-800 mb-1">AI评分理由:</div>
-                          <div className="text-blue-700">{score.reason}</div>
-                        </div>
-                      </div>
-                    </div>
+            {/* AI评分空状态 */}
+            <div className="flex flex-col items-center justify-center py-12">
+              <Empty
+                image={<RobotOutlined style={{ fontSize: '64px', color: '#d9d9d9' }} />}
+                description={
+                  <div className="text-center">
+                    <p className="text-gray-500 mb-2">AI评分功能待激活</p>
+                    <p className="text-sm text-gray-400 mb-4">
+                      上传答题卡后，AI将自动识别并辅助评分
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* 提交按钮 */}
-            <div className="mt-6 space-y-3">
-              <Button
-                type="primary"
-                size="large"
-                block
-                icon={<CheckCircleOutlined />}
-                onClick={handleSubmitGrading}
+                }
               >
-                确认评分并继续下一份
-              </Button>
-              
-              <div className="text-xs text-gray-500 text-center">
-                确认后将自动保存评分结果并跳转到下一份答题卡
-              </div>
+                <div className="space-y-3">
+                  <Alert
+                    message="AI评分流程"
+                    description={
+                      <div className="text-left text-sm">
+                        <p>1. 上传学生答题卡文件</p>
+                        <p>2. AI自动识别手写内容</p>
+                        <p>3. 基于评分标准智能评分</p>
+                        <p>4. 教师复核确认最终分数</p>
+                      </div>
+                    }
+                    type="info"
+                    showIcon
+                    className="text-left"
+                  />
+                  
+                  <Button type="primary" disabled>
+                    等待答题卡上传
+                  </Button>
+                </div>
+              </Empty>
             </div>
 
-            {/* 快捷操作 */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <div className="text-xs text-gray-600 mb-2">快捷操作:</div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button size="small" type="text">
-                  标记疑问
-                </Button>
-                <Button size="small" type="text">
-                  添加批注
-                </Button>
-                <Button size="small" type="text">
-                  查看原题
-                </Button>
-                <Button size="small" type="text">
-                  参考答案
-                </Button>
+            {/* 功能说明 */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <div className="text-sm font-medium text-gray-700 mb-3">AI评分特点:</div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  <span>多维度评分</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span>智能识别</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  <span>历史专业</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                  <span>人工复核</span>
+                </div>
               </div>
             </div>
           </Card>
