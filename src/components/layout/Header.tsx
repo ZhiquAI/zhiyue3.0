@@ -13,7 +13,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import CreateExamModal from '../modals/CreateExamModal';
 
 const Header: React.FC = () => {
-  const { currentView, setCurrentView, setSubViewInfo } = useAppContext();
+  const { currentView, setCurrentView, setSubViewInfo, subViewInfo } = useAppContext();
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
 
   const handleNavigate = (key: string) => {
@@ -21,6 +21,25 @@ const Header: React.FC = () => {
       setCurrentView(key);
       setSubViewInfo({ view: null, exam: null });
     }
+  };
+
+  // 确定当前应该高亮的菜单项
+  const getSelectedKey = () => {
+    // 如果在子工作台中，根据子工作台类型决定高亮项
+    if (subViewInfo.view) {
+      switch (subViewInfo.view) {
+        case 'configure':
+        case 'upload':
+          return 'examList'; // 配置和上传属于考试管理
+        case 'marking':
+          return 'markingCenter'; // 阅卷属于阅卷中心
+        case 'analysis':
+          return 'dataAnalysis'; // 分析属于数据分析
+        default:
+          return currentView;
+      }
+    }
+    return currentView;
   };
 
   // 如果在首页，显示简化的导航
@@ -69,7 +88,7 @@ const Header: React.FC = () => {
         <Menu
           theme="light"
           mode="horizontal"
-          selectedKeys={[currentView]}
+          selectedKeys={[getSelectedKey()]}
           onClick={({ key }) => handleNavigate(key)}
           className="border-b-0 flex-1 justify-center"
         >
