@@ -147,45 +147,25 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
             }
             className="h-full"
           >
-            {/* 答题卡图片显示区域 */}
-            <div className="relative w-full bg-gray-100 rounded-md overflow-hidden" style={{ paddingBottom: '141.4%' }}>
-              <img
-                src="https://images.pexels.com/photos/301926/pexels-photo-301926.jpeg?auto=compress&cs=tinysrgb&w=800"
-                alt={`${currentStudent.name}的答题卡`}
-                className="absolute top-0 left-0 w-full h-full object-cover"
-              />
-              
-              {/* 题目区域标注 */}
-              <div className="absolute inset-0">
-                {mockConfigureData.questions.map(q => (
-                  <div
-                    key={q.id}
-                    className={`absolute border-2 transition-all duration-300 cursor-pointer ${
-                      currentQuestionId === q.id
-                        ? 'border-blue-500 bg-blue-500/30 ring-4 ring-blue-300'
-                        : 'border-dashed border-gray-400 hover:border-blue-300 hover:bg-blue-100/20'
-                    }`}
-                    style={{ ...q.area }}
-                    onClick={() => setCurrentQuestionId(q.id)}
-                  >
-                    <div className="absolute -top-6 left-0 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                      {q.title}
-                    </div>
-                  </div>
-                ))}
+            {/* 答题卡显示区域 - 移除模拟数据，显示空白状态 */}
+            <div className="relative w-full bg-gray-100 rounded-md overflow-hidden flex items-center justify-center" style={{ height: '600px' }}>
+              <div className="text-center text-gray-500">
+                <FileTextOutlined style={{ fontSize: '64px', color: '#d9d9d9' }} className="mb-4" />
+                <p className="text-lg font-medium mb-2">等待上传答题卡</p>
+                <p className="text-sm">请先在考试配置中上传学生答题卡文件</p>
               </div>
             </div>
 
             {/* 答题卡操作区域 */}
             <div className="mt-4 flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="text-sm text-gray-600">
-                点击答题卡上的题目区域可切换评分题目
+                上传答题卡后，可点击题目区域切换评分
               </div>
               <div className="flex items-center gap-2">
-                <Button size="small" type="text">
+                <Button size="small" type="text" disabled>
                   放大查看
                 </Button>
-                <Button size="small" type="text">
+                <Button size="small" type="text" disabled>
                   旋转图片
                 </Button>
               </div>
@@ -204,14 +184,14 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
             }
             className="h-full"
           >
-            {/* 总分统计 */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* 总分统计 - 三项在同一排显示 */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
               <Card size="small" className="text-center bg-blue-50">
                 <Statistic
                   title="客观题得分"
                   value={mockMarkingData.objectiveScore}
                   suffix="分"
-                  valueStyle={{ color: '#1677ff', fontSize: '20px' }}
+                  valueStyle={{ color: '#1677ff', fontSize: '18px' }}
                 />
               </Card>
               <Card size="small" className="text-center bg-purple-50">
@@ -219,19 +199,18 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
                   title="主观题得分"
                   value={totalSubjectiveScore}
                   suffix="分"
-                  valueStyle={{ color: '#722ed1', fontSize: '20px' }}
+                  valueStyle={{ color: '#722ed1', fontSize: '18px' }}
+                />
+              </Card>
+              <Card size="small" className="text-center bg-green-50">
+                <Statistic
+                  title="总分"
+                  value={finalScore}
+                  suffix="分"
+                  valueStyle={{ color: '#52c41a', fontSize: '18px', fontWeight: 'bold' }}
                 />
               </Card>
             </div>
-
-            <Card size="small" className="mb-4 bg-gradient-to-r from-green-50 to-blue-50">
-              <Statistic
-                title="总分"
-                value={finalScore}
-                suffix="分"
-                valueStyle={{ color: '#52c41a', fontSize: '28px', fontWeight: 'bold' }}
-              />
-            </Card>
 
             {/* 题目选择 */}
             <div className="mb-4">
