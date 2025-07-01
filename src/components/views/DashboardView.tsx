@@ -147,7 +147,7 @@ const DashboardView: React.FC = () => {
 
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={14}>
-          <Card title="我的待办事项" extra={<Tag color="red">{todoExams.length}</Tag>}>
+          <Card title="待办事项" extra={<Tag color="red">{todoExams.length}</Tag>}>
             {todoExams.length > 0 ? (
               <List
                 itemLayout="horizontal"
