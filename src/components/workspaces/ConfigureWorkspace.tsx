@@ -20,7 +20,7 @@ interface UploadedFile {
 }
 
 const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
-  const { setSubViewInfo } = useAppContext();
+  const { setSubViewInfo, updateExamStatus } = useAppContext();
   const [uploadedFiles, setUploadedFiles] = useState<{
     paper: UploadedFile | null;
     answer: UploadedFile | null;
@@ -42,7 +42,25 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
   };
 
   const handleSaveConfiguration = () => {
-    message.success('所有配置已保存！');
+    if (recognizedQuestions.length === 0) {
+      message.warning('请先完成AI识别配置');
+      return;
+    }
+
+    try {
+      // 更新考试状态为"待阅卷"
+      updateExamStatus(exam.id, '待阅卷');
+      
+      message.success('配置保存成功！考试已进入待阅卷状态');
+      
+      // 延迟跳转到阅卷中心
+      setTimeout(() => {
+        setSubViewInfo({ view: null, exam: null });
+      }, 1500);
+      
+    } catch (error) {
+      message.error('保存配置失败，请重试');
+    }
   };
 
   // 处理文件上传
@@ -117,7 +135,7 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
     setRecognizedQuestions(questions);
     setGeneratedRubrics(rubrics);
     setShowRecognitionWorkspace(false);
-    message.success('AI识别和配置完成！');
+    message.success('AI识别和配置完成！现在可以保存配置并开始阅卷');
   };
 
   // 渲染文件上传区域
@@ -304,7 +322,7 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
           ]}
         />
         <div className="flex items-center gap-2">
-          {processingStatus.paper === 'completed' && (
+          {processingStatus.paper === 'completed' && recognizedQuestions.length === 0 && (
             <Button
               type="primary"
               size="large"
@@ -320,9 +338,8 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
             icon={<CheckCircleOutlined />}
             onClick={handleSaveConfiguration}
             disabled={recognizedQuestions.length === 0}
-            ghost
           >
-            完成配置
+            保存配置并开始阅卷
           </Button>
         </div>
       </div>
@@ -331,7 +348,7 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
       {configurationMode === 'ai' && recognizedQuestions.length > 0 && (
         <Alert
           message="AI智能配置完成"
-          description={`已识别 ${recognizedQuestions.length} 道题目，并生成多维评分标准。配置已保存，可以开始阅卷。`}
+          description={`已识别 ${recognizedQuestions.length} 道题目，并生成多维评分标准。点击"保存配置并开始阅卷"即可进入阅卷流程。`}
           type="success"
           showIcon
           icon={<RobotOutlined />}
@@ -347,7 +364,7 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
             <p><strong>第一步：</strong>上传试卷文件（必需）- 支持PDF、JPG、PNG格式</p>
             <p><strong>第二步：</strong>上传参考答案（可选）- 帮助AI生成更准确的评分标准</p>
             <p><strong>第三步：</strong>点击"开始AI智能识别"，系统将自动识别题目并生成评分标准</p>
-            <p><strong>第四步：</strong>在识别工作台中确认和调整配置，完成后即可开始阅卷</p>
+            <p><strong>第四步：</strong>确认配置后保存，考试将进入"待阅卷"状态，可在阅卷中心开始阅卷</p>
           </div>
         }
         type="info"
@@ -412,10 +429,19 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
                 <RobotOutlined className="text-green-600" />
                 <span className="font-medium text-green-800">AI配置完成</span>
               </div>
-              <p className="text-sm text-green-700">
+              <p className="text-sm text-green-700 mb-3">
                 已识别 {recognizedQuestions.length} 道题目，生成 {generatedRubrics.length} 个评分标准。
-                系统已准备就绪，可以开始上传答题卡进行阅卷。
+                配置已完成，可以保存并开始阅卷流程。
               </p>
+              <Button
+                type="primary"
+                size="large"
+                icon={<CheckCircleOutlined />}
+                onClick={handleSaveConfiguration}
+                className="w-full"
+              >
+                保存配置并开始阅卷
+              </Button>
             </div>
           )}
         </Card>

@@ -4,7 +4,9 @@ import {
   UploadOutlined, 
   CheckCircleOutlined, 
   BarChartOutlined,
-  ClockCircleOutlined 
+  ClockCircleOutlined,
+  EditOutlined,
+  FileTextOutlined
 } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import CreateExamModal from '../modals/CreateExamModal';
@@ -33,7 +35,12 @@ const DashboardView: React.FC = () => {
       // 开始阅卷 - 如果有待阅卷的考试，进入第一个
       if (markingExams.length > 0) {
         const firstMarkingExam = markingExams[0];
-        setSubViewInfo({ view: 'marking', exam: firstMarkingExam });
+        if (firstMarkingExam.status === '待阅卷') {
+          // 如果是待阅卷状态，提示需要先上传答题卡
+          setCurrentView('markingCenter');
+        } else {
+          setSubViewInfo({ view: 'marking', exam: firstMarkingExam });
+        }
       } else {
         // 如果没有待阅卷的考试，跳转到阅卷中心
         setCurrentView('markingCenter');
@@ -50,10 +57,36 @@ const DashboardView: React.FC = () => {
     } else if (exam) {
       const viewMap = {
         '待配置': 'configure',
-        '待阅卷': 'marking',
+        '待阅卷': 'configure', // 待阅卷状态也可以回到配置页面上传答题卡
         '阅卷中': 'marking'
       };
       setSubViewInfo({ view: viewMap[exam.status] || 'configure', exam });
+    }
+  };
+
+  const getActionIcon = (status: string) => {
+    switch (status) {
+      case '待配置':
+        return <FileTextOutlined className="text-orange-600" />;
+      case '待阅卷':
+        return <UploadOutlined className="text-blue-600" />;
+      case '阅卷中':
+        return <EditOutlined className="text-green-600" />;
+      default:
+        return <ClockCircleOutlined className="text-gray-600" />;
+    }
+  };
+
+  const getActionText = (status: string) => {
+    switch (status) {
+      case '待配置':
+        return '配置试卷';
+      case '待阅卷':
+        return '上传答题卡';
+      case '阅卷中':
+        return '继续阅卷';
+      default:
+        return '查看详情';
     }
   };
 
@@ -126,14 +159,14 @@ const DashboardView: React.FC = () => {
                         type="primary" 
                         onClick={() => handleNavigate('handle', item)}
                       >
-                        去处理
+                        {getActionText(item.status)}
                       </Button>
                     ]}
                   >
                     <List.Item.Meta
                       avatar={
                         <Avatar 
-                          icon={<ClockCircleOutlined />} 
+                          icon={getActionIcon(item.status)}
                           style={{ backgroundColor: '#ff9800' }} 
                         />
                       }
@@ -156,6 +189,14 @@ const DashboardView: React.FC = () => {
                       description={
                         <div className="text-gray-400 text-xs mt-2">
                           创建于: {item.createdAt}
+                          {item.status === '待阅卷' && (
+                            <span className="ml-2 text-blue-600">• 试卷已配置，等待上传答题卡</span>
+                          )}
+                          {item.status === '阅卷中' && item.tasks.total > 0 && (
+                            <span className="ml-2 text-green-600">
+                              • 进度: {item.tasks.completed}/{item.tasks.total}
+                            </span>
+                          )}
                         </div>
                       }
                     />
