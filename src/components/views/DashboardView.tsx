@@ -32,7 +32,7 @@ const DashboardView: React.FC = () => {
     if (type === 'create') {
       setCreateModalVisible(true);
     } else if (type === 'startMarking') {
-      // 开始阅卷 - 如果有待阅卷的考试，进入第一个
+      // 开始阅卷 - 如果有待阅卷的考试，提示需要先上传答题卡
       if (markingExams.length > 0) {
         const firstMarkingExam = markingExams[0];
         if (firstMarkingExam.status === '待阅卷') {
@@ -57,7 +57,7 @@ const DashboardView: React.FC = () => {
     } else if (exam) {
       const viewMap = {
         '待配置': 'configure',
-        '待阅卷': 'configure', // 待阅卷状态也可以回到配置页面上传答题卡
+        '待阅卷': 'upload', // 待阅卷状态跳转到上传答题卡工作台
         '阅卷中': 'marking'
       };
       setSubViewInfo({ view: viewMap[exam.status] || 'configure', exam });
