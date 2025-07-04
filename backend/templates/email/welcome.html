@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>欢迎使用智阅AI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .content {
+            padding: 40px 30px;
+            background-color: #ffffff;
+        }
+        .content h2 {
+            color: #333;
+            margin-top: 0;
+            font-size: 24px;
+            font-weight: 400;
+        }
+        .content p {
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .button {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            margin: 20px 0;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .info-box {
+            background-color: #e8f5e8;
+            border: 1px solid #4CAF50;
+            color: #2e7d32;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .feature-list {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .feature-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .feature-list li {
+            margin-bottom: 10px;
+        }
+        .footer {
+            padding: 30px 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">智阅AI</div>
+            <div class="subtitle">智能阅卷系统</div>
+        </div>
+        <div class="content">
+            <h2>🎉 欢迎加入智阅AI！</h2>
+            <p>您好，<strong>{{username}}</strong>！</p>
+            <p>欢迎使用智阅AI智能阅卷系统！您的账户已成功创建，现在可以开始体验我们的智能阅卷服务了。</p>
+            
+            <div class="info-box">
+                <strong>您的账户信息：</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>用户名: {{username}}</li>
+                    <li>邮箱: {{email}}</li>
+                    <li>注册时间: {{created_at}}</li>
+                </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{login_link}}" class="button">立即登录</a>
+            </div>
+            
+            <div class="feature-list">
+                <h3 style="margin-top: 0; color: #333;">🚀 智阅AI主要功能：</h3>
+                <ul>
+                    <li><strong>智能OCR识别</strong> - 采用最新的Gemini 2.5 Pro技术，准确识别答题卡内容</li>
+                    <li><strong>AI辅助评分</strong> - 智能分析答案质量，提供评分建议</li>
+                    <li><strong>多维度分析</strong> - 生成详细的学情分析报告</li>
+                    <li><strong>高效工作流</strong> - 从考试创建到成绩分析的完整流程</li>
+                    <li><strong>数据可视化</strong> - 直观的图表展示分析结果</li>
+                </ul>
+            </div>
+            
+            <p>如果您在使用过程中遇到任何问题，请随时联系我们的技术支持团队。我们将竭诚为您服务！</p>
+            
+            <p>祝您使用愉快！</p>
+            <p><strong>智阅AI团队</strong></p>
+        </div>
+        <div class="footer">
+            <p>此邮件由智阅AI系统自动发送，请勿回复。</p>
+            <p>如有问题，请联系系统管理员。</p>
+            <p style="margin-top: 15px; color: #999;">
+                © 2025 智阅AI. 保留所有权利。
+            </p>
+        </div>
+    </div>
+</body>
+</html>

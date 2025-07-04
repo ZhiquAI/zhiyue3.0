@@ -5,6 +5,13 @@
 import os
 from pathlib import Path
 from typing import List
+from dotenv import load_dotenv
+
+# 加载环境变量文件
+backend_dir = Path(__file__).parent.parent
+env_file = backend_dir / ".env"
+if env_file.exists():
+    load_dotenv(env_file)
 
 class Settings:
     """应用配置类"""
@@ -50,7 +57,8 @@ class Settings:
     AI_SUGGESTION_ENABLED = os.getenv("AI_SUGGESTION_ENABLED", "True").lower() == "true"
     
     # 安全配置
-    SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+    SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
+    ALGORITHM = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     
     # 日志配置

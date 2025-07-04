@@ -3,7 +3,7 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { message } from 'antd';
 
 // API配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const API_TIMEOUT = 30000;
 
 // 创建axios实例
@@ -118,23 +118,19 @@ export const examApi = {
     status?: string;
     search?: string;
   }): Promise<PaginatedResponse<any>> => {
-    const response = await apiClient.get('/exams', { params });
+    const response = await apiClient.get('/api/exams/', { params });
     return response.data;
   },
 
   // 创建考试
-  createExam: async (examData: FormData): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/exams', examData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+  createExam: async (examData: any): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/api/exams/', examData);
     return response.data;
   },
 
   // 获取考试详情
   getExam: async (examId: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get(`/exams/${examId}`);
+    const response = await apiClient.get(`/api/exams/${examId}`);
     return response.data;
   },
 
@@ -228,6 +224,19 @@ export const authApi = {
   // 登录
   login: async (credentials: { username: string; password: string }): Promise<ApiResponse<any>> => {
     const response = await apiClient.post('/auth/login', credentials);
+    return response.data;
+  },
+
+  // 注册
+  register: async (userData: {
+    username: string;
+    email: string;
+    password: string;
+    name: string;
+    school?: string;
+    subject?: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/auth/register', userData);
     return response.data;
   },
 

@@ -154,11 +154,28 @@ ${text}
 `;
 
     try {
-      const response = await geminiGradingApi.analyzePaperContent(prompt);
-      
+      // 检查是否有Gemini API配置
+      const hasGeminiAPI = import.meta.env.VITE_GEMINI_API_KEY;
+
+      if (hasGeminiAPI) {
+        try {
+          const response = await geminiGradingApi.analyzePaperContent(prompt);
+          // 模拟处理时间
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return response;
+        } catch (apiError) {
+          console.warn('Gemini API failed, falling back to mock data:', apiError);
+          message.warning('AI服务暂时不可用，使用模拟数据进行演示');
+        }
+      } else {
+        console.warn('Gemini API key not configured, using mock data');
+        message.info('AI服务未配置，使用模拟数据进行演示');
+      }
+
       // 模拟处理时间
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
+      // 返回模拟数据作为fallback
       return {
         questions: [
           {

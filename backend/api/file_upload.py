@@ -8,11 +8,18 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import logging
 
-from database import get_db
-from services.file_storage_service import FileStorageService
-from services.ocr_service import OCRService
-from models.file_storage import FileStorage
-from auth import get_current_user
+try:
+    from backend.database import get_db
+    from backend.services.file_storage_service import FileStorageService
+    from backend.services.ocr_service import OCRService
+    from backend.models.file_storage import FileStorage
+    from backend.auth import get_current_user
+except ImportError:
+    from database import get_db
+    from services.file_storage_service import FileStorageService
+    from services.ocr_service import OCRService
+    from models.file_storage import FileStorage
+    from auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/files", tags=["文件管理"])

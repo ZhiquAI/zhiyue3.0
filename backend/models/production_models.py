@@ -39,6 +39,10 @@ class Exam(Base):
         Index('idx_exam_status_created', 'status', 'created_at'),
         Index('idx_exam_creator_subject', 'created_by', 'subject'),
     )
+    
+    # 关联关系
+    creator = relationship("User", back_populates="created_exams")
+    answer_sheets = relationship("AnswerSheet", back_populates="exam")
 
 class AnswerSheet(Base):
     """答题卡表 - 生产优化版"""
@@ -84,6 +88,11 @@ class AnswerSheet(Base):
         Index('idx_answer_review', 'needs_review', 'reviewed_at'),
         Index('idx_answer_score', 'total_score'),
     )
+    
+    # 关联关系
+    exam = relationship("Exam", back_populates="answer_sheets")
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+    grading_tasks = relationship("GradingTask", back_populates="answer_sheet")
 
 class GradingTask(Base):
     """评分任务队列"""
@@ -111,6 +120,9 @@ class GradingTask(Base):
         Index('idx_task_status_priority', 'status', 'priority'),
         Index('idx_task_created', 'created_at'),
     )
+    
+    # 关联关系
+    answer_sheet = relationship("AnswerSheet", back_populates="grading_tasks")
 
 class User(Base):
     """用户表"""
@@ -119,6 +131,7 @@ class User(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False, comment='密码哈希')
     name = Column(String(100), nullable=False, comment='真实姓名')
     role = Column(String(20), nullable=False, default='teacher', comment='角色')
     
@@ -127,6 +140,20 @@ class User(Base):
     subject = Column(String(50), comment='任教科目')
     grades = Column(JSON, comment='任教年级')
     
+    # 状态和时间戳
     is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False, comment='邮箱验证状态')
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, comment='最后登录时间')
+    
+    # 索引优化
+    __table_args__ = (
+        Index('idx_user_username', 'username'),
+        Index('idx_user_email', 'email'),
+        Index('idx_user_active_role', 'is_active', 'role'),
+    )
+    
+    # 关联关系
+    created_exams = relationship("Exam", back_populates="creator")
+    reviewed_answer_sheets = relationship("AnswerSheet", foreign_keys="AnswerSheet.reviewed_by")

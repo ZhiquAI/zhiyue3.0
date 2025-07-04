@@ -47,8 +47,8 @@ const Header: React.FC = () => {
     return (
       <Layout.Header className="bg-white/95 backdrop-blur-sm shadow-sm flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <Avatar size="large" icon={<Sparkles />} className="bg-blue-600" />
-          <h1 className="text-xl font-bold text-gray-800 m-0">智阅AI</h1>
+          <Avatar size="large" icon={<Sparkles />} className="bg-slate-600" />
+          <h1 className="text-xl font-bold text-slate-800 m-0">智阅AI</h1>
         </div>
         <div className="flex items-center gap-4">
           <Button type="text" onClick={() => handleNavigate('dashboard')}>
@@ -72,14 +72,14 @@ const Header: React.FC = () => {
     <>
       <Layout.Header className="bg-white shadow-sm flex items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <Avatar 
-            size="large" 
-            icon={<Sparkles />} 
-            className="bg-blue-600 cursor-pointer" 
+          <Avatar
+            size="large"
+            icon={<Sparkles />}
+            className="bg-slate-600 cursor-pointer"
             onClick={() => handleNavigate('landing')}
           />
-          <h1 
-            className="text-xl font-bold text-gray-800 m-0 cursor-pointer" 
+          <h1
+            className="text-xl font-bold text-slate-800 m-0 cursor-pointer"
             onClick={() => handleNavigate('landing')}
           >
             智阅AI

@@ -3,7 +3,7 @@ import { message } from 'antd';
 
 // Gemini API配置
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-pro';
+const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL || 'gemini-1.5-pro';
 const GEMINI_BASE_URL = import.meta.env.VITE_GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta';
 const MAX_TOKENS = parseInt(import.meta.env.VITE_GEMINI_MAX_TOKENS) || 8192;
 const TEMPERATURE = parseFloat(import.meta.env.VITE_GEMINI_TEMPERATURE) || 0.3;
@@ -109,19 +109,27 @@ const callGeminiAPI = async (prompt: string, imageData?: string): Promise<string
   };
 
   try {
-    const response = await fetch(
-      `${GEMINI_BASE_URL}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      }
-    );
+    const apiUrl = `${GEMINI_BASE_URL}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    console.log('🔍 Gemini API调用信息:', {
+      url: apiUrl.replace(GEMINI_API_KEY, '***'),
+      model: GEMINI_MODEL,
+      hasApiKey: !!GEMINI_API_KEY,
+      apiKeyLength: GEMINI_API_KEY?.length
+    });
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    console.log('📡 API响应状态:', response.status, response.statusText);
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('❌ Gemini API错误详情:', errorData);
       throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`);
     }
 

@@ -227,7 +227,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({ exam }) => {
 
   const renderNavigationHeader = () => {
     return (
-      <Card className="mb-4 navigation-header" bodyStyle={{ padding: '16px 24px' }}>
+      <Card className="mb-4 navigation-header" styles={{ body: { padding: '16px 24px' } }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Dropdown menu={getQuickNavMenu()} trigger={['click']}>

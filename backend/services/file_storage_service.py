@@ -9,14 +9,18 @@ import shutil
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from pathlib import Path
-import magic
+import mimetypes
 from PIL import Image
 import logging
 
 from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException
-from models.file_storage import FileStorage, PaperDocument, AnswerSheet, ProcessingQueue
-from config import settings
+try:
+    from backend.models.file_storage import FileStorage, PaperDocument, AnswerSheet, ProcessingQueue
+    from backend.config.settings import settings
+except ImportError:
+    from models.file_storage import FileStorage, PaperDocument, AnswerSheet, ProcessingQueue
+    from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -60,19 +64,24 @@ class FileStorageService:
     def _get_mime_type(self, file_path: Path) -> str:
         """获取文件MIME类型"""
         try:
-            return magic.from_file(str(file_path), mime=True)
+            # 使用标准库mimetypes替代python-magic
+            mime_type, _ = mimetypes.guess_type(str(file_path))
+            if mime_type:
+                return mime_type
         except:
-            # 备用方案：根据扩展名判断
-            extension = file_path.suffix.lower()
-            mime_map = {
-                '.pdf': 'application/pdf',
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg',
-                '.png': 'image/png',
-                '.tiff': 'image/tiff',
-                '.tif': 'image/tiff'
-            }
-            return mime_map.get(extension, 'application/octet-stream')
+            pass
+        
+        # 备用方案：根据扩展名判断
+        extension = file_path.suffix.lower()
+        mime_map = {
+            '.pdf': 'application/pdf',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.tiff': 'image/tiff',
+            '.tif': 'image/tiff'
+        }
+        return mime_map.get(extension, 'application/octet-stream')
     
     def _validate_file(self, file: UploadFile) -> Dict[str, Any]:
         """验证上传文件"""

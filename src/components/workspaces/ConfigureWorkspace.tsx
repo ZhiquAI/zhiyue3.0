@@ -147,10 +147,10 @@ const ConfigureWorkspace: React.FC<ConfigureWorkspaceProps> = ({ exam }) => {
 
     if (status === 'none' || !file) {
       return (
-        <Card 
+        <Card
           title={title}
           className="h-full"
-          bodyStyle={{ height: 'calc(100% - 57px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          styles={{ body: { height: 'calc(100% - 57px)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }}
         >
           <Upload
             name="file"
