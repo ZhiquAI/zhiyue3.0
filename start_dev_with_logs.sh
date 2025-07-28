@@ -34,10 +34,17 @@ echo "🌐 启动前端服务..."
 bash start_frontend.sh &
 FRONTEND_PID=$!
 
+# 启动后端服务
+echo "🔧 启动后端服务..."
+cd backend && python3 start.py &
+BACKEND_PID=$!
+cd ..
+
 echo ""
 echo "🎉 开发环境启动完成！"
 echo "=================================="
 echo "📱 前端服务: http://localhost:5174/"
+echo "🔧 后端服务: http://localhost:8000/"
 echo "🔧 日志服务: http://localhost:3001/"
 echo "📁 日志目录: $(pwd)/logs/"
 echo ""
@@ -55,7 +62,7 @@ echo ""
 echo "按 Ctrl+C 停止所有服务"
 
 # 等待用户中断
-trap 'echo ""; echo "🛑 正在停止服务..."; kill $LOG_SERVER_PID $FRONTEND_PID 2>/dev/null; exit 0' INT
+trap 'echo ""; echo "🛑 正在停止服务..."; kill $LOG_SERVER_PID $FRONTEND_PID $BACKEND_PID 2>/dev/null; exit 0' INT
 
 # 保持脚本运行
 wait
