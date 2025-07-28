@@ -190,7 +190,7 @@ async def update_exam(
     
     return exam_response
 
-@router.delete("/{exam_id}")
+@router.delete("/{exam_id}", response_model=dict)
 async def delete_exam(
     exam_id: str,
     current_user: User = Depends(get_current_user),
@@ -217,7 +217,7 @@ async def delete_exam(
     return {"message": "考试删除成功"}
 
 # 试卷文件上传
-@router.post("/{exam_id}/upload-paper")
+@router.post("/{exam_id}/upload-paper", response_model=dict)
 async def upload_exam_paper(
     exam_id: str,
     file: UploadFile = File(...),
@@ -301,7 +301,7 @@ async def get_answer_sheets(
     
     return [AnswerSheetResponse.from_orm(sheet) for sheet in answer_sheets]
 
-@router.post("/{exam_id}/batch-upload")
+@router.post("/{exam_id}/batch-upload", response_model=dict)
 async def batch_upload_answer_sheets(
     exam_id: str,
     files: List[UploadFile] = File(...),
@@ -378,7 +378,7 @@ async def batch_upload_answer_sheets(
     }
 
 # 考试状态管理
-@router.post("/{exam_id}/status")
+@router.post("/{exam_id}/status", response_model=dict)
 async def update_exam_status(
     exam_id: str,
     status: str = Form(...),

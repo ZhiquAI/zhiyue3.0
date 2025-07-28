@@ -1,6 +1,6 @@
 // Gemini AI Hook - 在智阅AI中使用Gemini功能
 import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { message } from '../utils/message';
 import { geminiGradingApi, checkGeminiHealth } from '../services/geminiApi';
 import { useAsyncOperation } from './useAsyncOperation';
 

@@ -1,0 +1,109 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 现代渐变色 -->
+    <linearGradient id="modernGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 智能蓝色渐变 -->
+    <linearGradient id="aiGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 发光效果 -->
+    <filter id="modernGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+    
+    <!-- 阴影 -->
+    <filter id="modernShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#6366f1" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- 背景几何形状 -->
+  <rect x="10" y="10" width="100" height="100" rx="20" fill="url(#modernGradient)" opacity="0.05" filter="url(#modernShadow)"/>
+  
+  <!-- "智"字现代化设计 -->
+  <g transform="translate(15, 20)" filter="url(#modernGlow)">
+    <!-- 简化的智字结构 -->
+    <g fill="url(#modernGradient)" stroke="none">
+      <!-- 知部分的现代化表达 -->
+      <rect x="5" y="5" width="3" height="30" rx="1.5"/>
+      <rect x="2" y="15" width="9" height="3" rx="1.5"/>
+      <rect x="2" y="22" width="9" height="3" rx="1.5"/>
+      
+      <!-- 现代化的口字 -->
+      <rect x="15" y="8" width="15" height="15" fill="none" stroke="url(#modernGradient)" stroke-width="3" rx="3"/>
+      <rect x="18" y="12" width="9" height="2" fill="url(#modernGradient)" rx="1"/>
+    </g>
+    
+    <!-- 日部分的几何化设计 -->
+    <g fill="url(#aiGradient)" transform="translate(0, 40)">
+      <rect x="2" y="0" width="28" height="25" fill="none" stroke="url(#aiGradient)" stroke-width="3" rx="4"/>
+      <!-- 内部网格线条 -->
+      <rect x="5" y="5" width="22" height="2" fill="url(#aiGradient)" rx="1"/>
+      <rect x="5" y="11" width="22" height="2" fill="url(#aiGradient)" rx="1"/>
+      <rect x="5" y="17" width="22" height="2" fill="url(#aiGradient)" rx="1"/>
+      <rect x="14" y="5" width="2" height="15" fill="url(#aiGradient)" rx="1"/>
+    </g>
+  </g>
+  
+  <!-- "阅"字现代化设计 -->
+  <g transform="translate(65, 20)" filter="url(#modernGlow)">
+    <!-- 门字框的现代化 -->
+    <g fill="url(#modernGradient)">
+      <rect x="0" y="0" width="4" height="40" rx="2"/>
+      <rect x="26" y="0" width="4" height="40" rx="2"/>
+      <rect x="0" y="0" width="30" height="4" rx="2"/>
+    </g>
+    
+    <!-- 内部结构的几何化 -->
+    <g fill="url(#aiGradient)" transform="translate(6, 10)">
+      <!-- 简化的兑字结构 -->
+      <rect x="2" y="0" width="3" height="15" rx="1.5" transform="rotate(-10 3.5 7.5)"/>
+      <rect x="13" y="0" width="3" height="15" rx="1.5" transform="rotate(10 14.5 7.5)"/>
+      
+      <!-- 现代化的口 -->
+      <rect x="5" y="18" width="8" height="8" fill="none" stroke="url(#aiGradient)" stroke-width="2" rx="2"/>
+      <circle cx="9" cy="22" r="1" fill="url(#aiGradient)"/>
+    </g>
+  </g>
+  
+  <!-- 智能连接点 -->
+  <g opacity="0.8">
+    <circle cx="45" cy="60" r="2" fill="#6366f1">
+      <animate attributeName="r" values="1.5;3;1.5" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="75" cy="60" r="2" fill="#8b5cf6">
+      <animate attributeName="r" values="1.5;3;1.5" dur="2s" repeatCount="indefinite" begin="1s"/>
+    </circle>
+  </g>
+  
+  <!-- 连接线 -->
+  <line x1="47" y1="60" x2="73" y2="60" stroke="url(#modernGradient)" stroke-width="2" opacity="0.6">
+    <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" repeatCount="indefinite"/>
+  </line>
+  
+  <!-- 装饰性几何元素 -->
+  <g opacity="0.4">
+    <rect x="20" y="95" width="8" height="2" fill="url(#modernGradient)" rx="1">
+      <animateTransform attributeName="transform" type="translateX" values="0;60;0" dur="4s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="92" y="25" width="2" height="8" fill="url(#aiGradient)" rx="1">
+      <animateTransform attributeName="transform" type="translateY" values="0;60;0" dur="5s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  
+  <!-- 外框装饰 -->
+  <rect x="5" y="5" width="110" height="110" fill="none" stroke="url(#modernGradient)" stroke-width="1" opacity="0.2" rx="15" stroke-dasharray="10,5">
+    <animate attributeName="stroke-dashoffset" values="0;15" dur="3s" repeatCount="indefinite"/>
+  </rect>
+</svg>

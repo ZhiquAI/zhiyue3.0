@@ -1,6 +1,6 @@
 // Gemini OCR Hook - 专门处理OCR识别功能
 import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { message } from '../utils/message';
 import { geminiOCRApi } from '../services/geminiApi';
 import { useAsyncOperation } from './useAsyncOperation';
 

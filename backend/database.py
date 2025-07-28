@@ -33,7 +33,7 @@ def get_db():
 def create_tables():
     """创建所有数据库表"""
     try:
-        from backend.models.production_models import Base
+        from models.production_models import Base
     except ImportError:
         from models.production_models import Base
     Base.metadata.create_all(bind=engine)

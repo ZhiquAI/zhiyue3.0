@@ -5,9 +5,9 @@ import {
   LineChartOutlined, 
   PieChartOutlined, 
   UserOutlined,
-  TrendingUpOutlined,
+  ArrowUpOutlined,
   BookOutlined,
-  TargetOutlined
+  TagOutlined
 } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import AnalyticsCard from '../analytics/AnalyticsCard';
@@ -142,7 +142,7 @@ const ImprovedDataAnalysisView: React.FC = () => {
             title="及格率"
             value={analyticsData.overview.passRate}
             suffix="%"
-            prefix={<TrendingUpOutlined />}
+            prefix={<ArrowUpOutlined />}
             progress={{
               percent: analyticsData.overview.passRate,
               status: analyticsData.overview.passRate >= 90 ? 'success' : 'normal'
@@ -154,7 +154,7 @@ const ImprovedDataAnalysisView: React.FC = () => {
             title="优秀率"
             value={analyticsData.overview.excellentRate}
             suffix="%"
-            prefix={<TargetOutlined />}
+            prefix={<TagOutlined />}
             progress={{
               percent: analyticsData.overview.excellentRate,
               status: analyticsData.overview.excellentRate >= 60 ? 'success' : 'normal'

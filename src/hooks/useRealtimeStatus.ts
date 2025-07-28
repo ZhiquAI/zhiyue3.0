@@ -1,6 +1,6 @@
 // 实时状态更新Hook
 import { useState, useEffect, useRef } from 'react';
-import { message } from 'antd';
+import { message } from '../utils/message';
 
 interface RealtimeStatus {
   examId: string;

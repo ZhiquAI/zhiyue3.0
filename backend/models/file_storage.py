@@ -3,7 +3,7 @@
 处理试卷、答题卡等文件的存储和管理
 """
 
-from sqlalchemy import Column, String, Integer, DateTime, Text, Boolean, JSON, ForeignKey, Index
+from sqlalchemy import Column, String, Integer, DateTime, Text, Boolean, JSON, ForeignKey, Index, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -116,6 +116,11 @@ class AnswerSheet(Base):
     student_id = Column(String(50), comment='学生ID/学号')
     student_name = Column(String(100), comment='学生姓名')
     class_name = Column(String(50), comment='班级')
+    
+    # 涂卡识别相关字段
+    bubble_sheet_analysis = Column(JSON, comment='涂卡分析结果')
+    bubble_quality_score = Column(Float, comment='涂卡质量评分')
+    recognition_confidence = Column(Float, comment='识别置信度')
     
     # 答题卡信息
     sheet_number = Column(String(50), comment='答题卡编号')

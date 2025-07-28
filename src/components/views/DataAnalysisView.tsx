@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, Form, Select, List, Button, Breadcrumb, Row, Col, Statistic, Tabs, DatePicker, Space, Tag, Empty, Spin } from 'antd';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUpOutlined, TrendingDownOutlined, UserOutlined, BookOutlined, BarChartOutlined, PieChartOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, ArrowDownOutlined, UserOutlined, BookOutlined, BarChartOutlined, PieChartOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { mockScoreTrendData } from '../../data/mockData';
 import { Exam } from '../../types/exam';
@@ -82,7 +82,7 @@ const DataAnalysisView: React.FC = () => {
               title="及格率"
               value={processedData.overview.passRate}
               suffix="%"
-              prefix={<TrendingUpOutlined className="text-indigo-600" />}
+              prefix={<ArrowUpOutlined className="text-indigo-600" />}
               valueStyle={{ color: '#722ed1' }}
             />
           </Card>
@@ -222,7 +222,13 @@ const DataAnalysisView: React.FC = () => {
               <span className="text-sm text-slate-600">时间范围</span>
               <RangePicker
                 value={dateRange}
-                onChange={setDateRange}
+                onChange={(dates) => {
+                  if (dates && dates[0] && dates[1]) {
+                    setDateRange([dates[0], dates[1]]);
+                  } else {
+                    setDateRange(null);
+                  }
+                }}
                 className="w-full"
                 placeholder={['开始日期', '结束日期']}
               />

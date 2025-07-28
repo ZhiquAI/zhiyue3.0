@@ -11,6 +11,8 @@ import time
 from sqlalchemy.orm import Session
 from models.file_storage import FileStorage, PaperDocument, AnswerSheet
 from services.gemini_ocr_service import GeminiOCRService
+from services.bubble_sheet_service import BubbleSheetService
+from services.barcode_service import BarcodeService
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,8 @@ class OCRService:
     def __init__(self, db: Session):
         self.db = db
         self.gemini_ocr = GeminiOCRService()
+        self.bubble_sheet_service = BubbleSheetService()
+        self.barcode_service = BarcodeService()
         
     async def process_paper_document(self, file_record: FileStorage) -> Dict[str, Any]:
         """处理试卷文档OCR - 使用Gemini"""
@@ -107,14 +111,61 @@ class OCRService:
             # 获取文件路径
             image_path = Path(settings.STORAGE_BASE_PATH) / file_record.file_path
             
+            # 首先尝试条形码识别
+            barcode_results = self.barcode_service.recognize_barcodes(str(image_path))
+            
             # 使用Gemini进行答题卡识别
             ocr_results = await self.gemini_ocr.process_answer_sheet(str(image_path))
+            
+            # 如果有条形码识别结果，优先使用条形码信息
+            if barcode_results:
+                barcode_student_info = self._merge_barcode_info(barcode_results)
+                if barcode_student_info:
+                    # 用条形码信息覆盖或补充OCR识别的学生信息
+                    ocr_student_info = ocr_results.get('student_info', {})
+                    merged_info = {**ocr_student_info, **barcode_student_info}
+                    ocr_results['student_info'] = merged_info
+                    ocr_results['barcode_info'] = {
+                        'detected': True,
+                        'results': barcode_results,
+                        'confidence': 1.0
+                    }
+                    logger.info(f"Barcode detected and merged: {barcode_student_info}")
+            else:
+                ocr_results['barcode_info'] = {'detected': False}
+            
+            # 进行涂卡分析（如果检测到客观题）
+            if ocr_results.get('objective_answers'):
+                try:
+                    bubble_analysis = self.bubble_sheet_service.analyze_bubble_sheet(
+                        str(image_path), ocr_results
+                    )
+                    # 使用涂卡分析增强OCR结果
+                    ocr_results = self.bubble_sheet_service.enhance_ocr_with_bubble_analysis(
+                        ocr_results, bubble_analysis
+                    )
+                    
+                    # 验证答案一致性
+                    validation_result = self.bubble_sheet_service.validate_bubble_answers(
+                        ocr_results.get('objective_answers', {}), bubble_analysis
+                    )
+                    ocr_results['bubble_validation'] = validation_result
+                    
+                    logger.info(f"涂卡分析完成，质量评分: {bubble_analysis.overall_quality_score}")
+                except Exception as e:
+                    logger.warning(f"涂卡分析失败，使用基础OCR结果: {str(e)}")
+            
             ocr_results['processing_time'] = time.time() - start_time
             
             # 创建或更新答题卡记录
             answer_sheet = self.db.query(AnswerSheet).filter(
                 AnswerSheet.file_id == file_record.id
             ).first()
+            
+            # 提取涂卡分析数据
+            bubble_analysis = ocr_results.get('bubble_sheet_analysis', {})
+            bubble_quality = ocr_results.get('quality_assessment', {}).get('bubble_quality_score', 0.0)
+            recognition_confidence = ocr_results.get('confidence', 0.8)
             
             if not answer_sheet:
                 answer_sheet = AnswerSheet(
@@ -127,6 +178,10 @@ class OCRService:
             answer_sheet.recognition_status = 'completed'
             answer_sheet.recognition_result = ocr_results
             answer_sheet.recognition_confidence = int(ocr_results.get('confidence', 0.8) * 100)
+            
+            # 存储涂卡分析数据
+            answer_sheet.bubble_sheet_analysis = bubble_analysis
+            answer_sheet.bubble_quality_score = bubble_quality
             
             # 提取学生信息
             student_info = ocr_results.get('student_info', {})
@@ -185,17 +240,59 @@ class OCRService:
             
         except Exception as e:
             logger.error(f"Answer sheet OCR failed: {str(e)}")
+            raise
+    
+    def _merge_barcode_info(self, barcode_results: List[Dict[str, Any]]) -> Optional[Dict[str, str]]:
+        """合并条形码识别结果中的学生信息
+        
+        Args:
+            barcode_results: 条形码识别结果列表
             
-            # 更新错误状态
-            file_record.processing_status = 'failed'
-            file_record.error_message = f"Gemini OCR error: {str(e)}"
-            self.db.commit()
-            
-            return {
-                'status': 'error',
-                'error': str(e),
-                'ocr_engine': 'gemini-2.5-pro'
-            }
+        Returns:
+            合并后的学生信息字典
+        """
+        if not barcode_results:
+            return None
+        
+        # 选择置信度最高的条形码结果
+        best_result = max(barcode_results, key=lambda x: x.get('confidence', 0))
+        student_info = best_result.get('student_info', {})
+        
+        # 验证必要字段
+        if not student_info.get('student_id') and not student_info.get('raw_data'):
+            return None
+        
+        # 标准化字段名
+        normalized_info = {}
+        
+        # 学号字段
+        if student_info.get('student_id'):
+            normalized_info['student_id'] = student_info['student_id']
+        elif student_info.get('raw_data'):
+            # 如果只有原始数据，尝试作为学号使用
+            normalized_info['student_id'] = student_info['raw_data']
+        
+        # 姓名字段
+        if student_info.get('name'):
+            normalized_info['name'] = student_info['name']
+        
+        # 班级字段
+        if student_info.get('class'):
+            normalized_info['class'] = student_info['class']
+        
+        # 准考证号
+        if student_info.get('exam_number'):
+            normalized_info['exam_number'] = student_info['exam_number']
+        
+        # 试卷类型
+        if student_info.get('paper_type'):
+            normalized_info['paper_type'] = student_info['paper_type']
+        
+        # 添加条形码来源标识
+        normalized_info['source'] = 'barcode'
+        normalized_info['barcode_type'] = best_result.get('type', 'unknown')
+        
+        return normalized_info if normalized_info else None
     
     async def batch_process_answer_sheets(self, file_records: List[FileStorage]) -> Dict[str, Any]:
         """批量处理答题卡"""

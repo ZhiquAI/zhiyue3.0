@@ -1,0 +1,83 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景渐变圆形 -->
+  <circle cx="24" cy="24" r="24" fill="url(#dynamicGradient)"/>
+  
+  <!-- 中心大脑图标 -->
+  <g transform="translate(16, 14)">
+    <!-- 大脑轮廓 -->
+    <path d="M8 2C10.5 2 12.5 3.5 13.5 5.5C14.5 4 16 3 18 3C20.5 3 22.5 5 22.5 7.5C22.5 8.5 22 9.5 21.5 10C22 11 22.5 12.5 22.5 14C22.5 17 20 19.5 17 19.5H15C12 19.5 9.5 17 9.5 14C9.5 12.5 10 11 10.5 10C10 9.5 9.5 8.5 9.5 7.5C9.5 5 11.5 3 14 3C15.5 3 16.5 3.5 17.5 4.5C16.5 3 14.5 2 12 2C9.5 2 7.5 4 7.5 6.5C7.5 7.5 8 8.5 8.5 9C8 10 7.5 11.5 7.5 13C7.5 16 10 18.5 13 18.5H15" stroke="white" stroke-width="1.5" fill="none" opacity="0.9"/>
+    
+    <!-- 神经连接点 -->
+    <circle cx="6" cy="8" r="1.5" fill="#60a5fa" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="10" cy="6" r="1.5" fill="#34d399" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="14" cy="8" r="1.5" fill="#f59e0b" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="8" cy="12" r="1.5" fill="#ec4899" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="2.2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="12" cy="14" r="1.5" fill="#8b5cf6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="2.8s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- 连接线动画 -->
+    <path d="M6 8L10 6" stroke="white" stroke-width="0.8" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+    </path>
+    <path d="M10 6L14 8" stroke="white" stroke-width="0.8" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2.5s" repeatCount="indefinite"/>
+    </path>
+    <path d="M6 8L8 12" stroke="white" stroke-width="0.8" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/>
+    </path>
+    <path d="M8 12L12 14" stroke="white" stroke-width="0.8" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2.2s" repeatCount="indefinite"/>
+    </path>
+    <path d="M14 8L12 14" stroke="white" stroke-width="0.8" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2.8s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <!-- 外围光环 -->
+  <circle cx="24" cy="24" r="20" stroke="url(#glowRing)" stroke-width="1" fill="none" opacity="0.4">
+    <animate attributeName="r" values="20;22;20" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.4;0.7;0.4" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- 智能粒子效果 -->
+  <g>
+    <circle cx="12" cy="12" r="1" fill="white" opacity="0.6">
+      <animateTransform attributeName="transform" type="rotate" values="0 24 24;360 24 24" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="36" cy="12" r="1" fill="white" opacity="0.6">
+      <animateTransform attributeName="transform" type="rotate" values="0 24 24;360 24 24" dur="10s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="3.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="36" cy="36" r="1" fill="white" opacity="0.6">
+      <animateTransform attributeName="transform" type="rotate" values="0 24 24;360 24 24" dur="12s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="12" cy="36" r="1" fill="white" opacity="0.6">
+      <animateTransform attributeName="transform" type="rotate" values="0 24 24;360 24 24" dur="9s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <defs>
+    <radialGradient id="dynamicGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </radialGradient>
+    <linearGradient id="glowRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#60a5fa;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+</svg>

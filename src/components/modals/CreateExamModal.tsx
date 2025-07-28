@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, Button, message, Card, Space } from 'antd';
-import { CheckCircleOutlined, BookOutlined, ReadOutlined, FileTextOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, BookOutlined, ReadOutlined, FileTextOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam, ExamStatus } from '../../types/exam';
 
@@ -54,13 +54,13 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
       addExam(newExam);
       
       message.destroy();
-      message.success('考试创建成功！请前往配置试卷。');
+      message.success('考试创建成功！请前往上传答题卡。');
       
       // 重置并关闭
       resetModal();
       onClose();
       
-    } catch (error) {
+    } catch (error: any) {
       setLoading(false);
       message.destroy();
       console.error('Create exam error:', error);
@@ -83,12 +83,12 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
     <Modal
       title={
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <FileTextOutlined className="text-white text-lg" />
+          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <FileTextOutlined className="text-blue-600 text-lg" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold mb-0">创建新考试</h3>
-            <p className="text-sm text-gray-500 mb-0">填写基本信息，稍后可在配置页面上传试卷</p>
+            <h3 className="text-lg font-semibold mb-0 text-slate-800">创建新考试</h3>
+            <p className="text-sm text-gray-500 mb-0">填写基本信息，稍后可上传答题卡开始阅卷</p>
           </div>
         </div>
       }
@@ -96,7 +96,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
       onCancel={onClose}
       footer={null}
       width={600}
-      destroyOnClose
       className="create-exam-modal"
     >
       <div className="py-6">
@@ -110,8 +109,8 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
             name="name"
             label={
               <div className="flex items-center gap-2">
-                <BookOutlined className="text-blue-500" />
-                <span className="font-medium">考试名称</span>
+                <FileTextOutlined className="text-blue-600" />
+                <span className="font-medium text-slate-700">考试名称</span>
               </div>
             }
             rules={[
@@ -140,100 +139,69 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
             <Form.Item
               name="subject"
               label={
-                <div className="flex items-center gap-2">
-                  <BookOutlined className="text-green-500" />
-                  <span className="font-medium">科目</span>
-                </div>
-              }
+              <div className="flex items-center gap-2">
+                <BookOutlined className="text-blue-600" />
+                <span className="font-medium text-slate-700">科目</span>
+              </div>
+            }
               rules={[{ required: true, message: '请选择科目' }]}
             >
               <Select placeholder="请选择科目" className="rounded-lg">
-                <Select.Option value="历史">
-                  <div className="flex items-center gap-2">
-                    <span>📚</span>
-                    <span>历史</span>
-                  </div>
-                </Select.Option>
+                <Select.Option value="语文">语文</Select.Option>
+                <Select.Option value="数学">数学</Select.Option>
+                <Select.Option value="英语">英语</Select.Option>
+                <Select.Option value="物理">物理</Select.Option>
+                <Select.Option value="化学">化学</Select.Option>
+                <Select.Option value="生物">生物</Select.Option>
+                <Select.Option value="历史">历史</Select.Option>
+                <Select.Option value="地理">地理</Select.Option>
+                <Select.Option value="政治">政治</Select.Option>
               </Select>
             </Form.Item>
             
             <Form.Item
               name="grade"
               label={
-                <div className="flex items-center gap-2">
-                  <ReadOutlined className="text-purple-500" />
-                  <span className="font-medium">年级</span>
-                </div>
-              }
+              <div className="flex items-center gap-2">
+                <TeamOutlined className="text-blue-600" />
+                <span className="font-medium text-slate-700">年级</span>
+              </div>
+            }
               rules={[{ required: true, message: '请选择年级' }]}
             >
               <Select placeholder="请选择年级" className="rounded-lg">
-                <Select.Option value="初一">
-                  <div className="flex items-center gap-2">
-                    <span>🎓</span>
-                    <span>初一</span>
-                  </div>
-                </Select.Option>
-                <Select.Option value="初二">
-                  <div className="flex items-center gap-2">
-                    <span>🎓</span>
-                    <span>初二</span>
-                  </div>
-                </Select.Option>
-                <Select.Option value="初三">
-                  <div className="flex items-center gap-2">
-                    <span>🎓</span>
-                    <span>初三</span>
-                  </div>
-                </Select.Option>
-                <Select.Option value="高一">
-                  <div className="flex items-center gap-2">
-                    <span>🎓</span>
-                    <span>高一</span>
-                  </div>
-                </Select.Option>
-                <Select.Option value="高二">
-                  <div className="flex items-center gap-2">
-                    <span>🎓</span>
-                    <span>高二</span>
-                  </div>
-                </Select.Option>
-                <Select.Option value="高三">
-                  <div className="flex items-center gap-2">
-                    <span>🎓</span>
-                    <span>高三</span>
-                  </div>
-                </Select.Option>
+                <Select.Option value="初一">初一</Select.Option>
+                <Select.Option value="初二">初二</Select.Option>
+                <Select.Option value="初三">初三</Select.Option>
+                <Select.Option value="高一">高一</Select.Option>
+                <Select.Option value="高二">高二</Select.Option>
+                <Select.Option value="高三">高三</Select.Option>
               </Select>
             </Form.Item>
           </div>
         </Form>
 
         {/* 后续步骤说明 */}
-        <Card className="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <Card className="mt-6 bg-blue-50 border-blue-200">
           <div className="text-center">
-            <h4 className="font-semibold text-gray-800 mb-3">📋 创建后的下一步</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <h4 className="font-semibold text-slate-800 mb-3 flex items-center justify-center gap-2">
+              <FileTextOutlined className="text-blue-600" />
+              <span>创建后的下一步</span>
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex flex-col items-center p-3 bg-white rounded-lg shadow-sm">
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mb-2">
                   <span className="text-blue-600 font-bold">1</span>
                 </div>
-                <p className="font-medium text-gray-700">上传试卷</p>
-                <p className="text-gray-500 text-xs">PDF或图片格式</p>
+                <p className="font-medium text-slate-700">上传答题卡</p>
+                <p className="text-gray-500 text-xs">批量上传学生答卷</p>
               </div>
               <div className="flex flex-col items-center p-3 bg-white rounded-lg shadow-sm">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mb-2">
-                  <span className="text-green-600 font-bold">2</span>
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+                  <span className="text-blue-600 font-bold">2</span>
                 </div>
-                <p className="font-medium text-gray-700">AI智能分析</p>
-                <p className="text-gray-500 text-xs">自动识别题目</p>
-              </div>
-              <div className="flex flex-col items-center p-3 bg-white rounded-lg shadow-sm">
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mb-2">
-                  <span className="text-purple-600 font-bold">3</span>
-                </div>
-                <p className="font-medium text-gray-700">配置评分</p>
-                <p className="text-gray-500 text-xs">设置评分标准</p>
+                <p className="font-medium text-slate-700">AI智能阅卷</p>
+                <p className="text-gray-500 text-xs">自动评分生成报告</p>
               </div>
             </div>
           </div>
@@ -242,7 +210,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
 
       <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
         <Button size="large" onClick={onClose}>
-          取消
+          取 消
         </Button>
         <Button
           type="primary"
@@ -250,7 +218,6 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
           loading={loading}
           onClick={handleCreate}
           icon={<CheckCircleOutlined />}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 border-0"
         >
           创建考试
         </Button>

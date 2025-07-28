@@ -66,11 +66,16 @@ class AnswerSheet(Base):
     ocr_result = Column(JSON, comment='OCR识别结果')
     ocr_confidence = Column(Float, comment='OCR置信度')
     
+    # 题目分割结果
+    segmented_questions = Column(JSON, comment='题目分割结果')
+    segmentation_quality = Column(JSON, comment='分割质量评估')
+    
     # 评分结果
     grading_status = Column(String(20), default='pending', comment='评分状态')
     objective_score = Column(Float, comment='客观题得分')
     subjective_scores = Column(JSON, comment='主观题得分详情')
     total_score = Column(Float, comment='总分')
+    grading_details = Column(JSON, comment='详细评分结果和质量评估')
     
     # 质量控制
     quality_issues = Column(JSON, comment='质量问题')

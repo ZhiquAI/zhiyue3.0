@@ -7,11 +7,8 @@ from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
 
-# 加载环境变量文件
-backend_dir = Path(__file__).parent.parent
-env_file = backend_dir / ".env"
-if env_file.exists():
-    load_dotenv(env_file)
+# 加载 .env 文件
+load_dotenv()
 
 class Settings:
     """应用配置类"""
@@ -59,7 +56,20 @@ class Settings:
     # 安全配置
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
     ALGORITHM = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24小时
+    REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))  # 7天
+    
+    # JWT增强安全配置
+    JWT_ISSUER = os.getenv("JWT_ISSUER", "zhiyue-ai")
+    JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "zhiyue-ai-users")
+    PASSWORD_MIN_LENGTH = int(os.getenv("PASSWORD_MIN_LENGTH", "8"))
+    PASSWORD_REQUIRE_UPPERCASE = os.getenv("PASSWORD_REQUIRE_UPPERCASE", "True").lower() == "true"
+    PASSWORD_REQUIRE_NUMBERS = os.getenv("PASSWORD_REQUIRE_NUMBERS", "True").lower() == "true"
+    PASSWORD_REQUIRE_SYMBOLS = os.getenv("PASSWORD_REQUIRE_SYMBOLS", "False").lower() == "true"
+    
+    # 账户安全
+    MAX_LOGIN_ATTEMPTS = int(os.getenv("MAX_LOGIN_ATTEMPTS", "5"))
+    ACCOUNT_LOCKOUT_DURATION = int(os.getenv("ACCOUNT_LOCKOUT_DURATION", "1800"))  # 30分钟
     
     # 日志配置
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

@@ -40,33 +40,200 @@ export const mockExams: Exam[] = [
     createdAt: '2025-06-26',
     tasks: { total: 850, completed: 320, hasError: false },
     avgScore: null
+  },
+  {
+    id: '5',
+    name: '高二期末 · 世界现代史',
+    subject: '历史',
+    grade: '高二',
+    status: '待阅卷',
+    createdAt: '2025-06-24',
+    tasks: { total: 720, completed: 0, hasError: false },
+    avgScore: null
+  },
+  {
+    id: '6',
+    name: '初一月考 · 中华文明的起源',
+    subject: '历史',
+    grade: '初一',
+    status: '阅卷中',
+    createdAt: '2025-06-23',
+    tasks: { total: 450, completed: 180, hasError: true, errorCount: 3 },
+    avgScore: null
+  },
+  {
+    id: '7',
+    name: '高三一模 · 综合测试',
+    subject: '历史',
+    grade: '高三',
+    status: '待阅卷',
+    createdAt: '2025-06-22',
+    tasks: { total: 1580, completed: 0, hasError: false },
+    avgScore: null
   }
 ];
 
-export const mockConfigureData = {
+export const mockQuestionData = {
   questions: [
+    // 客观题部分 - 12道单选题
+    {
+      id: 'q1',
+      title: '第1题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '5%', left: '5%', width: '45%', height: '8%' },
+      answer: 'A',
+      options: ['A. 1949年', 'B. 1950年', 'C. 1951年', 'D. 1952年'],
+      questionText: '中华人民共和国成立于哪一年？'
+    },
+    {
+      id: 'q2',
+      title: '第2题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '13%', left: '5%', width: '45%', height: '8%' },
+      answer: 'C',
+      options: ['A. 毛泽东', 'B. 周恩来', 'C. 邓小平', 'D. 刘少奇'],
+      questionText: '改革开放的总设计师是？'
+    },
+    {
+      id: 'q3',
+      title: '第3题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '21%', left: '5%', width: '45%', height: '10%' },
+      answer: 'B',
+      options: ['A. 1956年', 'B. 1978年', 'C. 1980年', 'D. 1982年'],
+      questionText: '中国共产党十一届三中全会召开于哪一年？'
+    },
+    {
+      id: 'q4',
+      title: '第4题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '31%', left: '5%', width: '45%', height: '6%' },
+      answer: 'D',
+      options: ['A. 北京', 'B. 上海', 'C. 广州', 'D. 深圳'],
+      questionText: '中国第一个经济特区是？'
+    },
+    {
+      id: 'q5',
+      title: '第5题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '37%', left: '5%', width: '45%', height: '8%' },
+      answer: 'A',
+      options: ['A. 家庭联产承包责任制', 'B. 人民公社', 'C. 合作社', 'D. 国营农场'],
+      questionText: '1978年后，农村实行的经济体制改革是？'
+    },
+    {
+      id: 'q6',
+      title: '第6题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '45%', left: '5%', width: '45%', height: '8%' },
+      answer: 'C',
+      options: ['A. 1997年', 'B. 1998年', 'C. 1999年', 'D. 2000年'],
+      questionText: '澳门回归祖国是在哪一年？'
+    },
+    {
+      id: 'q7',
+      title: '第7题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '53%', left: '5%', width: '45%', height: '8%' },
+      answer: 'B',
+      options: ['A. 抗美援朝', 'B. 两弹一星', 'C. 载人航天', 'D. 青藏铁路'],
+      questionText: '20世纪60年代中国在国防科技方面的重大成就是？'
+    },
+    {
+      id: 'q8',
+      title: '第8题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '61%', left: '5%', width: '45%', height: '8%' },
+      answer: 'A',
+      options: ['A. 和平共处五项原则', 'B. 不结盟政策', 'C. 睦邻友好', 'D. 互利共赢'],
+      questionText: '新中国外交政策的基本准则是？'
+    },
+    {
+      id: 'q9',
+      title: '第9题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '69%', left: '5%', width: '45%', height: '8%' },
+      answer: 'D',
+      options: ['A. 1980年', 'B. 1982年', 'C. 1984年', 'D. 1992年'],
+      questionText: '邓小平南方谈话发表于哪一年？'
+    },
+    {
+      id: 'q10',
+      title: '第10题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '77%', left: '5%', width: '45%', height: '8%' },
+      answer: 'C',
+      options: ['A. 计划经济', 'B. 市场经济', 'C. 社会主义市场经济', 'D. 混合经济'],
+      questionText: '中共十四大确立的经济体制改革目标是？'
+    },
+    {
+      id: 'q11',
+      title: '第11题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '85%', left: '5%', width: '45%', height: '8%' },
+      answer: 'B',
+      options: ['A. 1971年', 'B. 1972年', 'C. 1973年', 'D. 1974年'],
+      questionText: '中美关系正常化开始于哪一年？'
+    },
+    {
+      id: 'q12',
+      title: '第12题',
+      type: '选择题',
+      questionType: 'choice',
+      points: 2,
+      area: { top: '93%', left: '5%', width: '45%', height: '8%' },
+      answer: 'A',
+      options: ['A. 民族区域自治制度', 'B. 联邦制', 'C. 邦联制', 'D. 单一制'],
+      questionText: '中国解决民族问题的基本政策是？'
+    },
+    // 主观题部分
     {
       id: 'q13',
       title: '第13题：中国现代史成就',
       type: '问答题',
+      questionType: 'essay',
       points: 11,
-      area: { top: '33%', left: '5%', width: '45%', height: '30%' },
+      area: { top: '45%', left: '5%', width: '45%', height: '25%' },
       answer: '（1）1953年，武汉长江大桥；1964年，邓稼先。（2）方式：公私合营；创举：赎买政策...'
     },
     {
       id: 'q14',
       title: '第14题：国防与军队现代化',
       type: '问答题',
+      questionType: 'analysis',
       points: 11,
-      area: { top: '5%', left: '50%', width: '45%', height: '45%' },
+      area: { top: '5%', left: '50%', width: '45%', height: '30%' },
       answer: '（1）"中国梦"蓝图：实现国家富强、民族振兴、人民幸福。（2）军种：火箭军；成就：成立五大战区...'
     },
     {
       id: 'q15',
       title: '第15题：民族政策与外交成就',
       type: '材料分析题',
+      questionType: 'analysis',
       points: 14,
-      area: { top: '52%', left: '50%', width: '45%', height: '45%' },
+      area: { top: '35%', left: '50%', width: '45%', height: '35%' },
       answer: '（1）政策：民族区域自治制度；历史意义：促进了西藏地区的经济发展...'
     }
   ] as Question[],
@@ -152,7 +319,14 @@ export const mockConfigureData = {
 export const mockMarkingData: MarkingData = {
   studentId: '2024001',
   studentName: '王同学',
-  objectiveScore: 22,
+  objectiveScore: 8,
+  objectiveResults: {
+    'q1': { score: 2, isCorrect: true, studentAnswer: 'A', correctAnswer: 'A' },
+    'q2': { score: 2, isCorrect: true, studentAnswer: 'C', correctAnswer: 'C' },
+    'q3': { score: 3, isCorrect: true, studentAnswer: 'ABC', correctAnswer: 'ABC' },
+    'q4': { score: 1, isCorrect: true, studentAnswer: '正确', correctAnswer: '正确' },
+    'q5': { score: 0, isCorrect: false, studentAnswer: '人民公社', correctAnswer: '家庭联产承包责任制' }
+  },
   subjectiveScores: {
     q13: {
       totalScore: 9,

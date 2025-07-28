@@ -10,6 +10,10 @@ export interface User {
   email: string;
   role: 'teacher' | 'admin';
   permissions: string[];
+  avatar?: string;
+  school?: string;
+  subject?: string;
+  grades?: string[];
 }
 
 export interface AuthContextType {
@@ -19,13 +23,15 @@ export interface AuthContextType {
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  hasRole: (role: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const { state: authState, execute } = useAsyncOperation();
+  const [loading, setLoading] = useState<boolean>(false);
+  const { execute } = useAsyncOperation();
 
   // 检查本地存储的token
   useEffect(() => {
@@ -36,14 +42,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (username: string, password: string) => {
-    const response = await execute(() => authApi.login({ username, password }));
-    
-    if (response.success) {
-      const { token, user: userData } = response.data;
-      localStorage.setItem('auth_token', token);
-      setUser(userData);
-    } else {
-      throw new Error(response.message || '登录失败');
+    setLoading(true);
+    try {
+      const response = await authApi.login({ username, password });
+      
+      // 检查响应格式 - 后端直接返回token和user，不是包装在success/data中
+      if (response.access_token && response.user) {
+        // 后端直接返回格式
+        const token = response.access_token;
+        const userData = {
+          id: response.user.id,
+          username: response.user.username,
+          name: response.user.name,
+          email: response.user.email,
+          role: response.user.role,
+          permissions: response.user.permissions || [],
+          avatar: response.user.avatar,
+          school: response.user.school,
+          subject: response.user.subject,
+          grades: response.user.grades
+        };
+        localStorage.setItem('auth_token', token);
+        setUser(userData);
+        console.log('用户状态已更新:', userData);
+      } else if (response.success && response.data) {
+        // 包装格式（备用）
+        const { token, user: userData } = response.data;
+        localStorage.setItem('auth_token', token);
+        setUser(userData);
+        console.log('用户状态已更新:', userData);
+      } else {
+        throw new Error('登录响应格式不正确');
+      }
+    } catch (error) {
+      console.error('登录过程中出错:', error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,8 +95,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const refreshAuth = async () => {
+    setLoading(true);
     try {
-      const response = await execute(() => authApi.getCurrentUser());
+      const response = await authApi.getCurrentUser();
       if (response.success) {
         setUser(response.data);
       } else {
@@ -70,6 +106,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       localStorage.removeItem('auth_token');
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,13 +116,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return user.permissions.includes(permission) || user.role === 'admin';
   };
 
+  const hasRole = (role: string): boolean => {
+    if (!user) return false;
+    return user.role === role;
+  };
+
   const value: AuthContextType = {
     user,
-    loading: authState.loading,
+    loading,
     login,
     logout,
     refreshAuth,
     hasPermission,
+    hasRole,
   };
 
   return (

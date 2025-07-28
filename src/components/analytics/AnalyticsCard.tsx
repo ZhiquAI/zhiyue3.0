@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Statistic, Progress, Tag, Space } from 'antd';
-import { TrendingUpOutlined, TrendingDownOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 
 interface AnalyticsCardProps {
   title: string;
@@ -48,7 +48,7 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           color={trend.isPositive ? 'green' : 'red'}
           className="border-0"
         >
-          {trend.isPositive ? <TrendingUpOutlined /> : <TrendingDownOutlined />}
+          {trend.isPositive ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
           <span className="ml-1">
             {Math.abs(trend.value)}%
             {trend.period && ` (${trend.period})`}

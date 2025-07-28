@@ -1,0 +1,443 @@
+/* 响应式设计系统 */
+
+/* 文本截断工具类 */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* 响应式间距 */
+.responsive-padding {
+  @apply p-2 sm:p-4 md:p-6 lg:p-8;
+}
+
+.responsive-margin {
+  @apply m-2 sm:m-4 md:m-6 lg:m-8;
+}
+
+/* 响应式字体大小 */
+.responsive-text-xs {
+  @apply text-xs sm:text-sm;
+}
+
+.responsive-text-sm {
+  @apply text-sm sm:text-base;
+}
+
+.responsive-text-base {
+  @apply text-base sm:text-lg;
+}
+
+.responsive-text-lg {
+  @apply text-lg sm:text-xl;
+}
+
+.responsive-text-xl {
+  @apply text-xl sm:text-2xl;
+}
+
+/* 响应式卡片 */
+.responsive-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200;
+  @apply p-3 sm:p-4 md:p-6;
+}
+
+.responsive-card-compact {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200;
+  @apply p-2 sm:p-3 md:p-4;
+}
+
+/* 响应式网格 */
+.responsive-grid-1 {
+  @apply grid grid-cols-1;
+}
+
+.responsive-grid-2 {
+  @apply grid grid-cols-1 sm:grid-cols-2;
+}
+
+.responsive-grid-3 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+}
+
+.responsive-grid-4 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+}
+
+/* 响应式间隙 */
+.responsive-gap {
+  @apply gap-2 sm:gap-4 md:gap-6;
+}
+
+.responsive-gap-sm {
+  @apply gap-1 sm:gap-2 md:gap-3;
+}
+
+/* 响应式按钮 */
+.responsive-button {
+  @apply px-3 py-1.5 sm:px-4 sm:py-2;
+  @apply text-sm sm:text-base;
+}
+
+.responsive-button-sm {
+  @apply px-2 py-1 sm:px-3 sm:py-1.5;
+  @apply text-xs sm:text-sm;
+}
+
+/* 响应式头像 */
+.responsive-avatar-sm {
+  @apply w-6 h-6 sm:w-8 sm:h-8;
+}
+
+.responsive-avatar {
+  @apply w-8 h-8 sm:w-10 sm:h-10;
+}
+
+.responsive-avatar-lg {
+  @apply w-10 h-10 sm:w-12 sm:h-12;
+}
+
+/* 移动端隐藏/显示 */
+.mobile-only {
+  @apply block sm:hidden;
+}
+
+.desktop-only {
+  @apply hidden sm:block;
+}
+
+.tablet-up {
+  @apply hidden md:block;
+}
+
+.desktop-up {
+  @apply hidden lg:block;
+}
+
+/* 响应式容器 */
+.responsive-container {
+  @apply w-full max-w-7xl mx-auto;
+  @apply px-2 sm:px-4 md:px-6 lg:px-8;
+}
+
+.responsive-container-sm {
+  @apply w-full max-w-4xl mx-auto;
+  @apply px-2 sm:px-4 md:px-6;
+}
+
+/* 响应式表单 */
+.responsive-form-item {
+  @apply mb-3 sm:mb-4;
+}
+
+.responsive-form-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4;
+}
+
+/* 响应式导航 */
+.responsive-nav-item {
+  @apply px-2 py-1 sm:px-3 sm:py-2;
+  @apply text-sm sm:text-base;
+}
+
+/* 响应式表格 */
+.responsive-table {
+  @apply overflow-x-auto;
+}
+
+.responsive-table table {
+  @apply min-w-full;
+}
+
+/* 响应式模态框 */
+.responsive-modal {
+  @apply w-full max-w-lg mx-4 sm:mx-auto;
+}
+
+.responsive-modal-lg {
+  @apply w-full max-w-4xl mx-4 sm:mx-auto;
+}
+
+/* 响应式侧边栏 */
+.responsive-sidebar {
+  @apply w-full lg:w-64 xl:w-72;
+}
+
+/* 响应式内容区 */
+.responsive-content {
+  @apply w-full lg:flex-1;
+}
+
+/* 响应式图片 */
+.responsive-image {
+  @apply w-full h-auto;
+  @apply rounded-lg;
+}
+
+/* 响应式视频 */
+.responsive-video {
+  @apply w-full aspect-video;
+  @apply rounded-lg;
+}
+
+/* 响应式分隔线 */
+.responsive-divider {
+  @apply my-3 sm:my-4 md:my-6;
+  @apply border-t border-gray-200;
+}
+
+/* 响应式阴影 */
+.responsive-shadow {
+  @apply shadow-sm sm:shadow md:shadow-lg;
+}
+
+/* 响应式圆角 */
+.responsive-rounded {
+  @apply rounded sm:rounded-md md:rounded-lg;
+}
+
+/* 响应式边框 */
+.responsive-border {
+  @apply border border-gray-200 sm:border-gray-300;
+}
+
+/* 响应式背景 */
+.responsive-bg-gray {
+  @apply bg-gray-50 sm:bg-gray-100;
+}
+
+/* 响应式高度 */
+.responsive-height-screen {
+  @apply h-screen;
+}
+
+.responsive-height-auto {
+  @apply h-auto;
+}
+
+/* 响应式最小高度 */
+.responsive-min-h-screen {
+  @apply min-h-screen;
+}
+
+/* 响应式最大宽度 */
+.responsive-max-w-xs {
+  @apply max-w-xs sm:max-w-sm;
+}
+
+.responsive-max-w-sm {
+  @apply max-w-sm sm:max-w-md;
+}
+
+.responsive-max-w-md {
+  @apply max-w-md sm:max-w-lg;
+}
+
+.responsive-max-w-lg {
+  @apply max-w-lg sm:max-w-xl;
+}
+
+.responsive-max-w-xl {
+  @apply max-w-xl sm:max-w-2xl;
+}
+
+/* 响应式Flex布局 */
+.responsive-flex-col {
+  @apply flex flex-col sm:flex-row;
+}
+
+.responsive-flex-row {
+  @apply flex flex-row;
+}
+
+.responsive-flex-wrap {
+  @apply flex flex-wrap;
+}
+
+/* 响应式对齐 */
+.responsive-text-center {
+  @apply text-center sm:text-left;
+}
+
+.responsive-text-left {
+  @apply text-left;
+}
+
+.responsive-items-center {
+  @apply items-center;
+}
+
+.responsive-justify-center {
+  @apply justify-center sm:justify-start;
+}
+
+.responsive-justify-between {
+  @apply justify-between;
+}
+
+/* 响应式位置 */
+.responsive-relative {
+  @apply relative;
+}
+
+.responsive-absolute {
+  @apply absolute;
+}
+
+.responsive-fixed {
+  @apply fixed;
+}
+
+.responsive-sticky {
+  @apply sticky;
+}
+
+/* 响应式z-index */
+.responsive-z-10 {
+  @apply z-10;
+}
+
+.responsive-z-20 {
+  @apply z-20;
+}
+
+.responsive-z-30 {
+  @apply z-30;
+}
+
+.responsive-z-40 {
+  @apply z-40;
+}
+
+.responsive-z-50 {
+  @apply z-50;
+}
+
+/* 响应式透明度 */
+.responsive-opacity-50 {
+  @apply opacity-50 sm:opacity-75;
+}
+
+.responsive-opacity-75 {
+  @apply opacity-75 sm:opacity-100;
+}
+
+/* 响应式变换 */
+.responsive-scale {
+  @apply transform scale-95 sm:scale-100;
+}
+
+.responsive-translate {
+  @apply transform translate-x-0 sm:translate-x-1;
+}
+
+/* 响应式过渡 */
+.responsive-transition {
+  @apply transition-all duration-200 ease-in-out;
+}
+
+/* 响应式动画 */
+.responsive-animate-pulse {
+  @apply animate-pulse;
+}
+
+.responsive-animate-bounce {
+  @apply animate-bounce;
+}
+
+/* 响应式滚动 */
+.responsive-overflow-hidden {
+  @apply overflow-hidden;
+}
+
+.responsive-overflow-auto {
+  @apply overflow-auto;
+}
+
+.responsive-overflow-x-auto {
+  @apply overflow-x-auto;
+}
+
+.responsive-overflow-y-auto {
+  @apply overflow-y-auto;
+}
+
+/* 响应式显示 */
+.responsive-block {
+  @apply block;
+}
+
+.responsive-inline-block {
+  @apply inline-block;
+}
+
+.responsive-inline {
+  @apply inline;
+}
+
+.responsive-flex {
+  @apply flex;
+}
+
+.responsive-inline-flex {
+  @apply inline-flex;
+}
+
+.responsive-grid {
+  @apply grid;
+}
+
+.responsive-hidden {
+  @apply hidden;
+}
+
+/* 响应式可见性 */
+.responsive-visible {
+  @apply visible;
+}
+
+.responsive-invisible {
+  @apply invisible;
+}
+
+/* 响应式指针事件 */
+.responsive-pointer-events-none {
+  @apply pointer-events-none;
+}
+
+.responsive-pointer-events-auto {
+  @apply pointer-events-auto;
+}
+
+/* 响应式用户选择 */
+.responsive-select-none {
+  @apply select-none;
+}
+
+.responsive-select-text {
+  @apply select-text;
+}
+
+.responsive-select-all {
+  @apply select-all;
+}
+
+.responsive-select-auto {
+  @apply select-auto;
+}

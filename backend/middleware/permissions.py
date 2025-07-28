@@ -7,12 +7,8 @@ from functools import wraps
 from typing import List, Callable, Dict, Any
 from sqlalchemy.orm import Session
 
-try:
-    from backend.models.production_models import User
-    from backend.database import get_db
-except ImportError:
-    from models.production_models import User
-    from database import get_db
+from models.production_models import User
+from database import get_db
 
 class PermissionManager:
     """权限管理器"""
@@ -185,7 +181,7 @@ def require_any_authenticated():
 def check_exam_ownership(exam_id: str, current_user: User, db: Session):
     """检查考试所有权"""
     try:
-        from backend.models.production_models import Exam
+        from models.production_models import Exam
     except ImportError:
         from models.production_models import Exam
     
@@ -204,7 +200,7 @@ def check_exam_ownership(exam_id: str, current_user: User, db: Session):
 def check_answer_sheet_access(answer_sheet_id: str, current_user: User, db: Session):
     """检查答题卡访问权限"""
     try:
-        from backend.models.production_models import AnswerSheet
+        from models.production_models import AnswerSheet
     except ImportError:
         from models.production_models import AnswerSheet
     

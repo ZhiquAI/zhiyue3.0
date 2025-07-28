@@ -1,18 +1,23 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Exam, ExamStatus } from '../types/exam';
 import { mockExams } from '../data/mockData';
-import { examApi } from '../services/api';
 import { useAsyncOperation } from '../hooks/useAsyncOperation';
-import { message } from 'antd';
+import { message } from '../utils/message';
+
+interface SubViewInfo {
+  view: string | null;
+  exam: Exam | null;
+  source?: 'examManagement' | 'markingCenter' | null; // 来源标识
+}
 
 interface AppContextType {
   currentView: string;
-  subViewInfo: { view: string | null; exam: Exam | null };
+  subViewInfo: SubViewInfo;
   exams: Exam[];
   loading: boolean;
   error: Error | null;
   setCurrentView: (view: string) => void;
-  setSubViewInfo: (info: { view: string | null; exam: Exam | null }) => void;
+  setSubViewInfo: (info: SubViewInfo) => void;
   addExam: (exam: Exam) => void;
   updateExamStatus: (examId: string, status: ExamStatus) => void;
   refreshExams: () => Promise<void>;
@@ -23,13 +28,14 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentView, setCurrentView] = useState('landing'); // 默认显示首页
-  const [subViewInfo, setSubViewInfo] = useState<{ view: string | null; exam: Exam | null }>({
+  const [subViewInfo, setSubViewInfo] = useState<SubViewInfo>({
     view: null,
     exam: null,
+    source: null,
   });
   const [exams, setExams] = useState<Exam[]>(mockExams);
   
-  const { state: examState, execute } = useAsyncOperation();
+  const { state: examState } = useAsyncOperation();
 
   // 初始化时加载考试数据
   useEffect(() => {

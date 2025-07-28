@@ -17,22 +17,34 @@ try:
     from backend.auth import get_current_user
     from backend.models.production_models import User, AnswerSheet, GradingTask
     from backend.services.gemini_ocr_service import GeminiOCRService
+    from backend.services.question_segmentation_service import QuestionSegmentationService
 except ImportError:
     from database import get_db
     from auth import get_current_user
     from models.production_models import User, AnswerSheet, GradingTask
     try:
         from services.gemini_ocr_service import GeminiOCRService
+        from services.question_segmentation_service import QuestionSegmentationService
     except ImportError:
-    # 如果导入失败，创建一个模拟服务
-    class GeminiOCRService:
-        async def process_answer_sheet(self, image_path):
-            return {
-                "success": False,
-                "error": "OCR服务未配置",
-                "recognized_data": {},
-                "confidence": 0.0
-            }
+        # 如果导入失败，创建一个模拟服务
+        class GeminiOCRService:
+            async def process_answer_sheet(self, image_path):
+                return {
+                    "success": False,
+                    "error": "OCR服务未配置",
+                    "recognized_data": {},
+                    "confidence": 0.0
+                }
+        
+        class QuestionSegmentationService:
+            def segment_questions(self, ocr_result):
+                return []
+            
+            def validate_segmentation(self, segments):
+                return {"quality_level": "poor", "total_questions": 0}
+            
+            def export_segmentation_result(self, segments):
+                return {"questions": []}
 from config.settings import settings
 
 router = APIRouter(prefix="/api/ocr", tags=["OCR处理"])
@@ -73,8 +85,9 @@ class TaskStatus(BaseModel):
     estimated_completion: Optional[datetime] = None
     current_sheet: Optional[str] = None
 
-# 初始化OCR服务
+# 初始化服务
 ocr_service = GeminiOCRService()
+segmentation_service = QuestionSegmentationService()
 
 # 线程池执行器
 executor = ThreadPoolExecutor(max_workers=settings.OCR_BATCH_SIZE)
@@ -109,13 +122,37 @@ async def process_single_answer_sheet(
         result = await ocr_service.process_answer_sheet(answer_sheet.original_file_path)
         processing_time = (datetime.utcnow() - start_time).total_seconds()
         
-        # 更新结果
+        # 更新OCR结果
         answer_sheet.ocr_result = result["recognized_data"]
         answer_sheet.ocr_confidence = result["confidence"]
         answer_sheet.ocr_status = "completed" if result["success"] else "failed"
         
-        # 如果识别成功，提取学生信息
+        # 如果OCR识别成功，进行题目分割
+        segmented_questions = None
+        segmentation_quality = None
+        
         if result["success"] and result["recognized_data"]:
+            try:
+                # 执行题目分割
+                segments = segmentation_service.segment_questions(result["recognized_data"])
+                
+                # 验证分割质量
+                segmentation_quality = segmentation_service.validate_segmentation(segments)
+                
+                # 导出分割结果
+                segmented_questions = segmentation_service.export_segmentation_result(segments)
+                
+                # 保存分割结果到答题卡
+                answer_sheet.segmented_questions = segmented_questions
+                answer_sheet.segmentation_quality = segmentation_quality
+                
+            except Exception as seg_error:
+                # 分割失败不影响OCR结果
+                print(f"题目分割失败: {str(seg_error)}")
+                answer_sheet.segmented_questions = None
+                answer_sheet.segmentation_quality = {"quality_level": "failed", "error": str(seg_error)}
+            
+            # 提取学生信息
             student_info = result["recognized_data"].get("student_info", {})
             if student_info:
                 answer_sheet.student_id = student_info.get("student_id")
@@ -292,13 +329,37 @@ async def process_single_sheet_internal(sheet_id: str, db: Session) -> Dict[str,
         result = await ocr_service.process_answer_sheet(answer_sheet.original_file_path)
         processing_time = (datetime.utcnow() - start_time).total_seconds()
         
-        # 更新结果
+        # 更新OCR结果
         answer_sheet.ocr_result = result["recognized_data"]
         answer_sheet.ocr_confidence = result["confidence"]
         answer_sheet.ocr_status = "completed" if result["success"] else "failed"
         
-        # 提取学生信息
+        # 如果OCR识别成功，进行题目分割
+        segmented_questions = None
+        segmentation_quality = None
+        
         if result["success"] and result["recognized_data"]:
+            try:
+                # 执行题目分割
+                segments = segmentation_service.segment_questions(result["recognized_data"])
+                
+                # 验证分割质量
+                segmentation_quality = segmentation_service.validate_segmentation(segments)
+                
+                # 导出分割结果
+                segmented_questions = segmentation_service.export_segmentation_result(segments)
+                
+                # 保存分割结果到答题卡
+                answer_sheet.segmented_questions = segmented_questions
+                answer_sheet.segmentation_quality = segmentation_quality
+                
+            except Exception as seg_error:
+                # 分割失败不影响OCR结果
+                print(f"题目分割失败: {str(seg_error)}")
+                answer_sheet.segmented_questions = None
+                answer_sheet.segmentation_quality = {"quality_level": "failed", "error": str(seg_error)}
+            
+            # 提取学生信息
             student_info = result["recognized_data"].get("student_info", {})
             if student_info:
                 answer_sheet.student_id = student_info.get("student_id")
@@ -385,7 +446,7 @@ async def get_task_results(
         completed_at=task_data.get("completed_at")
     )
 
-@router.post("/retry")
+@router.post("/retry", response_model=dict)
 async def retry_failed_ocr(
     answer_sheet_ids: List[str],
     current_user: User = Depends(get_current_user),
@@ -417,7 +478,7 @@ async def retry_failed_ocr(
     
     return {"message": f"已重置{len(answer_sheets)}个失败任务，可重新处理"}
 
-@router.get("/statistics")
+@router.get("/statistics", response_model=dict)
 async def get_ocr_statistics(
     exam_id: Optional[str] = None,
     current_user: User = Depends(get_current_user),

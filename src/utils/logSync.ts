@@ -19,8 +19,9 @@ class LogSyncService {
   }
 
   private initializeSync() {
+    // 暂时禁用日志同步功能以减少错误日志
     // 只在开发环境启用
-    if (import.meta.env.DEV) {
+    if (false && import.meta.env.DEV) {
       this.isEnabled = true;
       this.startPeriodicSync();
       this.interceptConsoleMethods();

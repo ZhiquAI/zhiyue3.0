@@ -1,6 +1,6 @@
 // 异步操作Hook - 统一处理加载状态和错误
-import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import React, { useState, useCallback, useEffect } from 'react';
+import { message } from '../utils/message';
 
 export interface AsyncOperationState<T = any> {
   data: T | null;
@@ -92,7 +92,7 @@ export const useAsyncData = <T = any>(
   }, [execute, fetcher]);
 
   // 自动执行
-  React.useEffect(() => {
+  useEffect(() => {
     if (immediate) {
       refetch();
     }

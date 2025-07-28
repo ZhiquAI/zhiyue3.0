@@ -11,6 +11,7 @@ import {
 import { useAppContext } from '../../contexts/AppContext';
 import CreateExamModal from '../modals/CreateExamModal';
 import { mockNotifications } from '../../data/mockData';
+import { Exam, ExamStatus } from '../../types/exam';
 
 const DashboardView: React.FC = () => {
   const { exams, setSubViewInfo, setCurrentView } = useAppContext();
@@ -28,7 +29,7 @@ const DashboardView: React.FC = () => {
   // 获取已完成的考试（可以查看分析）
   const completedExams = exams.filter(e => e.status === '已完成');
 
-  const handleNavigate = (type: string, exam?: any) => {
+  const handleNavigate = (type: string, exam?: Exam) => {
     if (type === 'create') {
       setCreateModalVisible(true);
     } else if (type === 'startMarking') {
@@ -55,12 +56,12 @@ const DashboardView: React.FC = () => {
         setCurrentView('dataAnalysis');
       }
     } else if (exam) {
-      const viewMap = {
-        '待配置': 'configure',
+      const viewMap: Partial<Record<ExamStatus, string>> = {
+        '待配置': 'upload',
         '待阅卷': 'upload', // 待阅卷状态跳转到上传答题卡工作台
         '阅卷中': 'marking'
       };
-      setSubViewInfo({ view: viewMap[exam.status] || 'configure', exam });
+      setSubViewInfo({ view: viewMap[exam.status] || 'upload', exam });
     }
   };
 
@@ -80,7 +81,7 @@ const DashboardView: React.FC = () => {
   const getActionText = (status: string) => {
     switch (status) {
       case '待配置':
-        return '配置试卷';
+        return '上传答题卡';
       case '待阅卷':
         return '上传答题卡';
       case '阅卷中':
@@ -121,19 +122,24 @@ const DashboardView: React.FC = () => {
       <Breadcrumb className="mb-4" items={[{ title: '工作台' }]} />
       
       <Card title="快捷操作" className="mb-6">
-        <Row gutter={[24, 24]}>
+        <Row gutter={[16, 16]}>
           {quickActions.map((action, index) => (
-            <Col xs={24} md={8} key={index}>
+            <Col xs={24} sm={12} lg={8} key={index}>
               <Card 
                 hoverable={!action.disabled} 
                 className={`h-full ${action.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={action.disabled ? undefined : action.onClick}
+                styles={{ body: { padding: '16px' } }}
               >
                 <div className="flex items-center">
-                  <Avatar size={48} icon={action.icon} className={action.color} />
-                  <div className="ml-4">
-                    <h3 className="font-semibold text-base m-0">{action.title}</h3>
-                    <p className="text-gray-500 text-sm m-0">{action.description}</p>
+                  <Avatar 
+                    size={{ xs: 40, sm: 48 }} 
+                    icon={action.icon} 
+                    className={action.color} 
+                  />
+                  <div className="ml-3 sm:ml-4 flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm sm:text-base m-0 truncate">{action.title}</h3>
+                    <p className="text-gray-500 text-xs sm:text-sm m-0 line-clamp-2">{action.description}</p>
                     {action.disabled && (
                       <p className="text-gray-400 text-xs mt-1">暂无可用任务</p>
                     )}
@@ -145,23 +151,31 @@ const DashboardView: React.FC = () => {
         </Row>
       </Card>
 
-      <Row gutter={[24, 24]}>
+      <Row gutter={[16, 16]}>
         {/* 左侧：通知中心 */}
-        <Col xs={24} lg={10}>
-          <Card title="通知中心" extra={<Button type="link">查看全部</Button>}>
-            <Timeline>
-              {mockNotifications.map((item, index) => (
-                <Timeline.Item key={index} color={item.color}>
-                  <p>{item.text}</p>
-                  <p className="text-xs text-gray-400">{item.time}</p>
-                </Timeline.Item>
-              ))}
-            </Timeline>
+        <Col xs={24} xl={10}>
+          <Card 
+            title="通知中心" 
+            extra={<Button type="link" size="small">查看全部</Button>}
+            className="h-full"
+          >
+            <Timeline
+              items={mockNotifications.map((item, index) => ({
+                key: index,
+                color: item.color,
+                children: (
+                  <div>
+                    <p className="text-sm sm:text-base mb-1">{item.text}</p>
+                    <p className="text-xs text-gray-400">{item.time}</p>
+                  </div>
+                )
+              }))}
+            />
           </Card>
         </Col>
         
         {/* 右侧：待办事项 */}
-        <Col xs={24} lg={14}>
+        <Col xs={24} xl={14}>
           <Card title="待办事项" extra={<Tag color="red">{todoExams.length}</Tag>}>
             {todoExams.length > 0 ? (
               <List
@@ -169,10 +183,13 @@ const DashboardView: React.FC = () => {
                 dataSource={todoExams}
                 renderItem={item => (
                   <List.Item
+                    className="px-0"
                     actions={[
                       <Button 
                         type="primary" 
+                        size="small"
                         onClick={() => handleNavigate('handle', item)}
+                        className="text-xs sm:text-sm"
                       >
                         {getActionText(item.status)}
                       </Button>
@@ -181,6 +198,7 @@ const DashboardView: React.FC = () => {
                     <List.Item.Meta
                       avatar={
                         <Avatar 
+                          size={{ xs: 32, sm: 40 }}
                           icon={getActionIcon(item.status)}
                           style={{ backgroundColor: '#ff9800' }} 
                         />
@@ -189,28 +207,28 @@ const DashboardView: React.FC = () => {
                         <div className="flex flex-col">
                           <a 
                             onClick={() => handleNavigate('handle', item)}
-                            className="font-semibold text-base text-gray-800 mb-1 hover:text-blue-600"
+                            className="font-semibold text-sm sm:text-base text-gray-800 mb-1 hover:text-blue-600 line-clamp-1"
                           >
                             {item.name || '未命名考试'}
                           </a>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Tag color="orange" size="small">{item.status}</Tag>
-                            <span>{item.subject}</span>
-                            <span>·</span>
-                            <span>{item.grade}</span>
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-500">
+                            <Tag color="orange" className="text-xs">{item.status}</Tag>
+                            <span className="truncate">{item.subject}</span>
+                            <span className="hidden sm:inline">·</span>
+                            <span className="truncate">{item.grade}</span>
                           </div>
                         </div>
                       }
                       description={
                         <div className="text-gray-400 text-xs mt-2">
-                          创建于: {item.createdAt}
+                          <div className="truncate">创建于: {item.createdAt}</div>
                           {item.status === '待阅卷' && (
-                            <span className="ml-2 text-blue-600">• 试卷已配置，等待上传答题卡</span>
+                            <div className="text-blue-600 mt-1">• 等待上传答题卡</div>
                           )}
-                          {item.status === '阅卷中' && item.tasks.total > 0 && (
-                            <span className="ml-2 text-green-600">
+                          {item.status === '阅卷中' && item.tasks && item.tasks.total > 0 && (
+                            <div className="text-green-600 mt-1">
                               • 进度: {item.tasks.completed}/{item.tasks.total}
-                            </span>
+                            </div>
                           )}
                         </div>
                       }

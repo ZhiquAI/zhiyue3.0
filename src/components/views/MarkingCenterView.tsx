@@ -1,11 +1,12 @@
 import React from 'react';
-import { Card, Table, Button, Tag, Progress, Tooltip, Breadcrumb, message, Empty } from 'antd';
-import { EditOutlined, ClockCircleOutlined, CheckCircleOutlined, UploadOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Tag, Progress, Tooltip, Breadcrumb, Empty, Alert } from 'antd';
+import { EditOutlined, ClockCircleOutlined, CheckCircleOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam } from '../../types/exam';
+import { message } from '../../utils/message';
 
 const MarkingCenterView: React.FC = () => {
-  const { exams, setSubViewInfo } = useAppContext();
+  const { exams, setSubViewInfo, setCurrentView } = useAppContext();
 
   const markingExams = exams.filter(e => 
     e.status === '阅卷中' || e.status === '待阅卷'
@@ -13,17 +14,22 @@ const MarkingCenterView: React.FC = () => {
 
   const handleEnterMarking = (exam: Exam) => {
     if (exam.status === '待阅卷') {
-      message.info('请先上传答题卡后再开始阅卷');
-      // 跳转到答题卡上传界面
-      setSubViewInfo({ view: 'upload', exam });
+      message.info('请先在考试管理中上传答题卡后再开始阅卷');
       return;
     }
-    setSubViewInfo({ view: 'marking', exam });
+    setSubViewInfo({ 
+      view: 'marking', 
+      exam,
+      source: 'markingCenter' // 标识来源为阅卷中心
+    });
   };
 
-  const handleUploadAnswerSheets = (exam: Exam) => {
-    // 跳转到答题卡上传界面
-    setSubViewInfo({ view: 'upload', exam });
+  const handleJumpToExamManagement = (exam?: Exam) => {
+    // 跳转到考试管理
+    setCurrentView('examList');
+    if (exam) {
+      message.info(`已跳转到考试管理，查看考试：${exam.name}`);
+    }
   };
 
   const columns = [
@@ -116,10 +122,10 @@ const MarkingCenterView: React.FC = () => {
             <div className="space-x-2">
               <Button 
                 type="primary"
-                icon={<UploadOutlined />}
-                onClick={() => handleUploadAnswerSheets(record)}
+                icon={<ArrowRightOutlined />}
+                onClick={() => handleJumpToExamManagement(record)}
               >
-                上传答题卡
+                去考试管理上传
               </Button>
               <Button 
                 type="default"
@@ -148,6 +154,15 @@ const MarkingCenterView: React.FC = () => {
     <div>
       <Breadcrumb className="mb-4" items={[{ title: '阅卷中心' }]} />
       
+      {/* 职责说明提示 */}
+      <Alert
+        message="阅卷中心职责说明"
+        description="阅卷中心专注于阅卷任务的执行和监控。如需上传答题卡，请前往考试管理模块进行操作。"
+        type="info"
+        showIcon
+        className="mb-4"
+      />
+      
       <Card 
         title={
           <div className="flex items-center justify-between">
@@ -170,8 +185,15 @@ const MarkingCenterView: React.FC = () => {
               <div className="text-center">
                 <p className="text-gray-500 mb-2">暂无阅卷任务</p>
                 <p className="text-sm text-gray-400">
-                  请先在考试管理中配置试卷，完成配置后考试将出现在这里
-                </p>
+              请先在考试管理中上传答题卡，完成后考试将出现在这里
+            </p>
+            <Button 
+              type="link" 
+              onClick={() => handleJumpToExamManagement()}
+              className="mt-2"
+            >
+              前往考试管理 →
+            </Button>
               </div>
             }
           />
@@ -180,30 +202,20 @@ const MarkingCenterView: React.FC = () => {
 
       {/* 阅卷流程说明 */}
       <Card title="阅卷流程说明" className="mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-blue-600 font-bold text-lg">1</span>
-            </div>
-            <h4 className="font-medium text-gray-800 mb-2">配置试卷</h4>
-            <p className="text-sm text-gray-600">
-              在考试管理中上传试卷文件，使用AI智能识别生成评分标准
-            </p>
-          </div>
-          
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center p-4 bg-green-50 rounded-lg">
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-green-600 font-bold text-lg">2</span>
+              <span className="text-green-600 font-bold text-lg">1</span>
             </div>
             <h4 className="font-medium text-gray-800 mb-2">上传答题卡</h4>
             <p className="text-sm text-gray-600">
-              批量上传学生答题卡，系统自动进行OCR识别和预处理
+              在考试管理中批量上传学生答题卡，系统自动进行OCR识别和预处理
             </p>
           </div>
           
           <div className="text-center p-4 bg-purple-50 rounded-lg">
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-purple-600 font-bold text-lg">3</span>
+              <span className="text-purple-600 font-bold text-lg">2</span>
             </div>
             <h4 className="font-medium text-gray-800 mb-2">AI辅助阅卷</h4>
             <p className="text-sm text-gray-600">
@@ -213,7 +225,7 @@ const MarkingCenterView: React.FC = () => {
 
           <div className="text-center p-4 bg-orange-50 rounded-lg">
             <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-orange-600 font-bold text-lg">4</span>
+              <span className="text-orange-600 font-bold text-lg">3</span>
             </div>
             <h4 className="font-medium text-gray-800 mb-2">生成报告</h4>
             <p className="text-sm text-gray-600">

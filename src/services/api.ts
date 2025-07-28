@@ -1,6 +1,6 @@
 // API服务层 - 统一管理所有后端交互
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
-import { message } from 'antd';
+import { message } from '../utils/message';
 
 // API配置
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -255,6 +255,125 @@ export const authApi = {
   // 刷新token
   refreshToken: async (): Promise<ApiResponse<any>> => {
     const response = await apiClient.post('/auth/refresh');
+    return response.data;
+  },
+
+  // 更新用户资料
+  updateProfile: async (profileData: {
+    name?: string;
+    email?: string;
+    school?: string;
+    subject?: string;
+    grades?: string[];
+    avatar?: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.put('/auth/profile', profileData);
+    return response.data;
+  },
+
+  // 更新密码
+  updatePassword: async (passwordData: {
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.put('/auth/password', passwordData);
+    return response.data;
+  },
+
+  // 请求密码重置
+  requestPasswordReset: async (email: string): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/auth/password-reset/request', { email });
+    return response.data;
+  },
+
+  // 确认密码重置
+  confirmPasswordReset: async (data: {
+    email: string;
+    code: string;
+    newPassword: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/auth/password-reset/confirm', data);
+    return response.data;
+  },
+};
+
+// 条形码相关API
+export const barcodeApi = {
+  // 生成条形码
+  generateBarcode: async (data: {
+    student_id: string;
+    name: string;
+    class_name: string;
+    exam_number?: string;
+    paper_type?: string;
+    barcode_type?: string;
+    data_format?: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/api/barcode/generate', data);
+    return response.data;
+  },
+
+  // 识别条形码（文件上传）
+  recognizeBarcode: async (file: File): Promise<ApiResponse<any>> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await apiClient.post('/api/barcode/recognize', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // 识别条形码（图片路径）
+  recognizeBarcodeByPath: async (imagePath: string): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/api/barcode/recognize', {
+      image_path: imagePath
+    });
+    return response.data;
+  },
+
+  // 创建条形码模板
+  createTemplate: async (templateData: {
+    name: string;
+    barcode_type: string;
+    data_format: string;
+    position: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    validation_rules?: any;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/api/barcode/template', templateData);
+    return response.data;
+  },
+
+  // 获取条形码模板列表
+  getTemplates: async (): Promise<ApiResponse<any[]>> => {
+    const response = await apiClient.get('/api/barcode/templates');
+    return response.data;
+  },
+
+  // 验证条形码区域
+  validateRegion: async (data: {
+    image_path: string;
+    region: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/api/barcode/validate', data);
+    return response.data;
+  },
+
+  // 获取条形码服务状态
+  getStatus: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/api/barcode/status');
     return response.data;
   },
 };

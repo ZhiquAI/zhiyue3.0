@@ -1,22 +1,16 @@
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-try:
-    from backend.database import get_db
-    from backend.models.production_models import User
-    from backend.config.settings import settings
-    from backend.services.email_service import email_service, reset_token_manager
-    from backend.middleware.permissions import permission_manager, get_user_permissions
-except ImportError:
-    from database import get_db
-    from models.production_models import User
-    from config.settings import settings
-    from services.email_service import email_service, reset_token_manager
-    from middleware.permissions import permission_manager, get_user_permissions
+from database import get_db
+from models.production_models import User
+from config.settings import settings
+from services.email_service import email_service, reset_token_manager
+from middleware.permissions import permission_manager, get_user_permissions
+from middleware.security_audit import security_auditor
 
 # OAuth2 an password-based bearer tokens scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -33,7 +27,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     )
     
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, 
+            settings.SECRET_KEY, 
+            algorithms=[settings.ALGORITHM],
+            audience=settings.JWT_AUDIENCE,
+            issuer=settings.JWT_ISSUER
+        )
         username: str = payload.get("sub")
         user_id: str = payload.get("user_id")
         
@@ -74,10 +74,48 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    # 添加标准JWT声明
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
+        "type": "access"
+    })
+    
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
+
+def create_refresh_token(user_id: str) -> str:
+    """创建刷新令牌"""
+    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode = {
+        "user_id": user_id,
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
+        "type": "refresh"
+    }
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+def validate_password_strength(password: str) -> bool:
+    """验证密码强度"""
+    if len(password) < settings.PASSWORD_MIN_LENGTH:
+        return False
+    
+    if settings.PASSWORD_REQUIRE_UPPERCASE and not any(c.isupper() for c in password):
+        return False
+    
+    if settings.PASSWORD_REQUIRE_NUMBERS and not any(c.isdigit() for c in password):
+        return False
+    
+    if settings.PASSWORD_REQUIRE_SYMBOLS and not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
+        return False
+    
+    return True
 
 
 from fastapi import APIRouter
@@ -114,8 +152,7 @@ class UserResponse(BaseModel):
     last_login: Optional[datetime] = None
     permissions: Optional[List[str]] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class Token(BaseModel):
     access_token: str
@@ -140,6 +177,9 @@ class PasswordResetRequest(BaseModel):
 class RoleUpdate(BaseModel):
     user_id: str
     new_role: str
+
+class MessageResponse(BaseModel):
+    message: str
 
 # 认证路由
 @router.post("/register", response_model=Token)
@@ -177,27 +217,65 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
     )
     
     # 创建用户响应对象，包含权限信息
-    user_response = UserResponse.from_orm(new_user)
-    user_response.permissions = get_user_permissions(new_user.role)
+    user_dict = {
+        'id': new_user.id,
+        'username': new_user.username,
+        'email': new_user.email,
+        'name': new_user.name,
+        'role': new_user.role,
+        'school': new_user.school,
+        'subject': new_user.subject,
+        'grades': new_user.grades,
+        'is_active': new_user.is_active,
+        'is_verified': new_user.is_verified,
+        'created_at': new_user.created_at,
+        'last_login': new_user.last_login,
+        'permissions': get_user_permissions(new_user.role)
+    }
+    user_response = UserResponse.model_validate(user_dict)
 
     # 发送欢迎邮件
     try:
+        # 邮件发送失败不应影响注册流程
         await email_service.send_welcome_email(new_user.email, new_user.username)
     except Exception as e:
         logger.warning(f"发送欢迎邮件失败: {str(e)}")
 
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": user_response
-    }
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=user_response
+    )
 
 @router.post("/login", response_model=Token)
-async def login_user(user_data: UserLogin, db: Session = Depends(get_db)):
+async def login_user(request: Request, user_data: UserLogin, db: Session = Depends(get_db)):
     """用户登录"""
+    # 获取客户端IP
+    client_ip = request.client.host if request.client else '127.0.0.1'
+    user_agent = request.headers.get('User-Agent', '')
+    
+    # 检查登录速率限制
+    if not security_auditor.check_rate_limit(client_ip, 'login'):
+        security_auditor.log_security_event(
+            'login_rate_limit_exceeded',
+            ip_address=client_ip,
+            details={'username': user_data.username}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="登录尝试过于频繁，请稍后再试"
+        )
+    
     user = db.query(User).filter(User.username == user_data.username).first()
     
     if not user or not verify_password(user_data.password, user.hashed_password):
+        # 记录登录失败
+        security_auditor.log_security_event(
+            'login_failed',
+            user_id=user.id if user else None,
+            ip_address=client_ip,
+            details={'username': user_data.username, 'user_agent': user_agent}
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误",
@@ -205,10 +283,19 @@ async def login_user(user_data: UserLogin, db: Session = Depends(get_db)):
         )
     
     if not user.is_active:
+        security_auditor.log_security_event(
+            'login_disabled_account',
+            user_id=user.id,
+            ip_address=client_ip,
+            details={'username': user_data.username}
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="账户已被禁用"
         )
+    
+    # 检查登录异常
+    anomaly_result = security_auditor.check_login_anomaly(user.id, client_ip, user_agent)
     
     # 更新最后登录时间
     user.last_login = datetime.utcnow()
@@ -221,17 +308,44 @@ async def login_user(user_data: UserLogin, db: Session = Depends(get_db)):
         expires_delta=access_token_expires
     )
     
+    # 记录成功登录
+    security_auditor.log_security_event(
+        'login_success',
+        user_id=user.id,
+        ip_address=client_ip,
+        details={
+            'username': user_data.username,
+            'user_agent': user_agent,
+            'anomaly_detected': anomaly_result['has_anomalies'],
+            'risk_score': anomaly_result['risk_score']
+        }
+    )
+    
     # 创建用户响应对象，包含权限信息
-    user_response = UserResponse.from_orm(user)
-    user_response.permissions = get_user_permissions(user.role)
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": user_response
+    user_dict = {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'name': user.name,
+        'role': user.role,
+        'school': user.school,
+        'subject': user.subject,
+        'grades': user.grades,
+        'is_active': user.is_active,
+        'is_verified': user.is_verified,
+        'created_at': user.created_at,
+        'last_login': user.last_login,
+        'permissions': get_user_permissions(user.role)
     }
+    user_response = UserResponse.model_validate(user_dict)
 
-@router.post("/token")
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=user_response
+    )
+
+@router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """OAuth2兼容的登录接口"""
     user = db.query(User).filter(User.username == form_data.username).first()
@@ -249,13 +363,49 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         expires_delta=access_token_expires
     )
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    # 创建用户响应对象，包含权限信息
+    user_dict = {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'name': user.name,
+        'role': user.role,
+        'school': user.school,
+        'subject': user.subject,
+        'grades': user.grades,
+        'is_active': user.is_active,
+        'is_verified': user.is_verified,
+        'created_at': user.created_at,
+        'last_login': user.last_login,
+        'permissions': get_user_permissions(user.role)
+    }
+    user_response = UserResponse.model_validate(user_dict)
+    
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=user_response
+    )
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """获取当前用户信息"""
-    user_response = UserResponse.from_orm(current_user)
-    user_response.permissions = get_user_permissions(current_user.role)
+    user_dict = {
+        'id': current_user.id,
+        'username': current_user.username,
+        'email': current_user.email,
+        'name': current_user.name,
+        'role': current_user.role,
+        'school': current_user.school,
+        'subject': current_user.subject,
+        'grades': current_user.grades,
+        'is_active': current_user.is_active,
+        'is_verified': current_user.is_verified,
+        'created_at': current_user.created_at,
+        'last_login': current_user.last_login,
+        'permissions': get_user_permissions(current_user.role)
+    }
+    user_response = UserResponse.model_validate(user_dict)
     return user_response
 
 @router.put("/me", response_model=UserResponse)
@@ -282,15 +432,15 @@ async def update_user_profile(
     db.commit()
     db.refresh(current_user)
     
-    return UserResponse.from_orm(current_user)
+    return UserResponse.model_validate(current_user)
 
-@router.post("/password/reset")
+@router.post("/password/reset", response_model=MessageResponse)
 async def request_password_reset(reset_data: PasswordReset, db: Session = Depends(get_db)):
     """请求密码重置"""
     user = db.query(User).filter(User.email == reset_data.email).first()
     if not user:
         # 为了安全，即使邮箱不存在也返回成功消息
-        return {"message": "如果邮箱存在，重置链接已发送"}
+        return MessageResponse(message="如果邮箱存在，重置链接已发送")
 
     # 生成重置令牌
     reset_token = reset_token_manager.generate_token(user.id)
@@ -302,12 +452,12 @@ async def request_password_reset(reset_data: PasswordReset, db: Session = Depend
             user.username,
             reset_token
         )
-        return {"message": "密码重置链接已发送到您的邮箱"}
+        return MessageResponse(message="密码重置链接已发送到您的邮箱")
     except Exception as e:
         logger.error(f"发送密码重置邮件失败: {str(e)}")
-        return {"message": "密码重置链接已发送到您的邮箱"}  # 为了安全，不暴露错误信息
+        return MessageResponse(message="密码重置链接已发送到您的邮箱")  # 为了安全，不暴露错误信息
 
-@router.post("/password/update")
+@router.post("/password/update", response_model=MessageResponse)
 async def update_password(
     password_data: PasswordUpdate,
     current_user: User = Depends(get_current_user),
@@ -322,9 +472,9 @@ async def update_password(
     
     db.commit()
     
-    return {"message": "密码更新成功"}
+    return MessageResponse(message="密码更新成功")
 
-@router.post("/password/reset/confirm")
+@router.post("/password/reset/confirm", response_model=MessageResponse)
 async def confirm_password_reset(reset_data: PasswordResetRequest, db: Session = Depends(get_db)):
     """确认密码重置"""
     # 验证重置令牌
@@ -352,13 +502,13 @@ async def confirm_password_reset(reset_data: PasswordResetRequest, db: Session =
 
     db.commit()
 
-    return {"message": "密码重置成功"}
+    return MessageResponse(message="密码重置成功")
 
-@router.post("/logout")
+@router.post("/logout", response_model=MessageResponse)
 async def logout_user():
     """用户登出"""
     # JWT是无状态的，客户端删除token即可
-    return {"message": "登出成功"}
+    return MessageResponse(message="登出成功")
 
 # 用户管理路由（需要管理员权限）
 @router.get("/users", response_model=List[UserResponse])
@@ -379,13 +529,13 @@ async def get_all_users(
     user_responses = []
 
     for user in users:
-        user_response = UserResponse.from_orm(user)
+        user_response = UserResponse.model_validate(user)
         user_response.permissions = get_user_permissions(user.role)
         user_responses.append(user_response)
 
     return user_responses
 
-@router.put("/users/{user_id}/role")
+@router.put("/users/{user_id}/role", response_model=UserResponse)
 async def update_user_role(
     user_id: str,
     role_data: RoleUpdate,
@@ -425,12 +575,12 @@ async def update_user_role(
     db.commit()
     db.refresh(target_user)
 
-    user_response = UserResponse.from_orm(target_user)
+    user_response = UserResponse.model_validate(target_user)
     user_response.permissions = get_user_permissions(target_user.role)
 
     return user_response
 
-@router.put("/users/{user_id}/status")
+@router.put("/users/{user_id}/status", response_model=MessageResponse)
 async def update_user_status(
     user_id: str,
     is_active: bool,
@@ -465,9 +615,9 @@ async def update_user_status(
 
     db.commit()
 
-    return {"message": f"用户状态已更新为 {'激活' if is_active else '禁用'}"}
+    return MessageResponse(message=f"用户状态已更新为 {'激活' if is_active else '禁用'}")
 
-@router.get("/roles")
+@router.get("/roles", response_model=dict)
 async def get_available_roles(current_user: User = Depends(get_current_user)):
     """获取可用角色列表"""
     try:
@@ -483,7 +633,7 @@ async def get_available_roles(current_user: User = Depends(get_current_user)):
 
     return PermissionInfo.get_all_roles_info()
 
-@router.get("/permissions")
+@router.get("/permissions", response_model=dict)
 async def get_user_permissions_info(current_user: User = Depends(get_current_user)):
     """获取当前用户权限信息"""
     try:

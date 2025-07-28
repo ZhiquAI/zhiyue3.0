@@ -7,12 +7,12 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
-from celery import Celery
 
 from models.production_models import Exam, AnswerSheet, GradingTask
 from services.ocr_service import OCRService
 from services.gemini_service import GeminiService
 from services.file_storage_service import FileStorageService
+from models.grading_models import GradingResult, GradingStatus
 
 logger = logging.getLogger(__name__)
 
@@ -233,22 +233,102 @@ class GradingService:
             issues.append('缺少学生基本信息')
         
         return issues
-
-# Celery任务定义
-app = Celery('zhiyue_ai')
-
-@app.task(bind=True, max_retries=3)
-def grade_answer_sheet(self, answer_sheet_id: str):
-    """异步评分任务"""
-    try:
-        from database import get_db
-        db = next(get_db())
-        
-        grading_service = GradingService(db)
-        result = grading_service.grade_single_answer_sheet(answer_sheet_id)
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"Grading task failed: {str(e)}")
-        self.retry(countdown=60, exc=e)
+    
+    async def grade_single_answer_sheet(self, answer_sheet_id: str) -> Dict[str, Any]:
+        """评分单个答题卡"""
+        try:
+            # 获取答题卡记录
+            answer_sheet = self.db.query(AnswerSheet).filter(
+                AnswerSheet.id == answer_sheet_id
+            ).first()
+            
+            if not answer_sheet:
+                raise ValueError(f"Answer sheet not found: {answer_sheet_id}")
+            
+            # 获取考试信息
+            exam = self.db.query(Exam).filter(
+                Exam.id == answer_sheet.exam_id
+            ).first()
+            
+            if not exam:
+                raise ValueError(f"Exam not found: {answer_sheet.exam_id}")
+            
+            # 检查OCR结果是否存在
+            if not answer_sheet.ocr_result:
+                raise ValueError(f"OCR result not found for answer sheet: {answer_sheet_id}")
+            
+            # 更新评分状态
+            answer_sheet.grading_status = GradingStatus.GRADING.value
+            self.db.commit()
+            
+            # 使用Gemini进行智能评分
+            grading_result: GradingResult = await self.gemini_service.grade_answer_sheet(
+                ocr_result=answer_sheet.ocr_result,
+                exam_config=exam.grading_config or {}
+            )
+            
+            # 计算客观题总分
+            objective_total = sum(result.earned_score for result in grading_result.objective_results)
+            
+            # 计算主观题总分
+            subjective_total = sum(result.earned_score for result in grading_result.subjective_results)
+            
+            # 构建主观题分数字典
+            subjective_scores = {
+                result.question_number: {
+                    'score': result.earned_score,
+                    'max_score': result.max_score,
+                    'feedback': result.feedback
+                }
+                for result in grading_result.subjective_results
+            }
+            
+            # 构建质量问题列表
+            quality_issues = grading_result.quality_assessment.issues if grading_result.quality_assessment else []
+            
+            # 更新评分结果
+            answer_sheet.objective_score = objective_total
+            answer_sheet.subjective_scores = subjective_scores
+            answer_sheet.total_score = grading_result.total_score
+            answer_sheet.grading_status = GradingStatus.COMPLETED.value
+            answer_sheet.quality_issues = quality_issues
+            
+            # 质量评估
+            if grading_result.quality_assessment and grading_result.quality_assessment.needs_human_review:
+                answer_sheet.needs_review = True
+            
+            # 保存详细的评分结果到扩展字段
+            answer_sheet.grading_details = {
+                'objective_results': [result.__dict__ for result in grading_result.objective_results],
+                'subjective_results': [result.__dict__ for result in grading_result.subjective_results],
+                'quality_assessment': grading_result.quality_assessment.__dict__ if grading_result.quality_assessment else None,
+                'graded_at': grading_result.graded_at.isoformat() if grading_result.graded_at else None,
+                'grading_engine': grading_result.grading_engine,
+                'grader_version': grading_result.grader_version,
+                'processing_time': grading_result.processing_time
+            }
+            
+            self.db.commit()
+            
+            logger.info(f"Grading completed for answer sheet: {answer_sheet_id}, score: {answer_sheet.total_score}")
+            
+            return {
+                'answer_sheet_id': answer_sheet_id,
+                'total_score': answer_sheet.total_score,
+                'objective_score': objective_total,
+                'subjective_score': subjective_total,
+                'subjective_scores': subjective_scores,
+                'quality_assessment': grading_result.quality_assessment.__dict__ if grading_result.quality_assessment else None,
+                'needs_human_review': grading_result.quality_assessment.needs_human_review if grading_result.quality_assessment else False,
+                'status': 'success'
+            }
+            
+        except Exception as e:
+            # 更新错误状态
+            if 'answer_sheet' in locals():
+                answer_sheet.grading_status = GradingStatus.FAILED.value
+                answer_sheet.error_message = str(e)
+                self.db.commit()
+            
+            logger.error(f"Grading failed for answer sheet {answer_sheet_id}: {str(e)}")
+            raise

@@ -33,7 +33,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({ exam }) => {
   const [activeTabKey, setActiveTabKey] = useState('grade');
 
   const handleBack = () => {
-    setSubViewInfo({ view: null, exam: null });
+    setSubViewInfo({ view: null, exam: null, source: null });
   };
 
   const handleClassSelect = (className: string) => {
@@ -209,7 +209,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({ exam }) => {
           onClick: () => handleExport('pdf')
         },
         {
-          type: 'divider'
+          type: 'divider' as const,
+          key: 'divider1'
         },
         {
           key: 'print',

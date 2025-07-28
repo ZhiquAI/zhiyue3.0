@@ -11,7 +11,7 @@ import VirtualTable from '../common/VirtualTable';
 import ErrorBoundary from '../common/ErrorBoundary';
 
 const ExamManagementView: React.FC = () => {
-  const { exams, setSubViewInfo, deleteExam, refreshExams } = useAppContext();
+  const { exams, setSubViewInfo, setCurrentView, deleteExam, refreshExams } = useAppContext();
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
   const [filteredExams, setFilteredExams] = useState(exams);
   const [form] = Form.useForm();
@@ -52,16 +52,27 @@ const ExamManagementView: React.FC = () => {
 
   const handleNavigate = (type: string, exam: Exam) => {
     const navigationMap = {
-      '待配置': 'configure',
+      '待配置': 'upload',
       '待阅卷': 'upload', // 待阅卷状态跳转到上传答题卡
       '阅卷中': 'marking',
       '已完成': 'analysis'
     };
-    
-    setSubViewInfo({ 
-      view: navigationMap[exam.status] || 'configure', 
-      exam 
+
+    const targetView = navigationMap[exam.status] || 'upload';
+    console.log('Navigating to:', targetView, 'for exam:', exam.name);
+
+    setSubViewInfo({
+      view: targetView,
+      exam,
+      source: 'examManagement' // 标识来源为考试管理
     });
+  };
+
+  const handleJumpToMarkingCenter = (exam: Exam) => {
+    // 跳转到阅卷中心并高亮对应考试
+    setCurrentView('markingCenter');
+    // 可以通过URL参数或其他方式传递考试ID以便在阅卷中心高亮
+    message.info(`已跳转到阅卷中心，查看考试：${exam.name}`);
   };
 
   const handleDeleteExam = async (examId: string) => {
@@ -88,28 +99,44 @@ const ExamManagementView: React.FC = () => {
       '待配置': (
         <Button 
           type="primary" 
-          icon={<FileTextOutlined />}
-          onClick={() => handleNavigate('configure', exam)}
-        >
-          配置试卷
-        </Button>
-      ),
-      '待阅卷': (
-        <Button 
-          type="primary" 
           icon={<UploadOutlined />}
           onClick={() => handleNavigate('upload', exam)}
         >
           上传答题卡
         </Button>
       ),
+      '待阅卷': (
+        <Space>
+          <Button 
+            type="primary" 
+            icon={<UploadOutlined />}
+            onClick={() => handleNavigate('upload', exam)}
+          >
+            上传答题卡
+          </Button>
+          <Button 
+            type="default"
+            onClick={() => handleJumpToMarkingCenter(exam)}
+          >
+            去阅卷中心
+          </Button>
+        </Space>
+      ),
       '阅卷中': (
-        <Button 
-          type="primary" 
-          onClick={() => handleNavigate('marking', exam)}
-        >
-          进入阅卷
-        </Button>
+        <Space>
+          <Button 
+            type="primary" 
+            onClick={() => handleNavigate('marking', exam)}
+          >
+            进入阅卷
+          </Button>
+          <Button 
+            type="default"
+            onClick={() => handleJumpToMarkingCenter(exam)}
+          >
+            去阅卷中心
+          </Button>
+        </Space>
       ),
       '已完成': (
         <Button 
@@ -127,8 +154,8 @@ const ExamManagementView: React.FC = () => {
 
   const getStatusDescription = (exam: Exam) => {
     const descriptions: Record<string, string> = {
-      '待配置': '需要上传试卷并配置评分标准',
-      '待阅卷': '试卷已配置，等待上传答题卡',
+      '待配置': '等待上传答题卡开始阅卷',
+      '待阅卷': '等待上传答题卡开始阅卷',
       '阅卷中': `阅卷进行中 (${exam.tasks.completed}/${exam.tasks.total})`,
       '已完成': `阅卷已完成，平均分 ${exam.avgScore}分`
     };
@@ -198,7 +225,7 @@ const ExamManagementView: React.FC = () => {
             </div>
           )}
           {record.tasks.hasError && (
-            <Tag color="red" size="small" className="mt-1">
+            <Tag color="red" className="mt-1 text-xs">
               有异常
             </Tag>
           )}

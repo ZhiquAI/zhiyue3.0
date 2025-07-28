@@ -24,7 +24,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/files", tags=["文件管理"])
 
-@router.post("/upload/paper")
+@router.post("/upload/paper", response_model=dict)
 async def upload_paper(
     exam_id: str = Form(...),
     paper_type: str = Form(..., description="试卷类型: original/reference_answer"),
@@ -63,7 +63,7 @@ async def upload_paper(
         logger.error(f"Paper upload failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"试卷上传失败: {str(e)}")
 
-@router.post("/upload/answer-sheets")
+@router.post("/upload/answer-sheets", response_model=dict)
 async def upload_answer_sheets(
     exam_id: str = Form(...),
     files: List[UploadFile] = File(...),
@@ -91,7 +91,7 @@ async def upload_answer_sheets(
         logger.error(f"Answer sheets upload failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"答题卡上传失败: {str(e)}")
 
-@router.get("/exam/{exam_id}")
+@router.get("/exam/{exam_id}", response_model=dict)
 async def get_exam_files(
     exam_id: str,
     file_category: Optional[str] = None,
@@ -153,7 +153,7 @@ async def download_file(
         logger.error(f"File download failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"文件下载失败: {str(e)}")
 
-@router.delete("/{file_id}")
+@router.delete("/{file_id}", response_model=dict)
 async def delete_file(
     file_id: str,
     db: Session = Depends(get_db),
@@ -176,7 +176,7 @@ async def delete_file(
         logger.error(f"File deletion failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"文件删除失败: {str(e)}")
 
-@router.post("/process/{file_id}")
+@router.post("/process/{file_id}", response_model=dict)
 async def process_file(
     file_id: str,
     db: Session = Depends(get_db),
@@ -209,7 +209,7 @@ async def process_file(
         logger.error(f"File processing failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"文件处理失败: {str(e)}")
 
-@router.get("/processing-status/{file_id}")
+@router.get("/processing-status/{file_id}", response_model=dict)
 async def get_processing_status(
     file_id: str,
     db: Session = Depends(get_db),

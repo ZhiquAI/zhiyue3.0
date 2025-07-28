@@ -26,6 +26,10 @@ aiohttp==3.8.6
 pillow==10.0.1
 python-magic==0.4.27
 
+# 条形码识别
+pyzbar==0.1.9
+opencv-python==4.8.1.78
+
 # Gemini AI
 google-generativeai==0.3.0
 
