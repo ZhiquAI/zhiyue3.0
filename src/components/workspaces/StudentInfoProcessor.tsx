@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Card, Form, Input, Select, Button, Space, Alert, 
-  Divider, Tag, Tooltip, Row, Col, Image, message
+  Divider, Tag, Tooltip, Row, Col, Image
 } from 'antd';
 import {
   UserOutlined, IdcardOutlined, TeamOutlined, 
@@ -9,6 +9,7 @@ import {
   BarcodeOutlined, CameraOutlined, QrcodeOutlined
 } from '@ant-design/icons';
 import BarcodeGenerator from '../tools/BarcodeGenerator';
+import { message } from '../../utils/message';
 
 interface StudentInfo {
   student_id?: string;

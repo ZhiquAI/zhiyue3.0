@@ -6,13 +6,17 @@ import {
   EditOutlined, 
   BarChartOutlined,
   UserOutlined,
-  HomeOutlined,
   MenuOutlined,
   LogoutOutlined,
   SettingOutlined,
   DownOutlined,
   SwapOutlined,
-  BarcodeOutlined
+  BarcodeOutlined,
+  TeamOutlined,
+  CameraOutlined,
+  FileTextOutlined,
+  MonitorOutlined,
+  UnorderedListOutlined
 } from '@ant-design/icons';
 import { Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -52,10 +56,85 @@ const Header: React.FC = () => {
   };
 
   const handleNavigate = (key: string) => {
-    if (['landing', 'dashboard', 'examList', 'markingCenter', 'dataAnalysis'].includes(key)) {
+    if (['landing', 'dashboard', 'examList', 'markingCenter', 'integratedMarkingCenter', 'dataAnalysis', 'examManagement', 'studentInfo', 'choiceGrading', 'questionSegmentation', 'preGrading', 'barcodeGenerator', 'gradeReport', 'classReport', 'subjectReport', 'personalReport'].includes(key)) {
+      setMobileMenuVisible(false); // 关闭移动端菜单
+      
+      if (key === 'studentInfo') {
+         setSubViewInfo({ view: null, exam: null, source: null });
+         setCurrentView('studentManagement');
+         navigate('/students');
+         return;
+       }
+      
+      if (key === 'examManagement' || key === 'examList') {
+         setSubViewInfo({ view: null, exam: null, source: null });
+         setCurrentView('examList');
+         navigate('/exams');
+         return;
+       }
+
+
+
+
+
+
+
+      if (key === 'choiceGrading') {
+         setSubViewInfo({ view: null, exam: null, source: null });
+         setCurrentView('choiceGrading');
+         navigate('/choice-grading');
+         return;
+       }
+
+      if (key === 'questionSegmentation') {
+         setSubViewInfo({ view: null, exam: null, source: null });
+         setCurrentView('questionSegmentation');
+         navigate('/question-segmentation');
+         return;
+       }
+
+      if (key === 'preGrading') {
+         setSubViewInfo({ view: null, exam: null, source: null });
+         setCurrentView('preGrading');
+         navigate('/pre-grading');
+         return;
+       }
+
+      if (key === 'barcodeGenerator') {
+        navigate('/barcode-generator');
+        return;
+      }
+
+      if (key === 'gradeReport') {
+         setSubViewInfo({ view: null, exam: null, source: null });
+         setCurrentView('gradeReport');
+         navigate('/analysis/grade-report');
+         return;
+       }
+
+      if (key === 'classReport') {
+         setSubViewInfo({ view: null, exam: null, source: null });
+         setCurrentView('classReport');
+         navigate('/analysis/class-report');
+         return;
+       }
+
+      if (key === 'subjectReport') {
+         setSubViewInfo({ view: null, exam: null, source: null });
+         setCurrentView('subjectReport');
+         navigate('/analysis/subject-report');
+         return;
+       }
+
+      if (key === 'personalReport') {
+         setSubViewInfo({ view: null, exam: null, source: null });
+         setCurrentView('personalReport');
+         navigate('/analysis/personal-report');
+         return;
+       }
+      
       setCurrentView(key);
       setSubViewInfo({ view: null, exam: null, source: null });
-      setMobileMenuVisible(false); // 关闭移动端菜单
       
       // 使用路由导航
       switch (key) {
@@ -71,9 +150,13 @@ const Header: React.FC = () => {
         case 'markingCenter':
           navigate('/marking');
           break;
+        case 'integratedMarkingCenter':
+          navigate('/integrated-marking');
+          break;
         case 'dataAnalysis':
           navigate('/analysis');
           break;
+
       }
     }
   };
@@ -123,11 +206,61 @@ const Header: React.FC = () => {
 
   // 确定当前应该高亮的菜单项
   const getSelectedKey = () => {
+    // 如果当前视图是考生管理，返回studentInfo
+    if (currentView === 'studentManagement') {
+      return 'studentInfo';
+    }
+    // 如果当前视图是考试列表，返回examList
+    if (currentView === 'examList') {
+      return 'examList';
+    }
+
+
+
+    // 如果当前视图是答题卡上传，返回choiceGrading
+    if (currentView === 'choiceGrading') {
+      return 'choiceGrading';
+    }
+    // 如果当前视图是答题卡切分，返回questionSegmentation
+    if (currentView === 'questionSegmentation') {
+      return 'questionSegmentation';
+    }
+    // 如果当前视图是智能预处理，返回preGrading
+    if (currentView === 'preGrading') {
+      return 'preGrading';
+    }
+    // 如果当前视图是集成阅卷中心，返回integratedMarkingCenter
+    if (currentView === 'integratedMarkingCenter') {
+      return 'integratedMarkingCenter';
+    }
+    // 如果当前视图是条形码生成器，返回barcodeGenerator
+    if (currentView === 'barcodeGenerator') {
+      return 'barcodeGenerator';
+    }
+    // 如果当前视图是年级报告，返回gradeReport
+    if (currentView === 'gradeReport') {
+      return 'gradeReport';
+    }
+    // 如果当前视图是班级报告，返回classReport
+    if (currentView === 'classReport') {
+      return 'classReport';
+    }
+    // 如果当前视图是学科报告，返回subjectReport
+    if (currentView === 'subjectReport') {
+      return 'subjectReport';
+    }
+    // 如果当前视图是个人报告，返回personalReport
+    if (currentView === 'personalReport') {
+      return 'personalReport';
+    }
+    // 如果当前视图是模块导航，返回modules
+
     // 如果在子工作台中，根据子工作台类型决定高亮项
     if (subViewInfo.view) {
       switch (subViewInfo.view) {
-        case 'upload':
-          return 'examList'; // 上传属于考试管理
+        case 'detail':
+        case 'studentManagement':
+          return 'examList'; // 这些都属于考试管理下的考试列表
         case 'marking':
           return 'markingCenter'; // 阅卷属于阅卷中心
         case 'analysis':
@@ -135,6 +268,14 @@ const Header: React.FC = () => {
         default:
           return currentView;
       }
+    }
+    // 如果当前视图是阅卷中心，无论是否有子视图都高亮阅卷中心
+    if (currentView === 'markingCenter') {
+      return 'markingCenter';
+    }
+    // 如果当前视图是集成阅卷中心，高亮集成阅卷中心
+    if (currentView === 'integratedMarkingCenter') {
+      return 'integratedMarkingCenter';
     }
     return currentView;
   };
@@ -233,7 +374,7 @@ const Header: React.FC = () => {
               label: '工作台'
             },
             {
-              key: 'examList',
+              key: 'examManagement',
               icon: <ProfileOutlined />,
               label: '考试管理'
             },
@@ -300,7 +441,7 @@ const Header: React.FC = () => {
               label: '工作台'
             },
             {
-              key: 'examList',
+              key: 'examManagement',
               icon: <ProfileOutlined />,
               label: '考试管理'
             },

@@ -15,6 +15,12 @@ from api.classified_grading import segmentation_router, classifier_router
 from api.choice_grading import router as choice_grading_router
 from api.barcode import router as barcode_router
 from api.scoring_standards import router as scoring_standards_router
+from api.intelligent_segmentation import router as intelligent_segmentation_router
+from api.student_management import router as student_management_router
+
+from api.template_management import router as template_management_router
+# from api.batch_monitoring import router as batch_monitoring_router
+from api.pre_grading import router as pre_grading_router
 from database import create_tables
 from config.settings import settings
 
@@ -70,6 +76,12 @@ app.include_router(classifier_router)
 app.include_router(choice_grading_router, prefix="/api")
 app.include_router(barcode_router)  # 条形码服务路由
 app.include_router(scoring_standards_router)  # 评分标准服务路由
+app.include_router(intelligent_segmentation_router)  # 智能切题路由
+app.include_router(student_management_router, prefix="/api")  # 学生信息管理路由
+
+app.include_router(template_management_router)  # 答题卡模板管理路由
+# app.include_router(batch_monitoring_router)  # 批量处理监控路由
+app.include_router(pre_grading_router)  # 阅卷前处理工作流路由
 
 @app.get("/", response_model=dict)
 def read_root():

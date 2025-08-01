@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 import base64
 import io
+from sqlalchemy.orm import Session
 
 try:
     from pyzbar import pyzbar
@@ -288,3 +289,129 @@ class BarcodeService:
         }
         
         return templates.get(template_type, templates['standard'])
+    
+    def match_student_from_database(self, barcode_data: str, exam_id: str, db: Session) -> Optional[Dict[str, Any]]:
+        """从数据库中匹配学生信息
+        
+        Args:
+            barcode_data: 条形码数据
+            exam_id: 考试ID
+            db: 数据库会话
+            
+        Returns:
+            匹配的学生信息，如果未找到返回None
+        """
+        try:
+            # 导入Student模型（避免循环导入）
+            try:
+                from backend.models.production_models import Student
+            except ImportError:
+                from models.production_models import Student
+            
+            # 解析条形码数据
+            parsed_info = self._parse_student_info(barcode_data)
+            
+            if 'student_id' not in parsed_info:
+                logger.warning(f"条形码数据中未找到学号: {barcode_data}")
+                return None
+            
+            student_id = parsed_info['student_id']
+            
+            # 从数据库查找学生
+            student = db.query(Student).filter(
+                Student.exam_id == exam_id,
+                Student.student_id == student_id,
+                Student.is_active == True
+            ).first()
+            
+            if not student:
+                logger.info(f"未找到匹配的学生信息: exam_id={exam_id}, student_id={student_id}")
+                return None
+            
+            # 返回匹配结果
+            return {
+                'matched': True,
+                'student': {
+                    'id': student.id,
+                    'student_id': student.student_id,
+                    'name': student.name,
+                    'class_name': student.class_name,
+                    'grade': student.grade,
+                    'school': student.school
+                },
+                'parsed_data': parsed_info,
+                'confidence': 1.0  # 数据库匹配的置信度为100%
+            }
+            
+        except Exception as e:
+            logger.error(f"学生信息匹配失败: {str(e)}")
+            return None
+    
+    def batch_generate_barcodes(self, students_data: List[Dict[str, str]], format_type: str = 'pipe') -> List[Dict[str, str]]:
+        """批量生成条形码数据
+        
+        Args:
+            students_data: 学生信息列表
+            format_type: 编码格式
+            
+        Returns:
+            包含条形码数据的学生信息列表
+        """
+        results = []
+        
+        for student_info in students_data:
+            try:
+                barcode_data = self.generate_barcode_data(student_info, format_type)
+                result = student_info.copy()
+                result['barcode_data'] = barcode_data
+                results.append(result)
+            except Exception as e:
+                logger.error(f"生成条形码失败: {student_info}, error: {str(e)}")
+                result = student_info.copy()
+                result['barcode_data'] = None
+                result['error'] = str(e)
+                results.append(result)
+        
+        return results
+    
+    def validate_student_barcode(self, student_info: Dict[str, str], barcode_data: str) -> Dict[str, Any]:
+        """验证学生信息与条形码数据是否匹配
+        
+        Args:
+            student_info: 学生信息
+            barcode_data: 条形码数据
+            
+        Returns:
+            验证结果
+        """
+        try:
+            parsed_info = self._parse_student_info(barcode_data)
+            
+            # 检查关键字段是否匹配
+            matches = {
+                'student_id': student_info.get('student_id') == parsed_info.get('student_id'),
+                'name': student_info.get('name') == parsed_info.get('name'),
+                'class': student_info.get('class_name') == parsed_info.get('class')
+            }
+            
+            # 计算匹配度
+            match_count = sum(matches.values())
+            total_fields = len(matches)
+            match_rate = match_count / total_fields if total_fields > 0 else 0
+            
+            return {
+                'valid': match_rate >= 0.8,  # 80%以上匹配认为有效
+                'match_rate': match_rate,
+                'matches': matches,
+                'parsed_data': parsed_info,
+                'student_data': student_info
+            }
+            
+        except Exception as e:
+            logger.error(f"条形码验证失败: {str(e)}")
+            return {
+                'valid': False,
+                'error': str(e),
+                'parsed_data': None,
+                'student_data': student_info
+            }

@@ -7,6 +7,9 @@ import { Exam } from '../../types/exam';
 import { mockQuestionData } from '../../data/mockData';
 import { message } from '../../utils/message';
 import BubbleSheetAnalysis from '../BubbleSheetAnalysis';
+import AIMarkingAssistant from '../AIMarkingAssistant';
+import IntelligentScoringStrategy from '../IntelligentScoringStrategy';
+import AIGradingQualityMonitor from '../AIGradingQualityMonitor';
 
 interface MarkingWorkspaceProps {
   exam: Exam;
@@ -606,33 +609,88 @@ const MarkingWorkspace: React.FC<MarkingWorkspaceProps> = ({ exam }) => {
             }
             className="h-full"
           >
-            {/* 总分统计 */}
-            <div className="grid grid-cols-3 gap-2 mb-6">
-              <Card size="small" className="text-center bg-gradient-to-r from-green-50 to-green-100">
-                <Statistic
-                  title="客观题"
-                  value={currentStudent?.objectiveResults ? Object.values(currentStudent.objectiveResults).reduce((sum, result) => sum + result.score, 0) : 0}
-                  suffix={`/ ${mockQuestionData.questions.filter(q => ['choice', 'multiple_choice', 'true_false', 'fill_blank'].includes(q.questionType || '')).reduce((sum, q) => sum + q.points, 0)}`}
-                  valueStyle={{ color: '#52c41a', fontSize: '16px', fontWeight: 'bold' }}
-                />
-              </Card>
-              <Card size="small" className="text-center bg-gradient-to-r from-blue-50 to-blue-100">
-                <Statistic
-                  title="主观题"
-                  value={mockQuestionData.questions.filter(q => !['choice', 'multiple_choice', 'true_false', 'fill_blank'].includes(q.questionType || '')).reduce((sum, q) => sum + getQuestionScore(q.id), 0)}
-                  suffix={`/ ${mockQuestionData.questions.filter(q => !['choice', 'multiple_choice', 'true_false', 'fill_blank'].includes(q.questionType || '')).reduce((sum, q) => sum + q.points, 0)}`}
-                  valueStyle={{ color: '#1677ff', fontSize: '16px', fontWeight: 'bold' }}
-                />
-              </Card>
-              <Card size="small" className="text-center bg-gradient-to-r from-purple-50 to-purple-100">
-                <Statistic
-                  title="总分"
-                  value={getTotalScore()}
-                  suffix={`/ ${mockQuestionData.questions.reduce((sum, q) => sum + q.points, 0)}`}
-                  valueStyle={{ color: '#722ed1', fontSize: '16px', fontWeight: 'bold' }}
-                />
-              </Card>
-            </div>
+            {/* AI辅助阅卷功能集成 */}
+            <Tabs
+              size="small"
+              items={[
+                {
+                  key: 'overview',
+                  label: '评分概览',
+                  children: (
+                    <div className="space-y-4">
+                      {/* 总分统计 */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <Card size="small" className="text-center bg-gradient-to-r from-green-50 to-green-100">
+                          <Statistic
+                            title="客观题"
+                            value={currentStudent?.objectiveResults ? Object.values(currentStudent.objectiveResults).reduce((sum, result) => sum + result.score, 0) : 0}
+                            suffix={`/ ${mockQuestionData.questions.filter(q => ['choice', 'multiple_choice', 'true_false', 'fill_blank'].includes(q.questionType || '')).reduce((sum, q) => sum + q.points, 0)}`}
+                            valueStyle={{ color: '#52c41a', fontSize: '16px', fontWeight: 'bold' }}
+                          />
+                        </Card>
+                        <Card size="small" className="text-center bg-gradient-to-r from-blue-50 to-blue-100">
+                          <Statistic
+                            title="主观题"
+                            value={mockQuestionData.questions.filter(q => !['choice', 'multiple_choice', 'true_false', 'fill_blank'].includes(q.questionType || '')).reduce((sum, q) => sum + getQuestionScore(q.id), 0)}
+                            suffix={`/ ${mockQuestionData.questions.filter(q => !['choice', 'multiple_choice', 'true_false', 'fill_blank'].includes(q.questionType || '')).reduce((sum, q) => sum + q.points, 0)}`}
+                            valueStyle={{ color: '#1677ff', fontSize: '16px', fontWeight: 'bold' }}
+                          />
+                        </Card>
+                        <Card size="small" className="text-center bg-gradient-to-r from-purple-50 to-purple-100">
+                          <Statistic
+                            title="总分"
+                            value={getTotalScore()}
+                            suffix={`/ ${mockQuestionData.questions.reduce((sum, q) => sum + q.points, 0)}`}
+                            valueStyle={{ color: '#722ed1', fontSize: '16px', fontWeight: 'bold' }}
+                          />
+                        </Card>
+                      </div>
+                    </div>
+                  )
+                },
+                {
+                   key: 'ai-assistant',
+                   label: 'AI助手',
+                   children: currentStudent && currentQuestionId ? (
+                     <AIMarkingAssistant
+                       questionId={currentQuestionId}
+                       questionType={mockQuestionData.questions.find(q => q.id === currentQuestionId)?.questionType || 'subjective'}
+                       studentAnswer={(currentStudent.answers as any)?.[currentQuestionId] || ''}
+                       standardAnswer={mockQuestionData.questions.find(q => q.id === currentQuestionId)?.answer}
+                       maxScore={mockQuestionData.questions.find(q => q.id === currentQuestionId)?.points || 10}
+                       onScoreChange={(score: number) => {
+                         setManualScores(prev => ({ ...prev, [currentQuestionId]: score }));
+                       }}
+                       onSuggestionApply={(suggestion: any) => {
+                         console.log('AI建议已应用:', suggestion);
+                       }}
+                     />
+                   ) : (
+                     <div className="text-center py-8 text-gray-500">
+                       请选择题目以使用AI助手
+                     </div>
+                   )
+                 },
+                 {
+                   key: 'scoring-strategy',
+                   label: '评分策略',
+                   children: (
+                     <IntelligentScoringStrategy
+                       onStrategyChange={(strategy) => {
+                         console.log('评分策略已更新:', strategy);
+                       }}
+                     />
+                   )
+                 },
+                 {
+                   key: 'quality-monitor',
+                   label: '质量监控',
+                   children: (
+                     <AIGradingQualityMonitor />
+                   )
+                 }
+              ]}
+            />
 
             {/* 涂卡分析 */}
             <BubbleSheetAnalysis

@@ -3,7 +3,7 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { message } from '../utils/message';
 
 // API配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
 const API_TIMEOUT = 30000;
 
 // 创建axios实例

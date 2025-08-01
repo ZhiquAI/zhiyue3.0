@@ -1,0 +1,21 @@
+{
+  "recommendations": [
+    "claudeai.claude-dev",
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode.vscode-typescript-next",
+    "dbaeumer.vscode-eslint",
+    "ms-python.flake8",
+    "ms-python.isort",
+    "christian-kohler.path-intellisense",
+    "formulahendry.auto-rename-tag",
+    "ms-vscode.vscode-json",
+    "redhat.vscode-yaml",
+    "ms-vscode.vscode-css-peek",
+    "bradlc.vscode-tailwindcss",
+    "antfu.iconify"
+  ],
+  "unwantedRecommendations": []
+}

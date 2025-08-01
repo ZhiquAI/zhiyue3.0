@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Card, Row, Col, Breadcrumb, Button, Upload, Progress, Alert, Table, Tag, Modal, Spin, Empty, Tooltip, Space, Radio, Switch, Steps, Divider } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Row, Col, Breadcrumb, Button, Upload, Alert, Table, Tag, Modal, Space, Switch, Steps } from 'antd';
 import { message } from '../../utils/message';
-import { UploadOutlined, DeleteOutlined, EyeOutlined, CheckCircleOutlined, ExclamationCircleOutlined, FileImageOutlined, ReloadOutlined, CloudUploadOutlined, ScissorOutlined, EditOutlined, HistoryOutlined, RobotOutlined, LeftOutlined, RightOutlined, SettingOutlined, UserOutlined, BarcodeOutlined, TeamOutlined } from '@ant-design/icons';
+import apiClient from '../../services/api';
+import { CheckCircleOutlined, RobotOutlined, LeftOutlined, RightOutlined, SettingOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam } from '../../types/exam';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
@@ -19,6 +20,7 @@ const { Step } = Steps;
 
 interface AnswerSheetUploadWorkspaceProps {
   exam: Exam;
+  onSmartReturn?: () => void;
 }
 
 interface QuestionRegion {
@@ -85,7 +87,7 @@ interface ProcessedAnswerSheet {
   errorMessage?: string;
 }
 
-const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({ exam }) => {
+const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({ exam, onSmartReturn }) => {
   const { setSubViewInfo, updateExamStatus } = useAppContext();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [processedSheets, setProcessedSheets] = useState<ProcessedAnswerSheet[]>([]);
@@ -144,7 +146,11 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
   }, [previewVisible, currentPreviewIndex, processedSheets]);
 
   const handleBack = () => {
-    setSubViewInfo({ view: null, exam: null, source: null });
+    if (onSmartReturn) {
+      onSmartReturn();
+    } else {
+      setSubViewInfo({ view: null, exam: null, source: null });
+    }
   };
 
   // 处理异常答题卡
@@ -171,12 +177,41 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
       return Upload.LIST_IGNORE; // 阻止文件被添加到列表
     }
 
+    // 检查是否已经上传过相同文件名的文件
+    const existingFilenames = processedSheets.map(sheet => sheet.filename);
+    if (existingFilenames.includes(file.name)) {
+      message.warning(`文件 "${file.name}" 已经上传过，请勿重复上传！`);
+      return false;
+    }
+
+    // 检查当前文件列表中是否已有相同文件名
+    const currentFilenames = fileList.map(f => f.name);
+    if (currentFilenames.includes(file.name)) {
+      message.warning(`文件 "${file.name}" 已在上传列表中！`);
+      return false;
+    }
+
     return false; // 验证通过，阻止自动上传但允许添加到文件列表
   };
 
   // 处理文件选择
   const handleChange: UploadProps['onChange'] = (info) => {
-    setFileList(info.fileList);
+    // 过滤掉重复的文件
+    const existingFilenames = processedSheets.map(sheet => sheet.filename);
+    const filteredFileList = info.fileList.filter(file => {
+      const filename = file.name;
+      if (existingFilenames.includes(filename)) {
+        return false; // 过滤掉已上传的文件
+      }
+      return true;
+    });
+    
+    // 检查文件列表内部是否有重复
+    const uniqueFileList = filteredFileList.filter((file, index, arr) => {
+      return arr.findIndex(f => f.name === file.name) === index;
+    });
+    
+    setFileList(uniqueFileList);
   };
 
   // 批量上传答题卡
@@ -186,95 +221,134 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
       return;
     }
 
+    // 检查重复文件
+    const duplicateFiles: string[] = [];
+    const existingFilenames = processedSheets.map(sheet => sheet.filename);
+    
+    fileList.forEach(file => {
+      if (existingFilenames.includes(file.name)) {
+        duplicateFiles.push(file.name);
+      }
+    });
+
+    if (duplicateFiles.length > 0) {
+      const confirmed = await new Promise<boolean>((resolve) => {
+        Modal.confirm({
+          title: '检测到重复文件',
+          content: (
+            <div>
+              <p>以下文件已经上传过：</p>
+              <ul className="mt-2 text-sm text-gray-600">
+                {duplicateFiles.slice(0, 5).map(filename => (
+                  <li key={filename}>• {filename}</li>
+                ))}
+                {duplicateFiles.length > 5 && <li>• 还有 {duplicateFiles.length - 5} 个文件...</li>}
+              </ul>
+              <p className="mt-3 text-orange-600">是否继续上传？重复文件将被跳过。</p>
+            </div>
+          ),
+          okText: '继续上传',
+          cancelText: '取消',
+          onOk: () => resolve(true),
+          onCancel: () => resolve(false)
+        });
+      });
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setUploading(true);
     setProcessing(true);
+    message.loading('正在上传和处理答题卡...', 0);
+
+    const formData = new FormData();
+    formData.append('exam_id', exam.id);
+    fileList.forEach(file => {
+      formData.append('files', file.originFileObj as Blob);
+    });
 
     try {
-      message.loading('正在上传答题卡...', 0);
+      const response = await apiClient.post('/api/files/upload/answer-sheets', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      // 模拟批量上传和处理过程
-      const results: ProcessedAnswerSheet[] = [];
-      
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
-        const fileObj = file.originFileObj!;
-        
-        // 模拟上传进度
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // 模拟OCR识别和学生信息提取
-        const mockResult: ProcessedAnswerSheet = {
-          id: `sheet_${Date.now()}_${i}`,
-          filename: fileObj.name,
-          size: fileObj.size,
-          status: Math.random() > 0.1 ? 'pending_student_info' : 'error', // 90%成功率，先标记为待处理学生信息
-          previewUrl: URL.createObjectURL(fileObj),
-        };
+      message.destroy();
 
-        // 模拟处理结果（包含空白答题卡检测）
-        const isBlankSheet = Math.random() < 0.05; // 5%概率为空白答题卡
+      if (response.data.success) {
+        const successResults = response.data.data?.success || [];
+        const failedResults = response.data.data?.failed || [];
         
-        if (isBlankSheet) {
-          // 空白答题卡处理
-          mockResult.status = 'error';
-          mockResult.errorMessage = '检测到空白答题卡，无有效内容';
-          mockResult.recognitionResult = {
-            confidence: 0,
-            issues: ['答题卡为空白', '无学生信息', '无答题内容']
-          };
-        } else if (mockResult.status === 'pending_student_info') {
-          // 模拟初步的学生信息区域检测
-          mockResult.studentInfoRegions = [
-            {
-              id: `region_student_info_${i}`,
-              type: 'student_info',
-              x: 50,
-              y: 50,
-              width: 400,
-              height: 150,
-              confidence: 0.85 + Math.random() * 0.15
-            },
-            {
-              id: `region_barcode_${i}`,
-              type: 'barcode',
-              x: 500,
-              y: 50,
-              width: 450,
-              height: 80,
-              confidence: 0.80 + Math.random() * 0.20
-            }
-          ];
-          
-          // 模拟基础识别结果（低置信度，需要进一步处理）
-          mockResult.recognitionResult = {
-            confidence: Math.floor(Math.random() * 30) + 50, // 50-80的置信度
-            issues: ['需要进行学生信息识别', '图片质量检查中'],
-            needsReview: true
-          };
-          
+        // 过滤掉已存在的文件，避免重复显示
+        const existingFileIds = processedSheets.map(sheet => sheet.id);
+        const newSuccessResults = successResults.filter((result: any) => 
+          !existingFileIds.includes(result.file_id)
+        );
+        
+        // 处理成功的文件
+        const newProcessedSheets = newSuccessResults.map((result: any) => ({
+          id: result.file_id,
+          filename: result.filename,
+          size: 0, // 后端没有返回文件大小
+          status: 'completed',
+          errorMessage: undefined,
+          previewUrl: `/api/files/view/${result.file_id}`,
+          studentInfo: result.student_info,
+        }));
+        
+        // 处理失败的文件
+        const failedSheets = failedResults.map((result: any) => ({
+          id: `failed_${Date.now()}_${Math.random()}`,
+          filename: result.filename,
+          size: 0,
+          status: 'error',
+          errorMessage: result.error,
+          previewUrl: undefined,
+          studentInfo: undefined,
+        }));
 
+        setProcessedSheets(prevSheets => [...prevSheets, ...newProcessedSheets, ...failedSheets]);
+        
+        const actualNewCount = newProcessedSheets.length;
+        const duplicateCount = successResults.length - actualNewCount;
+        const failedCount = response.data.data?.failed_count || 0;
+
+        let messageText = '';
+        if (duplicateCount > 0 && failedCount > 0) {
+          messageText = `上传完成！新增 ${actualNewCount} 份，跳过重复 ${duplicateCount} 份，失败 ${failedCount} 份。`;
+          message.warning(messageText);
+        } else if (duplicateCount > 0) {
+          messageText = `上传完成！新增 ${actualNewCount} 份，跳过重复 ${duplicateCount} 份。`;
+          message.success(messageText);
+        } else if (failedCount > 0) {
+          messageText = `上传完成！成功 ${actualNewCount} 份，失败 ${failedCount} 份。`;
+          message.warning(messageText);
         } else {
-          mockResult.errorMessage = '无法识别学生信息，请检查答题卡质量';
+          messageText = `答题卡上传成功！共处理 ${actualNewCount} 份。`;
+          message.success(messageText);
         }
-
-        results.push(mockResult);
-      }
-
-      message.destroy();
-      setProcessedSheets(results);
-      
-      const successCount = results.filter(r => r.status === 'completed').length;
-      const errorCount = results.filter(r => r.status === 'error').length;
-      
-      if (errorCount === 0) {
-        message.success(`答题卡上传完成！成功处理 ${successCount} 份答题卡`);
+        
+        setFileList([]); // 清空上传列表
       } else {
-        message.warning(`上传完成！成功 ${successCount} 份，失败 ${errorCount} 份`);
+        message.error(response.data.message || '答题卡上传失败，请重试');
       }
-
-    } catch (error) {
+    } catch (error: any) {
+      console.error("答题卡上传失败:", error);
+      console.error("错误详情:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
       message.destroy();
-      message.error('答题卡上传失败，请重试');
+      let errorMessage = '答题卡上传失败，请检查网络连接或联系管理员。';
+      if (error.response && error.response.data && error.response.data.detail) {
+        errorMessage = error.response.data.detail;
+      }
+      message.error(errorMessage);
     } finally {
       setUploading(false);
       setProcessing(false);
@@ -342,13 +416,7 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
       okText: '确定',
       cancelText: '取消',
       onOk: () => {
-        setProcessedSheets(prev => {
-          const sheet = prev.find(s => s.id === sheetId);
-          if (sheet?.previewUrl) {
-            URL.revokeObjectURL(sheet.previewUrl);
-          }
-          return prev.filter(s => s.id !== sheetId);
-        });
+        setProcessedSheets(prev => prev.filter(s => s.id !== sheetId));
         message.success('答题卡已删除');
       }
     });
@@ -356,12 +424,18 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
 
   // 预览答题卡
   const handlePreview = (sheet: ProcessedAnswerSheet) => {
-    const sheetsWithPreview = processedSheets.filter(s => s.previewUrl);
-    const index = sheetsWithPreview.findIndex(s => s.id === sheet.id);
-    if (index !== -1) {
-      setCurrentPreviewIndex(index);
-      setPreviewImage(sheet.previewUrl!);
-      setPreviewVisible(true);
+    if (sheet.previewUrl) {
+      const sheetsWithPreview = processedSheets.filter(s => s.previewUrl);
+      const index = sheetsWithPreview.findIndex(s => s.id === sheet.id);
+      if (index !== -1) {
+        setCurrentPreviewIndex(index);
+        // 后端返回的 URL 可能需要拼接 origin
+        const previewUrl = sheet.previewUrl.startsWith('http') ? sheet.previewUrl : `${window.location.origin}${sheet.previewUrl}`;
+        setPreviewImage(previewUrl);
+        setPreviewVisible(true);
+      }
+    } else {
+      message.warning('该文件没有可用的预览。');
     }
   };
 
@@ -414,13 +488,6 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
       cancelText: '保留',
       okType: 'danger',
       onOk: () => {
-        // 清理URL对象
-        blankSheets.forEach(sheet => {
-          if (sheet.previewUrl) {
-            URL.revokeObjectURL(sheet.previewUrl);
-          }
-        });
-        
         // 从列表中移除空白答题卡
         setProcessedSheets(prev => prev.filter(s => !s.errorMessage?.includes('空白答题卡')));
         setFileList(prev => prev.filter(file => {
@@ -581,13 +648,6 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
       okText: '确定',
       cancelText: '取消',
       onOk: () => {
-        // 清理URL对象
-        processedSheets.forEach(sheet => {
-          if (sheet.previewUrl) {
-            URL.revokeObjectURL(sheet.previewUrl);
-          }
-        });
-        
         setFileList([]);
         setProcessedSheets([]);
         message.success('已清空所有文件');

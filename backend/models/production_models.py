@@ -43,6 +43,7 @@ class Exam(Base):
     # 关联关系
     creator = relationship("User", back_populates="created_exams")
     answer_sheets = relationship("AnswerSheet", back_populates="exam")
+    students = relationship("Student", back_populates="exam")
 
 class AnswerSheet(Base):
     """答题卡表 - 生产优化版"""
@@ -51,7 +52,9 @@ class AnswerSheet(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     exam_id = Column(String(36), ForeignKey('exams.id'), nullable=False)
     
-    # 学生信息
+    # 学生信息关联
+    student_uuid = Column(String(36), ForeignKey('students.id'), comment='学生信息ID')
+    # 冗余字段，用于快速查询和兼容性
     student_id = Column(String(50), comment='学号')
     student_name = Column(String(100), comment='学生姓名')
     class_name = Column(String(50), comment='班级')
@@ -96,6 +99,7 @@ class AnswerSheet(Base):
     
     # 关联关系
     exam = relationship("Exam", back_populates="answer_sheets")
+    student = relationship("Student", back_populates="answer_sheets")
     reviewer = relationship("User", foreign_keys=[reviewed_by])
     grading_tasks = relationship("GradingTask", back_populates="answer_sheet")
 
@@ -128,6 +132,46 @@ class GradingTask(Base):
     
     # 关联关系
     answer_sheet = relationship("AnswerSheet", back_populates="grading_tasks")
+
+class Student(Base):
+    """学生信息表"""
+    __tablename__ = 'students'
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    student_id = Column(String(50), unique=True, nullable=False, comment='学号/准考证号')
+    name = Column(String(100), nullable=False, comment='学生姓名')
+    class_name = Column(String(50), nullable=False, comment='班级')
+    grade = Column(String(50), comment='年级')
+    school = Column(String(200), comment='学校')
+    
+    # 额外信息
+    gender = Column(String(10), comment='性别')
+    phone = Column(String(20), comment='联系电话')
+    email = Column(String(255), comment='邮箱')
+    parent_phone = Column(String(20), comment='家长电话')
+    address = Column(String(500), comment='地址')
+    
+    # 考试相关
+    exam_id = Column(String(36), ForeignKey('exams.id'), nullable=False, comment='关联考试')
+    barcode_data = Column(String(500), comment='条形码数据')
+    
+    # 状态和时间戳
+    is_active = Column(Boolean, default=True, comment='是否有效')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by = Column(String(36), ForeignKey('users.id'), nullable=False)
+    
+    # 索引优化
+    __table_args__ = (
+        Index('idx_student_id_exam', 'student_id', 'exam_id'),
+        Index('idx_student_class_exam', 'class_name', 'exam_id'),
+        Index('idx_student_name_exam', 'name', 'exam_id'),
+    )
+    
+    # 关联关系
+    exam = relationship("Exam", back_populates="students")
+    creator = relationship("User", foreign_keys=[created_by])
+    answer_sheets = relationship("AnswerSheet", back_populates="student")
 
 class User(Base):
     """用户表"""
@@ -162,3 +206,64 @@ class User(Base):
     # 关联关系
     created_exams = relationship("Exam", back_populates="creator")
     reviewed_answer_sheets = relationship("AnswerSheet", foreign_keys="AnswerSheet.reviewed_by")
+    created_templates = relationship("AnswerSheetTemplate", foreign_keys="AnswerSheetTemplate.created_by", back_populates="creator")
+
+class AnswerSheetTemplate(Base):
+    """答题卡模板表"""
+    __tablename__ = 'answer_sheet_templates'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False, comment='模板名称')
+    description = Column(String(500), comment='模板描述')
+    subject = Column(String(50), comment='科目')
+    grade_level = Column(String(20), comment='年级')
+    exam_type = Column(String(50), comment='考试类型')
+    
+    # 模板配置
+    template_data = Column(JSON, nullable=False, comment='模板配置数据')
+    page_width = Column(Integer, default=210, comment='页面宽度(mm)')
+    page_height = Column(Integer, default=297, comment='页面高度(mm)')
+    dpi = Column(Integer, default=300, comment='分辨率')
+    
+    # 状态和时间戳
+    is_active = Column(Boolean, default=True, comment='是否激活')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by = Column(String(36), ForeignKey('users.id'), nullable=False)
+    updated_by = Column(String(36), ForeignKey('users.id'), nullable=False)
+    
+    # 索引优化
+    __table_args__ = (
+        Index('idx_template_name_creator', 'name', 'created_by'),
+        Index('idx_template_subject_grade', 'subject', 'grade_level'),
+        Index('idx_template_active', 'is_active'),
+    )
+    
+    # 关联关系
+    creator = relationship("User", foreign_keys=[created_by], back_populates="created_templates")
+    updater = relationship("User", foreign_keys=[updated_by])
+    usages = relationship("TemplateUsage", back_populates="template")
+
+class TemplateUsage(Base):
+    """模板使用记录表"""
+    __tablename__ = 'template_usages'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    template_id = Column(Integer, ForeignKey('answer_sheet_templates.id'), nullable=False)
+    exam_id = Column(String(36), ForeignKey('exams.id'), nullable=False)
+    used_by = Column(String(36), ForeignKey('users.id'), nullable=False)
+    used_at = Column(DateTime, default=datetime.utcnow)
+    
+    # 使用统计
+    usage_count = Column(Integer, default=1, comment='使用次数')
+    
+    # 索引优化
+    __table_args__ = (
+        Index('idx_usage_template_exam', 'template_id', 'exam_id'),
+        Index('idx_usage_user_date', 'used_by', 'used_at'),
+    )
+    
+    # 关联关系
+    template = relationship("AnswerSheetTemplate", back_populates="usages")
+    exam = relationship("Exam")
+    user = relationship("User")

@@ -1,0 +1,35 @@
+[Unit]
+Description=智阅AI后端服务
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=hero
+Group=staff
+WorkingDirectory=/Users/hero/zhiyue3.0/backend
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONPATH=/Users/hero/zhiyue3.0
+ExecStart=/usr/bin/python3 /Users/hero/zhiyue3.0/backend/start.py
+Restart=always
+RestartSec=10
+KillMode=mixed
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+# 日志配置
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zhiyue-backend
+
+# 安全配置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/Users/hero/zhiyue3.0/storage
+ReadWritePaths=/Users/hero/zhiyue3.0/logs
+ReadWritePaths=/Users/hero/zhiyue3.0/backend/logs
+
+[Install]
+WantedBy=multi-user.target

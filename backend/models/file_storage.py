@@ -4,14 +4,14 @@
 """
 
 from sqlalchemy import Column, String, Integer, DateTime, Text, Boolean, JSON, ForeignKey, Index, Float
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 import hashlib
 import os
 
-Base = declarative_base()
+# 使用production_models中的Base
+from .production_models import Base
 
 class FileStorage(Base):
     """文件存储基础模型"""
@@ -66,9 +66,9 @@ class FileStorage(Base):
         Index('idx_processing_status', 'processing_status'),
     )
     
-    # 关联关系
-    exam = relationship("Exam", back_populates="files")
-    uploader = relationship("User", back_populates="uploaded_files")
+    # 关联关系 - 注释掉暂时不用的关系，避免循环导入
+    # exam = relationship("Exam", back_populates="files")
+    # uploader = relationship("User", back_populates="uploaded_files")
 
 class PaperDocument(Base):
     """试卷文档模型"""
@@ -100,13 +100,13 @@ class PaperDocument(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # 关联关系
-    exam = relationship("Exam", back_populates="paper_documents")
-    file = relationship("FileStorage")
+    # 关联关系 - 注释掉暂时不用的关系
+    # exam = relationship("Exam", back_populates="paper_documents")
+    # file = relationship("FileStorage")
 
-class AnswerSheet(Base):
-    """答题卡模型"""
-    __tablename__ = 'answer_sheets'
+class AnswerSheetFile(Base):
+    """答题卡文件模型"""
+    __tablename__ = 'answer_sheet_files'
     
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     exam_id = Column(String(36), ForeignKey('exams.id'), nullable=False)
@@ -154,9 +154,9 @@ class AnswerSheet(Base):
         Index('idx_grading_status', 'grading_status'),
     )
     
-    # 关联关系
-    exam = relationship("Exam", back_populates="answer_sheets")
-    file = relationship("FileStorage")
+    # 关联关系 - 注释掉暂时不用的关系
+    # exam = relationship("Exam", back_populates="answer_sheets")
+    # file = relationship("FileStorage")
 
 class ProcessingQueue(Base):
     """文件处理队列"""
@@ -193,5 +193,5 @@ class ProcessingQueue(Base):
         Index('idx_queued_time', 'queued_at'),
     )
     
-    # 关联关系
-    file = relationship("FileStorage")
+    # 关联关系 - 注释掉暂时不用的关系
+    # file = relationship("FileStorage")

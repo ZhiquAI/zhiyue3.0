@@ -1,0 +1,75 @@
+{
+  "folders": [
+    {
+      "name": "智阅AI (Root)",
+      "path": "."
+    },
+    {
+      "name": "Frontend",
+      "path": "./src"
+    },
+    {
+      "name": "Backend",
+      "path": "./backend"
+    },
+    {
+      "name": "Docs",
+      "path": "./docs"
+    }
+  ],
+  "settings": {
+    "claude.projectContext": {
+      "name": "智阅AI历史阅卷系统",
+      "description": "智能历史阅卷系统，使用React前端和FastAPI后端，集成Gemini AI进行OCR和智能评分",
+      "mainTechnologies": [
+        "React 18",
+        "TypeScript",
+        "FastAPI",
+        "Python",
+        "Ant Design",
+        "Tailwind CSS",
+        "Gemini AI"
+      ],
+      "keyComponents": [
+        "OCR处理管道",
+        "智能评分系统",
+        "答题卡模板管理",
+        "批量处理监控",
+        "数据分析可视化"
+      ]
+    },
+    "claude.codeStyle": {
+      "frontend": {
+        "framework": "React with hooks",
+        "styling": "Tailwind CSS + Ant Design",
+        "stateManagement": "Zustand + React Context",
+        "apiClient": "Axios with interceptors",
+        "errorHandling": "ErrorBoundary + try-catch",
+        "naming": "camelCase for variables, PascalCase for components"
+      },
+      "backend": {
+        "framework": "FastAPI with async/await",
+        "database": "SQLAlchemy ORM",
+        "authentication": "JWT with Bearer tokens",
+        "errorHandling": "HTTPException with detailed messages",
+        "naming": "snake_case for Python, camelCase for JSON"
+      }
+    },
+    "claude.commonPatterns": [
+      "使用TypeScript严格类型检查",
+      "组件按功能模块化组织",
+      "API调用统一错误处理",
+      "响应式设计适配移动端",
+      "中文界面本地化",
+      "异步操作loading状态管理"
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "claudeai.claude-dev",
+      "ms-python.python",
+      "esbenp.prettier-vscode",
+      "bradlc.vscode-tailwindcss"
+    ]
+  }
+}

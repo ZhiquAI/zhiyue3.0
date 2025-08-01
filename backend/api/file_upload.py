@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import logging
+from pathlib import Path
 
 try:
     from backend.database import get_db
@@ -14,12 +15,14 @@ try:
     from backend.services.ocr_service import OCRService
     from backend.models.file_storage import FileStorage
     from backend.auth import get_current_user
+    from backend.config.settings import settings
 except ImportError:
     from database import get_db
     from services.file_storage_service import FileStorageService
     from services.ocr_service import OCRService
     from models.file_storage import FileStorage
     from auth import get_current_user
+    from config.settings import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/files", tags=["文件管理"])
@@ -237,3 +240,112 @@ async def get_processing_status(
     except Exception as e:
         logger.error(f"Get processing status failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取处理状态失败: {str(e)}")
+
+@router.get("/view/{file_id}")
+async def view_file(
+    file_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """查看文件（返回文件内容用于预览）"""
+    try:
+        storage_service = FileStorageService(db)
+        file_record = storage_service.get_file_by_id(file_id)
+        
+        if not file_record:
+            raise HTTPException(status_code=404, detail="文件不存在")
+        
+        file_path = Path(settings.STORAGE_BASE_PATH) / file_record.file_path
+        
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="文件不存在")
+        
+        return FileResponse(
+            path=str(file_path),
+            media_type=file_record.mime_type,
+            headers={"Content-Disposition": "inline"}
+        )
+        
+    except Exception as e:
+        logger.error(f"File view failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"文件查看失败: {str(e)}")
+
+@router.get("/segmentation/{file_id}", response_model=dict)
+async def get_file_segmentation(
+    file_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """获取文件的分割数据"""
+    try:
+        storage_service = FileStorageService(db)
+        file_record = storage_service.get_file_by_id(file_id)
+        
+        if not file_record:
+            raise HTTPException(status_code=404, detail="文件不存在")
+        
+        # 检查是否有分割数据
+        segmented_questions = getattr(file_record, 'segmented_questions', None)
+        segmentation_quality = getattr(file_record, 'segmentation_quality', None)
+        
+        if not segmented_questions:
+            # 返回默认的空分割数据
+            return {
+                "success": True,
+                "data": {
+                    "questions": [],
+                    "total_questions": 0,
+                    "segmentation_quality": segmentation_quality or {"quality_level": "not_processed"},
+                    "processing_status": "pending"
+                }
+            }
+        
+        return {
+            "success": True,
+            "data": {
+                "questions": segmented_questions,
+                "total_questions": len(segmented_questions) if segmented_questions else 0,
+                "segmentation_quality": segmentation_quality,
+                "processing_status": "completed"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Get file segmentation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取分割数据失败: {str(e)}")
+
+@router.post("/segmentation/{file_id}", response_model=dict)
+async def save_file_segmentation(
+    file_id: str,
+    segmentation_data: dict,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """保存文件的分割数据"""
+    try:
+        storage_service = FileStorageService(db)
+        file_record = storage_service.get_file_by_id(file_id)
+        
+        if not file_record:
+            raise HTTPException(status_code=404, detail="文件不存在")
+        
+        # 保存分割数据
+        file_record.segmented_questions = segmentation_data.get('questions', [])
+        file_record.segmentation_quality = segmentation_data.get('segmentation_quality', {})
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "分割数据保存成功",
+            "data": {
+                "file_id": file_id,
+                "questions_count": len(segmentation_data.get('questions', [])),
+                "updated_at": file_record.updated_at.isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Save file segmentation failed: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"保存分割数据失败: {str(e)}")

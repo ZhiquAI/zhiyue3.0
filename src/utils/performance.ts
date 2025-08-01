@@ -1,12 +1,21 @@
 // 性能优化工具
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 
 // 防抖Hook
 export const useDebounce = <T extends (...args: any[]) => any>(
   callback: T,
   delay: number
 ): T => {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<number>();
+
+  // 清理函数
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return useCallback(
     ((...args: Parameters<T>) => {

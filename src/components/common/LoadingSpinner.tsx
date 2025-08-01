@@ -18,10 +18,13 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 }) => {
   const spinnerContent = (
     <Spin
+      spinning={true}
       tip={message}
       className={cn('flex flex-col items-center justify-center', className)}
       {...props}
-    />
+    >
+      <div style={{ minHeight: '50px' }} />
+    </Spin>
   );
 
   if (fullScreen) {

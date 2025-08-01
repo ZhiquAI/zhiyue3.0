@@ -22,6 +22,39 @@ class QuestionType(Enum):
     SHORT_ANSWER = "short_answer"  # 简答题
     ESSAY = "essay"  # 论述题
     CALCULATION = "calculation"  # 计算题
+    
+    def get_display_name(self) -> str:
+        """获取显示名称"""
+        display_names = {
+            self.CHOICE: "选择题",
+            self.FILL_BLANK: "填空题",
+            self.SHORT_ANSWER: "简答题",
+            self.ESSAY: "论述题",
+            self.CALCULATION: "计算题"
+        }
+        return display_names.get(self, "未知类型")
+    
+    def get_description(self) -> str:
+        """获取题型描述"""
+        descriptions = {
+            self.CHOICE: "单选或多选题，有固定选项",
+            self.FILL_BLANK: "需要填入答案的空白题",
+            self.SHORT_ANSWER: "需要简短文字回答的题目",
+            self.ESSAY: "需要详细论述的题目",
+            self.CALCULATION: "需要计算过程的数学题"
+        }
+        return descriptions.get(self, "未知题型")
+    
+    def get_grading_strategy(self) -> str:
+        """获取评分策略"""
+        strategies = {
+            self.CHOICE: "exact_match",
+            self.FILL_BLANK: "keyword_match",
+            self.SHORT_ANSWER: "semantic_analysis",
+            self.ESSAY: "comprehensive_analysis",
+            self.CALCULATION: "step_by_step"
+        }
+        return strategies.get(self, "manual_review")
 
 class QualityLevel(Enum):
     """质量等级枚举"""
@@ -283,3 +316,23 @@ def validate_grading_result(result: GradingResult) -> List[str]:
         issues.append("评分置信度应在0-1之间")
     
     return issues
+
+from sqlalchemy import Column, String, Integer, DateTime, JSON
+from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
+
+Base = declarative_base()
+
+class PreGradingWorkflow(Base):
+    __tablename__ = 'pre_grading_workflows'
+
+    id = Column(String, primary_key=True, index=True)
+    exam_id = Column(String, index=True, nullable=False)
+    user_id = Column(Integer, nullable=False)
+    configuration = Column(JSON, nullable=False)
+    status = Column(String, nullable=False, default='initialized')
+    progress = Column(Integer, nullable=False, default=0)
+    current_stage = Column(String, nullable=False, default='preparation')
+    statistics = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,8 +1,8 @@
 // 批量阅卷操作面板
 import React, { useState } from 'react';
-import { Card, Button, Progress, Alert, Table, Tag, Space, Modal, Statistic, Row, Col } from 'antd';
-import { PlayCircleOutlined, PauseCircleOutlined, StopOutlined, ReloadOutlined } from '@ant-design/icons';
-import { useRealtimeStatus } from '../../hooks/useRealtimeStatus';
+import { Card, Button, Progress, Alert, Table, Tag, Space, Modal, Statistic, Row, Col, message } from 'antd';
+import { PlayCircleOutlined, PauseCircleOutlined, StopOutlined, ReloadOutlined, FileTextOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+
 
 interface BatchGradingPanelProps {
   examId: string;
@@ -10,7 +10,8 @@ interface BatchGradingPanelProps {
 }
 
 const BatchGradingPanel: React.FC<BatchGradingPanelProps> = ({ examId, onComplete }) => {
-  const { status, connected } = useRealtimeStatus(examId);
+  const [status, setStatus] = useState<any>(null);
+  const [connected, setConnected] = useState(false);
   const [batchStatus, setBatchStatus] = useState<'idle' | 'running' | 'paused' | 'completed'>('idle');
   const [showDetails, setShowDetails] = useState(false);
 

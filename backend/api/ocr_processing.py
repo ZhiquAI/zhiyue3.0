@@ -11,6 +11,10 @@ import uuid
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import json
+import time
+import heapq
+from dataclasses import dataclass, field
+from enum import Enum
 
 try:
     from backend.database import get_db
@@ -92,8 +96,28 @@ segmentation_service = QuestionSegmentationService()
 # 线程池执行器
 executor = ThreadPoolExecutor(max_workers=settings.OCR_BATCH_SIZE)
 
-# 存储任务状态的内存缓存（生产环境应使用Redis）
+# 任务优先级枚举
+class TaskPriority(Enum):
+    LOW = 3
+    NORMAL = 2
+    HIGH = 1
+    URGENT = 0
+
+@dataclass
+class PriorityTask:
+    priority: int
+    task_id: str
+    exam_id: str
+    answer_sheet_ids: list
+    created_at: float = field(default_factory=time.time)
+    
+    def __lt__(self, other):
+        return self.priority < other.priority
+
+# 优先级队列和任务缓存
+task_queue = []
 task_cache = {}
+queue_lock = asyncio.Lock()
 
 @router.post("/process", response_model=OCRResult)
 async def process_single_answer_sheet(
@@ -202,20 +226,50 @@ async def start_batch_ocr_processing(
         if current_user.role == "teacher" and exam.created_by != current_user.id:
             raise HTTPException(status_code=403, detail="无权处理部分答题卡")
     
+    # 验证优先级
+    priority_map = {
+        1: TaskPriority.URGENT.value,
+        2: TaskPriority.HIGH.value,
+        3: TaskPriority.NORMAL.value,
+        4: TaskPriority.LOW.value,
+        5: TaskPriority.LOW.value
+    }
+    
+    priority_value = priority_map.get(request.priority, TaskPriority.NORMAL.value)
+    
     # 创建批处理任务
     task_id = str(uuid.uuid4())
     
     # 初始化任务状态
     task_cache[task_id] = {
-        "status": "pending",
+        "status": "queued",
+        "priority": request.priority,
         "progress": 0.0,
         "total_sheets": len(answer_sheets),
         "processed_count": 0,
         "success_count": 0,
         "failed_count": 0,
         "started_at": datetime.utcnow(),
+        "queue_time": datetime.utcnow(),
+        "processing_start_time": None,
+        "estimated_completion": None,
+        "average_processing_time": None,
+        "current_sheet": None,
+        "queue_position": 0,
         "results": []
     }
+    
+    # 创建优先级任务并加入队列
+    priority_task = PriorityTask(
+        priority=priority_value,
+        task_id=task_id,
+        exam_id=answer_sheets[0].exam_id if answer_sheets else "",
+        answer_sheet_ids=request.answer_sheet_ids
+    )
+    
+    async with queue_lock:
+        heapq.heappush(task_queue, priority_task)
+        task_cache[task_id]["queue_position"] = len(task_queue)
     
     # 创建数据库任务记录
     for sheet in answer_sheets:
@@ -224,30 +278,51 @@ async def start_batch_ocr_processing(
             answer_sheet_id=sheet.id,
             task_type="ocr",
             priority=request.priority,
-            status="pending"
+            status="queued"
         )
         db.add(grading_task)
     
     db.commit()
     
-    # 启动后台处理
-    background_tasks.add_task(
-        process_batch_ocr_background,
-        task_id,
-        request.answer_sheet_ids,
-        request.priority
-    )
+    # 启动队列处理器（如果还没有运行）
+    background_tasks.add_task(process_task_queue)
     
     return {
         "task_id": task_id,
         "message": f"批量OCR任务已启动，共{len(answer_sheets)}张答题卡"
     }
 
+async def process_task_queue():
+    """处理任务队列"""
+    while True:
+        try:
+            async with queue_lock:
+                if not task_queue:
+                    await asyncio.sleep(5)  # 队列为空时等待
+                    continue
+                
+                # 获取最高优先级任务
+                priority_task = heapq.heappop(task_queue)
+            
+            # 处理任务
+            await process_batch_ocr_background(
+                priority_task.task_id,
+                priority_task.answer_sheet_ids,
+                priority_task.priority
+            )
+            
+        except Exception as e:
+            print(f"队列处理错误: {str(e)}")
+            await asyncio.sleep(1)
+
 async def process_batch_ocr_background(task_id: str, answer_sheet_ids: List[str], priority: int):
     """后台批量OCR处理"""
     try:
         # 更新任务状态为进行中
         task_cache[task_id]["status"] = "processing"
+        task_cache[task_id]["processing_start_time"] = time.time()
+        task_cache[task_id]["queue_position"] = 0
+        task_cache[task_id]["progress_details"] = []
         
         # 获取数据库会话
         from backend.database import SessionLocal
@@ -256,8 +331,11 @@ async def process_batch_ocr_background(task_id: str, answer_sheet_ids: List[str]
         try:
             # 分批处理
             batch_size = settings.OCR_BATCH_SIZE
+            processing_times = []
+            
             for i in range(0, len(answer_sheet_ids), batch_size):
                 batch_ids = answer_sheet_ids[i:i + batch_size]
+                batch_start_time = time.time()
                 
                 # 并行处理当前批次
                 tasks = []
@@ -268,6 +346,9 @@ async def process_batch_ocr_background(task_id: str, answer_sheet_ids: List[str]
                 
                 # 等待当前批次完成
                 batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+                batch_end_time = time.time()
+                batch_processing_time = batch_end_time - batch_start_time
+                processing_times.append(batch_processing_time)
                 
                 # 更新结果
                 for j, result in enumerate(batch_results):
@@ -289,9 +370,29 @@ async def process_batch_ocr_background(task_id: str, answer_sheet_ids: List[str]
                         
                         task_cache[task_id]["results"].append(result)
                 
-                # 更新进度
+                # 更新进度和统计信息
                 progress = task_cache[task_id]["processed_count"] / task_cache[task_id]["total_sheets"]
                 task_cache[task_id]["progress"] = progress
+                
+                # 计算平均处理时间和预估完成时间
+                if processing_times:
+                    avg_time = sum(processing_times) / len(processing_times)
+                    task_cache[task_id]["average_processing_time"] = avg_time
+                    
+                    remaining_batches = (len(answer_sheet_ids) - task_cache[task_id]["processed_count"]) / batch_size
+                    estimated_remaining_time = remaining_batches * avg_time
+                    task_cache[task_id]["estimated_completion"] = time.time() + estimated_remaining_time
+                
+                # 记录详细进度
+                progress_detail = {
+                    "batch_index": i // batch_size + 1,
+                    "batch_size": len(batch_ids),
+                    "processing_time": batch_processing_time,
+                    "timestamp": time.time(),
+                    "successful_in_batch": sum(1 for r in batch_results if not isinstance(r, Exception) and r.get("status") == "completed"),
+                    "failed_in_batch": sum(1 for r in batch_results if isinstance(r, Exception) or (not isinstance(r, Exception) and r.get("status") != "completed"))
+                }
+                task_cache[task_id]["progress_details"].append(progress_detail)
                 
                 # 避免过度并发
                 if i + batch_size < len(answer_sheet_ids):

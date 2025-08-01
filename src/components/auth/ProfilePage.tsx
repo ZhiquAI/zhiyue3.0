@@ -8,7 +8,7 @@ import { cn } from '../../utils/cn';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
+// 移除废弃的TabPane导入
 
 interface ProfileFormData {
   name: string;
@@ -191,244 +191,249 @@ export const ProfilePage: React.FC = () => {
         />
       )}
 
-      <Tabs defaultActiveKey="profile" size="large">
-        <TabPane
-          tab={
-            <span className="flex items-center gap-2">
-              <UserOutlined />
-              基本信息
-            </span>
-          }
-          key="profile"
-        >
-          <Card className="shadow-sm">
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* 头像部分 */}
-              <div className="flex flex-col items-center">
-                <Upload {...uploadProps}>
-                  <div className="relative">
-                    <Avatar
-                      size={120}
-                      src={avatarUrl}
-                      icon={!avatarUrl && <UserOutlined />}
-                      className="border-4 border-white shadow-lg"
-                    />
-                    <div className={cn(
-                      'absolute inset-0 bg-black/50 rounded-full',
-                      'flex items-center justify-center opacity-0 hover:opacity-100',
-                      'transition-opacity duration-200 cursor-pointer'
-                    )}>
-                      <CameraOutlined className="text-white text-xl" />
-                    </div>
-                  </div>
-                </Upload>
-                <Text type="secondary" className="mt-2 text-center text-sm">
-                  点击更换头像
-                  <br />
-                  支持 JPG、PNG 格式
-                  <br />
-                  文件大小不超过 2MB
-                </Text>
-              </div>
-
-              {/* 表单部分 */}
-              <div className="flex-1">
-                <Form
-                  form={profileForm}
-                  layout="vertical"
-                  onFinish={handleProfileSubmit}
-                  initialValues={{
-                    name: user?.name,
-                    email: user?.email,
-                    school: user?.school,
-                    subject: user?.subject,
-                    grades: user?.grades
-                  }}
-                  size="large"
-                >
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Form.Item
-                      name="name"
-                      label="真实姓名"
-                      rules={[
-                        { required: true, message: '请输入真实姓名' },
-                        { min: 2, message: '姓名至少2个字符' }
-                      ]}
-                    >
-                      <Input
-                        prefix={<UserOutlined className="text-gray-400" />}
-                        placeholder="请输入真实姓名"
-                      />
-                    </Form.Item>
-
-                    <Form.Item
-                      name="email"
-                      label="邮箱地址"
-                      rules={[
-                        { required: true, message: '请输入邮箱地址' },
-                        { type: 'email', message: '请输入有效的邮箱地址' }
-                      ]}
-                    >
-                      <Input
-                        prefix={<MailOutlined className="text-gray-400" />}
-                        placeholder="请输入邮箱地址"
-                      />
-                    </Form.Item>
+      <Tabs 
+        defaultActiveKey="profile" 
+        size="large"
+        items={[
+          {
+            key: 'profile',
+            label: (
+              <span className="flex items-center gap-2">
+                <UserOutlined />
+                基本信息
+              </span>
+            ),
+            children: (
+              <Card className="shadow-sm">
+                <div className="flex flex-col lg:flex-row gap-8">
+                  {/* 头像部分 */}
+                  <div className="flex flex-col items-center">
+                    <Upload {...uploadProps}>
+                      <div className="relative">
+                        <Avatar
+                          size={120}
+                          src={avatarUrl}
+                          icon={!avatarUrl && <UserOutlined />}
+                          className="border-4 border-white shadow-lg"
+                        />
+                        <div className={cn(
+                          'absolute inset-0 bg-black/50 rounded-full',
+                          'flex items-center justify-center opacity-0 hover:opacity-100',
+                          'transition-opacity duration-200 cursor-pointer'
+                        )}>
+                          <CameraOutlined className="text-white text-xl" />
+                        </div>
+                      </div>
+                    </Upload>
+                    <Text type="secondary" className="mt-2 text-center text-sm">
+                      点击更换头像
+                      <br />
+                      支持 JPG、PNG 格式
+                      <br />
+                      文件大小不超过 2MB
+                    </Text>
                   </div>
 
-                  <Form.Item
-                    name="school"
-                    label="学校名称"
-                  >
-                    <Input
-                      prefix={<BankOutlined className="text-gray-400" />}
-                      placeholder="请输入学校名称（可选）"
-                    />
-                  </Form.Item>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Form.Item
-                      name="subject"
-                      label="任教学科"
+                  {/* 表单部分 */}
+                  <div className="flex-1">
+                    <Form
+                      form={profileForm}
+                      layout="vertical"
+                      onFinish={handleProfileSubmit}
+                      initialValues={{
+                        name: user?.name,
+                        email: user?.email,
+                        school: user?.school,
+                        subject: user?.subject,
+                        grades: user?.grades
+                      }}
+                      size="large"
                     >
-                      <Select
-                        placeholder="请选择任教学科（可选）"
-                        suffixIcon={<BookOutlined className="text-gray-400" />}
-                      >
-                        {subjects.map(subject => (
-                          <Option key={subject.value} value={subject.value}>
-                            {subject.label}
-                          </Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <Form.Item
+                          name="name"
+                          label="真实姓名"
+                          rules={[
+                            { required: true, message: '请输入真实姓名' },
+                            { min: 2, message: '姓名至少2个字符' }
+                          ]}
+                        >
+                          <Input
+                            prefix={<UserOutlined className="text-gray-400" />}
+                            placeholder="请输入真实姓名"
+                          />
+                        </Form.Item>
 
-                    <Form.Item
-                      name="grades"
-                      label="任教年级"
-                    >
-                      <Select
-                        mode="multiple"
-                        placeholder="请选择任教年级（可选）"
+                        <Form.Item
+                          name="email"
+                          label="邮箱地址"
+                          rules={[
+                            { required: true, message: '请输入邮箱地址' },
+                            { type: 'email', message: '请输入有效的邮箱地址' }
+                          ]}
+                        >
+                          <Input
+                            prefix={<MailOutlined className="text-gray-400" />}
+                            placeholder="请输入邮箱地址"
+                          />
+                        </Form.Item>
+                      </div>
+
+                      <Form.Item
+                        name="school"
+                        label="学校名称"
                       >
-                        {grades.map(grade => (
-                          <Option key={grade.value} value={grade.value}>
-                            {grade.label}
-                          </Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
+                        <Input
+                          prefix={<BankOutlined className="text-gray-400" />}
+                          placeholder="请输入学校名称（可选）"
+                        />
+                      </Form.Item>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <Form.Item
+                          name="subject"
+                          label="任教学科"
+                        >
+                          <Select
+                            placeholder="请选择任教学科（可选）"
+                            suffixIcon={<BookOutlined className="text-gray-400" />}
+                          >
+                            {subjects.map(subject => (
+                              <Option key={subject.value} value={subject.value}>
+                                {subject.label}
+                              </Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+
+                        <Form.Item
+                          name="grades"
+                          label="任教年级"
+                        >
+                          <Select
+                            mode="multiple"
+                            placeholder="请选择任教年级（可选）"
+                          >
+                            {grades.map(grade => (
+                              <Option key={grade.value} value={grade.value}>
+                                {grade.label}
+                              </Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                      </div>
+
+                      <Form.Item className="!mb-0">
+                        <Space>
+                          <Button
+                            type="primary"
+                            htmlType="submit"
+                            loading={loading}
+                            className="px-8"
+                          >
+                            保存更改
+                          </Button>
+                          <Button
+                            onClick={() => profileForm.resetFields()}
+                          >
+                            重置
+                          </Button>
+                        </Space>
+                      </Form.Item>
+                    </Form>
                   </div>
-
-                  <Form.Item className="!mb-0">
-                    <Space>
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={loading}
-                        className="px-8"
-                      >
-                        保存更改
-                      </Button>
-                      <Button
-                        onClick={() => profileForm.resetFields()}
-                      >
-                        重置
-                      </Button>
-                    </Space>
-                  </Form.Item>
-                </Form>
-              </div>
-            </div>
-          </Card>
-        </TabPane>
-
-        <TabPane
-          tab={
-            <span className="flex items-center gap-2">
-              <LockOutlined />
-              修改密码
-            </span>
-          }
-          key="password"
-        >
-          <Card className="shadow-sm">
-            <div className="max-w-md">
-              <div className="mb-6">
-                <Title level={4} className="!mb-2">
-                  修改密码
-                </Title>
-                <Text type="secondary">
-                  为了账户安全，请定期更换密码
-                </Text>
-              </div>
-
-              <Form
-                form={passwordForm}
-                layout="vertical"
-                onFinish={handlePasswordSubmit}
-                size="large"
-              >
-                <Form.Item
-                  name="currentPassword"
-                  label="当前密码"
-                  rules={[
-                    { required: true, message: '请输入当前密码' }
-                  ]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined className="text-gray-400" />}
-                    placeholder="请输入当前密码"
-                    iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="newPassword"
-                  label="新密码"
-                  rules={[{ validator: validatePassword }]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined className="text-gray-400" />}
-                    placeholder="请输入新密码"
-                    iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="confirmPassword"
-                  label="确认新密码"
-                  rules={[{ validator: validateConfirmPassword }]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined className="text-gray-400" />}
-                    placeholder="请再次输入新密码"
-                    iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-                  />
-                </Form.Item>
-
-                <Form.Item className="!mb-0">
-                  <Space>
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      loading={passwordLoading}
-                      className="px-8"
-                    >
+                </div>
+              </Card>
+            )
+          },
+          {
+            key: 'password',
+            label: (
+              <span className="flex items-center gap-2">
+                <LockOutlined />
+                修改密码
+              </span>
+            ),
+            children: (
+              <Card className="shadow-sm">
+                <div className="max-w-md">
+                  <div className="mb-6">
+                    <Title level={4} className="!mb-2">
                       修改密码
-                    </Button>
-                    <Button
-                      onClick={() => passwordForm.resetFields()}
+                    </Title>
+                    <Text type="secondary">
+                      为了账户安全，请定期更换密码
+                    </Text>
+                  </div>
+
+                  <Form
+                    form={passwordForm}
+                    layout="vertical"
+                    onFinish={handlePasswordSubmit}
+                    size="large"
+                  >
+                    <Form.Item
+                      name="currentPassword"
+                      label="当前密码"
+                      rules={[
+                        { required: true, message: '请输入当前密码' }
+                      ]}
                     >
-                      重置
-                    </Button>
-                  </Space>
-                </Form.Item>
-              </Form>
-            </div>
-          </Card>
-        </TabPane>
-      </Tabs>
+                      <Input.Password
+                        prefix={<LockOutlined className="text-gray-400" />}
+                        placeholder="请输入当前密码"
+                        iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="newPassword"
+                      label="新密码"
+                      rules={[{ validator: validatePassword }]}
+                    >
+                      <Input.Password
+                        prefix={<LockOutlined className="text-gray-400" />}
+                        placeholder="请输入新密码"
+                        iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="confirmPassword"
+                      label="确认新密码"
+                      rules={[{ validator: validateConfirmPassword }]}
+                    >
+                      <Input.Password
+                        prefix={<LockOutlined className="text-gray-400" />}
+                        placeholder="请再次输入新密码"
+                        iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+                      />
+                    </Form.Item>
+
+                    <Form.Item className="!mb-0">
+                      <Space>
+                        <Button
+                          type="primary"
+                          htmlType="submit"
+                          loading={passwordLoading}
+                          className="px-8"
+                        >
+                          修改密码
+                        </Button>
+                        <Button
+                          onClick={() => passwordForm.resetFields()}
+                        >
+                          重置
+                        </Button>
+                      </Space>
+                    </Form.Item>
+                  </Form>
+                </div>
+              </Card>
+            )
+          }
+        ]}
+      />
     </div>
   );
 };

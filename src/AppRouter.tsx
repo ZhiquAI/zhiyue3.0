@@ -11,6 +11,14 @@ import { SimpleAuthTest } from './components/debug/SimpleAuthTest';
 import { LoginTestSimple } from './pages/LoginTestSimple';
 import ChoiceGrading from './pages/ChoiceGrading';
 import BarcodeGeneratorPage from './pages/BarcodeGeneratorPage.tsx';
+import QuestionSegmentationPage from './pages/QuestionSegmentationPage';
+import TestEnhancedDesigner from './pages/TestEnhancedDesigner';
+import TemplateDesignerV2Page from './pages/TemplateDesignerV2Page';
+
+
+
+
+
 
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Spin } from 'antd';
@@ -66,6 +74,8 @@ export const AppRouter: React.FC = () => {
         } 
       />
       
+
+      
       {/* 主应用路由 - 需要认证 */}
       <Route 
         path="/dashboard" 
@@ -99,6 +109,15 @@ export const AppRouter: React.FC = () => {
           </ProtectedRoute>
         } 
       />
+      <Route 
+        path="/students" 
+        element={
+          <ProtectedRoute>
+            <MainApplication />
+          </ProtectedRoute>
+        } 
+      />
+
       
       {/* 选择题评分页面 */}
       <Route 
@@ -116,6 +135,62 @@ export const AppRouter: React.FC = () => {
         element={
           <ProtectedRoute>
             <BarcodeGeneratorPage />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* 试题分类切割页面 */}
+      <Route 
+        path="/question-segmentation" 
+        element={
+          <ProtectedRoute>
+            <QuestionSegmentationPage />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* 增强版答题卡设计器测试页面 */}
+      <Route 
+        path="/test-enhanced-designer" 
+        element={
+          <ProtectedRoute>
+            <TestEnhancedDesigner />
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* 答题卡模板设计器 V2.0 页面 */}
+      <Route 
+        path="/template-designer-v2" 
+        element={
+          <ProtectedRoute>
+            <TemplateDesignerV2Page />
+          </ProtectedRoute>
+        } 
+      />
+      
+
+      
+
+      
+
+      
+      {/* 集成阅卷中心页面 */}
+      <Route 
+        path="/integrated-marking" 
+        element={
+          <ProtectedRoute>
+            <div>集成阅卷中心功能暂时不可用</div>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* 智能预处理页面 */}
+      <Route 
+        path="/pre-grading" 
+        element={
+          <ProtectedRoute>
+            <MainApplication />
           </ProtectedRoute>
         } 
       />

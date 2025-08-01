@@ -1,0 +1,73 @@
+{
+  "name": "智阅AI历史阅卷系统",
+  "description": "基于AI的中学历史答题卡智能阅卷系统，集成OCR识别、自动评分和数据分析功能",
+  "version": "3.0.0",
+  "language": "typescript",
+  "frameworks": ["React", "FastAPI", "Ant Design"],
+  "context": {
+    "domain": "教育科技 - 智能阅卷",
+    "userBase": "中学历史教师",
+    "keyFeatures": [
+      "OCR文字识别",
+      "智能评分算法",
+      "答题卡模板设计",
+      "批量处理能力",
+      "数据统计分析",
+      "导出功能"
+    ]
+  },
+  "codeStyle": {
+    "frontend": {
+      "componentStructure": "功能模块化 - Views/Workspaces/Common",
+      "stateManagement": "AppContext + Zustand + 自定义hooks",
+      "styling": "Tailwind CSS + Ant Design组件",
+      "naming": {
+        "components": "PascalCase (e.g., AnswerSheetUpload)",
+        "files": "camelCase (e.g., useGeminiOCR.ts)",
+        "variables": "camelCase",
+        "constants": "UPPER_SNAKE_CASE"
+      },
+      "patterns": [
+        "React Hooks优先于class组件",
+        "TypeScript严格类型检查",
+        "错误边界组件包装",
+        "Loading状态统一管理",
+        "API调用错误处理"
+      ]
+    },
+    "backend": {
+      "structure": "分层架构 - API/Services/Models",
+      "async": "全面使用async/await",
+      "errorHandling": "HTTPException + 详细错误信息",
+      "naming": {
+        "functions": "snake_case",
+        "classes": "PascalCase",
+        "constants": "UPPER_SNAKE_CASE",
+        "endpoints": "kebab-case URLs"
+      },
+      "patterns": [
+        "依赖注入模式",
+        "服务层业务逻辑封装",
+        "数据库事务管理",
+        "JWT认证中间件",
+        "文件存储抽象化"
+      ]
+    }
+  },
+  "keyFiles": {
+    "entry": ["src/main.tsx", "backend/main.py"],
+    "config": ["vite.config.ts", "backend/config/settings.py"],
+    "core": [
+      "src/contexts/AppContext.tsx",
+      "backend/services/gemini_service.py"
+    ]
+  },
+  "commonTasks": [
+    "创建新的React组件",
+    "添加FastAPI路由",
+    "集成Gemini AI功能",
+    "优化OCR处理流程",
+    "添加数据可视化图表",
+    "实现文件上传功能"
+  ]
+}

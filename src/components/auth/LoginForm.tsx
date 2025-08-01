@@ -136,19 +136,27 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </Button>
         </Form.Item>
 
-        {onSwitchToRegister && (
-          <div className="text-center">
-            <Text type="secondary">
-              还没有账户？{' '}
-              <Link 
-                onClick={onSwitchToRegister}
-                className="text-primary-600 hover:text-primary-700 font-medium"
-              >
-                立即注册
-              </Link>
+        <div className="text-center space-y-3">
+          {onSwitchToRegister && (
+            <div>
+              <Text type="secondary">
+                还没有账户？{' '}
+                <Link 
+                  onClick={onSwitchToRegister}
+                  className="text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  立即注册
+                </Link>
+              </Text>
+            </div>
+          )}
+          
+          <div className="pt-2 border-t border-gray-100">
+            <Text type="secondary" className="text-xs">
+              测试账户：<Text code className="text-xs">demo</Text> / <Text code className="text-xs">demo123</Text>
             </Text>
           </div>
-        )}
+        </div>
       </Form>
     </div>
   );

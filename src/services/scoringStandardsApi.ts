@@ -38,7 +38,7 @@ export const uploadPaperFile = async (file: File): Promise<UploadedFile> => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await fetch('http://localhost:8001/api/scoring-standards/upload/paper', {
+    const response = await fetch('http://localhost:8000/api/scoring-standards/upload/paper', {
       method: 'POST',
       body: formData
     });
@@ -74,7 +74,7 @@ export const uploadAnswerFile = async (file: File): Promise<UploadedFile> => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await fetch('http://localhost:8001/api/scoring-standards/upload/answer', {
+    const response = await fetch('http://localhost:8000/api/scoring-standards/upload/answer', {
       method: 'POST',
       body: formData
     });
@@ -116,7 +116,7 @@ export const generateScoringStandards = async (
       formData.append('answer_file_id', answerFile.fileId);
     }
     
-    const response = await fetch('http://localhost:8001/api/scoring-standards/generate', {
+    const response = await fetch('http://localhost:8000/api/scoring-standards/generate', {
       method: 'POST',
       body: formData
     });
@@ -196,7 +196,7 @@ export const generateScoringStandards = async (
 // 保存评分标准API
 export const saveScoringStandards = async (questions: Question[], examId?: string): Promise<boolean> => {
   try {
-    const response = await fetch('http://localhost:8001/api/scoring-standards/save', {
+    const response = await fetch('http://localhost:8000/api/scoring-standards/save', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -226,7 +226,7 @@ export const saveScoringStandards = async (questions: Question[], examId?: strin
 // 获取已保存的评分标准API
 export const getScoringStandards = async (examId: string): Promise<Question[]> => {
   try {
-    const response = await fetch(`http://localhost:8001/api/scoring-standards/exam/${examId}`);
+    const response = await fetch(`http://localhost:8000/api/scoring-standards/exam/${examId}`);
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

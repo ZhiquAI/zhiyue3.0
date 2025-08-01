@@ -80,7 +80,7 @@ const ChoiceGrading: React.FC = () => {
     error: null as string | null
   });
   const [showProgressModal, setShowProgressModal] = useState(false);
-  const websocketRef = useRef<WebSocket | null>(null);
+
   const [nonChoiceQuestions, setNonChoiceQuestions] = useState<NonChoiceQuestion[]>([
     {
       id: '1',
@@ -99,95 +99,13 @@ const ChoiceGrading: React.FC = () => {
   ]);
   const [choiceAnswers, setChoiceAnswers] = useState<Record<string, string>>({});
 
-  // WebSocket连接管理
-  useEffect(() => {
-    return () => {
-      // 组件卸载时清理WebSocket连接
-      if (websocketRef.current) {
-        websocketRef.current.close();
-      }
-    };
-  }, []);
 
-  // 建立WebSocket连接
-  const connectWebSocket = (taskId: string) => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/choice-grading/ws/${taskId}`;
-    
-    websocketRef.current = new WebSocket(wsUrl);
-    
-    websocketRef.current.onopen = () => {
-      console.log('WebSocket连接已建立');
-    };
-    
-    websocketRef.current.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        handleWebSocketMessage(data);
-      } catch (error) {
-        console.error('WebSocket消息解析错误:', error);
-      }
-    };
-    
-    websocketRef.current.onclose = () => {
-      console.log('WebSocket连接已关闭');
-    };
-    
-    websocketRef.current.onerror = (error) => {
-      console.error('WebSocket连接错误:', error);
-      setRealtimeGrading(prev => ({
-        ...prev,
-        error: 'WebSocket连接失败'
-      }));
-    };
-  };
 
-  // 处理WebSocket消息
-  const handleWebSocketMessage = (data: any) => {
-    switch (data.type) {
-      case 'task_status':
-      case 'task_update':
-        setRealtimeGrading(prev => ({
-          ...prev,
-          progress: data.progress || 0,
-          status: data.status || 'pending',
-          error: data.error || null
-        }));
-        
-        // 如果任务完成，设置结果
-        if (data.status === 'completed' && data.result) {
-          setGradingResult(data.result);
-          setShowProgressModal(false);
-          setRealtimeGrading(prev => ({ ...prev, isActive: false }));
-          message.success('实时评分完成！');
-        } else if (data.status === 'failed') {
-          setShowProgressModal(false);
-          setRealtimeGrading(prev => ({ ...prev, isActive: false }));
-          message.error(`评分失败: ${data.error || '未知错误'}`);
-        }
-        break;
-        
-      case 'error':
-        message.error(data.message || '发生错误');
-        setShowProgressModal(false);
-        setRealtimeGrading(prev => ({ ...prev, isActive: false }));
-        break;
-        
-      case 'pong':
-        // 心跳响应
-        break;
-        
-      default:
-        console.log('未知WebSocket消息类型:', data.type);
-    }
-  };
 
-  // 发送心跳
-  const sendHeartbeat = () => {
-    if (websocketRef.current && websocketRef.current.readyState === WebSocket.OPEN) {
-      websocketRef.current.send(JSON.stringify({ type: 'ping' }));
-    }
-  };
+
+
+
+
 
   // 默认参考答案（12道选择题）
   const defaultReferenceAnswers = {
@@ -231,22 +149,9 @@ const ChoiceGrading: React.FC = () => {
       if (response.data.success) {
         const taskId = response.data.data.task_id;
         
-        // 设置实时评分状态
-        setRealtimeGrading({
-          isActive: true,
-          taskId: taskId,
-          progress: 0,
-          status: 'pending',
-          error: null
-        });
-        
-        // 显示进度弹窗
-        setShowProgressModal(true);
-        
-        // 建立WebSocket连接
-        connectWebSocket(taskId);
-        
-        message.success('评分任务已启动，正在实时处理...');
+        // 简化为同步处理
+        setGradingResult(response.data.data);
+        message.success('评分完成！');
       } else {
         message.error('创建评分任务失败');
       }
@@ -524,9 +429,6 @@ const ChoiceGrading: React.FC = () => {
             key="close" 
             onClick={() => {
               setShowProgressModal(false);
-              if (websocketRef.current) {
-                websocketRef.current.close();
-              }
               setRealtimeGrading(prev => ({ ...prev, isActive: false }));
             }}
             disabled={realtimeGrading.status === 'processing'}

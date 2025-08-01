@@ -1,239 +1,316 @@
-import React from 'react';
-import { Card, Table, Button, Tag, Progress, Tooltip, Breadcrumb, Empty, Alert } from 'antd';
-import { EditOutlined, ClockCircleOutlined, CheckCircleOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Card, Button, Tag, Breadcrumb, Empty, Alert, Space, message, Row, Col } from 'antd';
+import { EditOutlined, ExperimentOutlined, UploadOutlined, ScissorOutlined, RobotOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam } from '../../types/exam';
-import { message } from '../../utils/message';
+import MarkingWorkspace from '../workspaces/MarkingWorkspace';
+import PreGradingCenterView from './PreGradingCenterView';
+
+interface WorkflowState {
+  exam: Exam;
+  currentStep: 'pre_grading' | 'marking' | 'review' | 'completed';
+}
 
 const MarkingCenterView: React.FC = () => {
-  const { exams, setSubViewInfo, setCurrentView } = useAppContext();
+  const { currentView, subViewInfo, setCurrentView, setSubViewInfo } = useAppContext();
+  const [workflowState, setWorkflowState] = useState<WorkflowState | null>(null);
+  const [showSubMenu, setShowSubMenu] = useState(true); // 控制是否显示子菜单卡片
+  
+  // 获取当前选中的考试
+  const selectedExam = subViewInfo?.exam as Exam;
 
-  const markingExams = exams.filter(e => 
-    e.status === '阅卷中' || e.status === '待阅卷'
-  );
-
-  const handleEnterMarking = (exam: Exam) => {
-    if (exam.status === '待阅卷') {
-      message.info('请先在考试管理中上传答题卡后再开始阅卷');
-      return;
-    }
-    setSubViewInfo({ 
-      view: 'marking', 
-      exam,
-      source: 'markingCenter' // 标识来源为阅卷中心
-    });
-  };
-
-  const handleJumpToExamManagement = (exam?: Exam) => {
-    // 跳转到考试管理
-    setCurrentView('examList');
-    if (exam) {
-      message.info(`已跳转到考试管理，查看考试：${exam.name}`);
-    }
-  };
-
-  const columns = [
+  // 子菜单卡片数据
+  const subMenuCards = [
     {
-      title: '考试名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text: string, record: Exam) => (
-        <div>
-          <div className="font-medium text-gray-800">{text}</div>
-          <div className="text-sm text-gray-500">
-            {record.subject} · {record.grade} · {record.createdAt}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => {
-        const statusConfig = {
-          '待阅卷': { color: 'geekblue', icon: <ClockCircleOutlined /> },
-          '阅卷中': { color: 'processing', icon: <EditOutlined /> }
-        };
-        const config = statusConfig[status as keyof typeof statusConfig];
-        
-        return (
-          <Tag color={config.color} icon={config.icon}>
-            {status}
-          </Tag>
-        );
+      key: 'preGrading',
+      title: '阅卷前处理',
+      description: '上传答题卡，进行图像预处理和质量检查',
+      icon: <UploadOutlined className="text-2xl" />,
+      color: 'from-blue-500 to-blue-600',
+      onClick: () => {
+        setShowSubMenu(false);
+        setWorkflowState(prev => prev ? { ...prev, currentStep: 'pre_grading' } : null);
       }
     },
     {
-      title: '阅卷进度',
-      key: 'progress',
-      render: (_: any, record: Exam) => {
-        if (record.status === '待阅卷') {
-          return (
-            <div className="text-center">
-              <div className="text-sm text-gray-500 mb-1">等待上传答题卡</div>
-              <Progress percent={0} size="small" />
-            </div>
-          );
-        }
-        
-        const percent = record.tasks.total > 0 
-          ? Math.round((record.tasks.completed / record.tasks.total) * 100) 
-          : 0;
-          
-        return (
-          <Tooltip title={`${record.tasks.completed} / ${record.tasks.total}`}>
-            <Progress 
-              percent={percent}
-              size="small"
-              status={record.tasks.hasError ? 'exception' : 'active'}
-            />
-          </Tooltip>
-        );
+      key: 'marking',
+      title: '在线阅卷',
+      description: '进行主观题阅卷，评分和质量控制',
+      icon: <EditOutlined className="text-2xl" />,
+      color: 'from-green-500 to-green-600',
+      onClick: () => {
+        setShowSubMenu(false);
+        setWorkflowState(prev => prev ? { ...prev, currentStep: 'marking' } : null);
       }
     },
     {
-      title: '异常答卷',
-      key: 'errors',
-      render: (_: any, record: Exam) => {
-        if (record.status === '待阅卷') {
-          return <Tag color="default">-</Tag>;
-        }
-        
-        return record.tasks.hasError ? (
-          <Button 
-            type="link" 
-            danger 
-            onClick={() => message.info('正在打开异常处理工作台...')}
-          >
-            {record.tasks.errorCount} 份
-          </Button>
-        ) : (
-          <Tag color="success">无</Tag>
-        );
+      key: 'aiMarking',
+      title: 'AI智能阅卷',
+      description: '使用人工智能技术进行自动阅卷',
+      icon: <RobotOutlined className="text-2xl" />,
+      color: 'from-purple-500 to-purple-600',
+      onClick: () => {
+        setCurrentView('aiMarking');
       }
     },
     {
-      title: '操作',
-      key: 'action',
-      render: (_: any, record: Exam) => {
-        if (record.status === '待阅卷') {
-          return (
-            <div className="space-x-2">
-              <Button 
-                type="primary"
-                icon={<ArrowRightOutlined />}
-                onClick={() => handleJumpToExamManagement(record)}
-              >
-                去考试管理上传
-              </Button>
-              <Button 
-                type="default"
-                disabled
-              >
-                进入阅卷
-              </Button>
-            </div>
-          );
-        }
-        
-        return (
-          <Button 
-            type="primary" 
-            icon={<EditOutlined />}
-            onClick={() => handleEnterMarking(record)}
-          >
-            进入阅卷
-          </Button>
-        );
+      key: 'markingTools',
+      title: '阅卷工具',
+      description: '阅卷辅助工具和设置管理',
+      icon: <ScissorOutlined className="text-2xl" />,
+      color: 'from-orange-500 to-orange-600',
+      onClick: () => {
+        setCurrentView('markingTools');
       }
     }
   ];
 
-  return (
-    <div>
+  // 渲染卡片式子菜单
+  const renderSubMenuCards = () => (
+    <div className="space-y-6">
       <Breadcrumb className="mb-4" items={[{ title: '阅卷中心' }]} />
       
-      {/* 职责说明提示 */}
-      <Alert
-        message="阅卷中心职责说明"
-        description="阅卷中心专注于阅卷任务的执行和监控。如需上传答题卡，请前往考试管理模块进行操作。"
-        type="info"
-        showIcon
-        className="mb-4"
-      />
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">阅卷中心</h2>
+        <p className="text-gray-600">选择您要使用的阅卷功能</p>
+      </div>
       
-      <Card 
-        title={
-          <div className="flex items-center justify-between">
-            <span>阅卷任务列表</span>
-            <Tag color="blue">{markingExams.length} 个任务</Tag>
-          </div>
-        }
-      >
-        {markingExams.length > 0 ? (
-          <Table 
-            columns={columns} 
-            dataSource={markingExams} 
-            rowKey="id"
-            pagination={false}
-          />
-        ) : (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <div className="text-center">
-                <p className="text-gray-500 mb-2">暂无阅卷任务</p>
-                <p className="text-sm text-gray-400">
-              请先在考试管理中上传答题卡，完成后考试将出现在这里
-            </p>
-            <Button 
-              type="link" 
-              onClick={() => handleJumpToExamManagement()}
-              className="mt-2"
+      <Row gutter={[24, 24]}>
+        {subMenuCards.map((card) => (
+          <Col xs={24} sm={12} lg={6} key={card.key}>
+            <Card
+              hoverable
+              className="h-full transition-all duration-300 hover:shadow-lg border-0 overflow-hidden"
+              onClick={card.onClick}
+              style={{ cursor: 'pointer' }}
             >
-              前往考试管理 →
-            </Button>
+              <div className={`bg-gradient-to-br ${card.color} p-6 -m-6 mb-4 text-white`}>
+                <div className="flex items-center justify-center mb-3">
+                  {card.icon}
+                </div>
+                <h3 className="text-lg font-semibold text-center text-white">
+                  {card.title}
+                </h3>
               </div>
-            }
+              <div className="pt-2">
+                <p className="text-gray-600 text-sm text-center leading-relaxed">
+                  {card.description}
+                </p>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    </div>
+  );
+
+  // 如果显示子菜单，则渲染卡片式子菜单
+  if (showSubMenu) {
+    return renderSubMenuCards();
+  }
+
+  // 如果没有选中考试，显示考试列表
+  if (!selectedExam) {
+    return (
+      <div className="marking-center-overview">
+        <div className="mb-6">
+          <Breadcrumb
+            items={[
+              { title: <span style={{ cursor: 'pointer' }} onClick={() => setCurrentView('examList')}>考试管理</span> },
+              { title: <span style={{ cursor: 'pointer' }} onClick={() => setShowSubMenu(true)}>阅卷中心</span> }
+            ]}
           />
-        )}
-      </Card>
-
-      {/* 阅卷流程说明 */}
-      <Card title="阅卷流程说明" className="mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-green-600 font-bold text-lg">1</span>
-            </div>
-            <h4 className="font-medium text-gray-800 mb-2">上传答题卡</h4>
-            <p className="text-sm text-gray-600">
-              在考试管理中批量上传学生答题卡，系统自动进行OCR识别和预处理
-            </p>
-          </div>
-          
-          <div className="text-center p-4 bg-purple-50 rounded-lg">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-purple-600 font-bold text-lg">2</span>
-            </div>
-            <h4 className="font-medium text-gray-800 mb-2">AI辅助阅卷</h4>
-            <p className="text-sm text-gray-600">
-              AI自动评分主观题，教师复核确认，确保评分准确性
-            </p>
-          </div>
-
-          <div className="text-center p-4 bg-orange-50 rounded-lg">
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-orange-600 font-bold text-lg">3</span>
-            </div>
-            <h4 className="font-medium text-gray-800 mb-2">生成报告</h4>
-            <p className="text-sm text-gray-600">
-              自动生成详细的分析报告，为教学决策提供数据支撑
-            </p>
-          </div>
         </div>
-      </Card>
+
+        <Card>
+          <Empty 
+            description="请先从考试管理页面选择要处理的考试"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          >
+            <Button 
+              type="primary" 
+              onClick={() => setCurrentView('examList')}
+            >
+              返回考试管理
+            </Button>
+          </Empty>
+        </Card>
+      </div>
+    );
+  }
+
+  // 初始化工作流状态
+  if (!workflowState) {
+    const initialStep = determineInitialStep(selectedExam);
+    setWorkflowState({
+      exam: selectedExam,
+      currentStep: initialStep
+    });
+    return <div>初始化中...</div>;
+  }
+
+  // 确定考试的初始步骤
+  function determineInitialStep(exam: Exam): 'pre_grading' | 'marking' | 'review' | 'completed' {
+    switch (exam.status) {
+      case '待配置':
+        return 'pre_grading';
+             case '阅卷中':
+         return 'marking';
+       case '待复核':
+         return 'review';
+      case '已完成':
+        return 'completed';
+      default:
+        return 'pre_grading';
+    }
+  }
+
+  // 处理阅卷前处理完成
+  const handlePreGradingComplete = () => {
+    setWorkflowState(prev => prev ? { ...prev, currentStep: 'marking' } : null);
+    message.success('阅卷前处理已完成，开始在线阅卷');
+  };
+
+  // 处理阅卷完成
+  const handleMarkingComplete = () => {
+    setWorkflowState(prev => prev ? { ...prev, currentStep: 'review' } : null);
+    message.success('阅卷已完成，进入复核阶段');
+  };
+
+
+
+  // 返回考试管理
+  const handleBackToOverview = () => {
+    setCurrentView('examList');
+    setSubViewInfo({ view: null, exam: null, source: null });
+    setWorkflowState(null);
+  };
+
+  // 根据当前步骤渲染内容
+  const renderCurrentStep = () => {
+    switch (workflowState.currentStep) {
+      case 'pre_grading':
+        return (
+          <PreGradingCenterView 
+            exam={selectedExam}
+            onBack={handleBackToOverview}
+            onComplete={handlePreGradingComplete}
+          />
+        );
+      
+      case 'marking':
+        return (
+          <div>
+            <div className="mb-6">
+              <Breadcrumb
+                items={[
+                  { title: <span style={{ cursor: 'pointer' }} onClick={handleBackToOverview}>考试管理</span> },
+                  { title: selectedExam.name },
+                  { title: '在线阅卷' }
+                ]}
+              />
+            </div>
+            
+            <Card 
+              title={
+                <div className="flex items-center gap-2">
+                  <EditOutlined />
+                  <span>在线阅卷</span>
+                  <Tag color="processing">进行中</Tag>
+                </div>
+              }
+              extra={
+                <Space>
+                  <Button onClick={() => setWorkflowState(prev => prev ? { ...prev, currentStep: 'pre_grading' } : null)}>
+                    返回预处理
+                  </Button>
+                  <Button type="primary" onClick={handleMarkingComplete}>
+                    完成阅卷
+                  </Button>
+                </Space>
+              }
+            >
+              <MarkingWorkspace exam={selectedExam} />
+            </Card>
+          </div>
+        );
+      
+      case 'review':
+        return (
+          <div>
+            <div className="mb-6">
+              <Breadcrumb
+                items={[
+                  { title: <span style={{ cursor: 'pointer' }} onClick={handleBackToOverview}>考试管理</span> },
+                  { title: selectedExam.name },
+                  { title: '复核确认' }
+                ]}
+              />
+            </div>
+            
+            <Card title="复核确认">
+              <Alert
+                message="阅卷复核功能"
+                description="复核功能正在开发中，当前版本暂不支持"
+                type="info"
+                showIcon
+                action={
+                  <Space>
+                    <Button onClick={() => setWorkflowState(prev => prev ? { ...prev, currentStep: 'marking' } : null)}>
+                      返回阅卷
+                    </Button>
+                    <Button type="primary" onClick={() => setWorkflowState(prev => prev ? { ...prev, currentStep: 'completed' } : null)}>
+                      确认完成
+                    </Button>
+                  </Space>
+                }
+              />
+            </Card>
+          </div>
+        );
+      
+      case 'completed':
+        return (
+          <div>
+            <div className="mb-6">
+              <Breadcrumb
+                items={[
+                  { title: <span style={{ cursor: 'pointer' }} onClick={handleBackToOverview}>考试管理</span> },
+                  { title: selectedExam.name },
+                  { title: '已完成' }
+                ]}
+              />
+            </div>
+            
+            <Card title="阅卷完成">
+              <Alert
+                message="阅卷已完成"
+                description="本次考试的所有阅卷工作已经完成，您可以查看统计报告或进行数据分析"
+                type="success"
+                showIcon
+                action={
+                  <Space>
+                    <Button onClick={() => setCurrentView('dataAnalysis')}>
+                      查看分析报告
+                    </Button>
+                    <Button onClick={handleBackToOverview}>
+                      返回考试管理
+                    </Button>
+                  </Space>
+                }
+              />
+            </Card>
+          </div>
+        );
+      
+      default:
+        return <Empty description="未知状态" />;
+    }
+  };
+
+  return (
+    <div className="marking-center">
+      {renderCurrentStep()}
     </div>
   );
 };

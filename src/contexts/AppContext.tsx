@@ -16,8 +16,10 @@ interface AppContextType {
   exams: Exam[];
   loading: boolean;
   error: Error | null;
+  isHeaderVisible: boolean; // 新增：控制菜单栏显示状态
   setCurrentView: (view: string) => void;
   setSubViewInfo: (info: SubViewInfo) => void;
+  setHeaderVisible: (visible: boolean) => void; // 新增：设置菜单栏显示状态
   addExam: (exam: Exam) => void;
   updateExamStatus: (examId: string, status: ExamStatus) => void;
   refreshExams: () => Promise<void>;
@@ -34,6 +36,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     source: null,
   });
   const [exams, setExams] = useState<Exam[]>(mockExams);
+  const [isHeaderVisible, setHeaderVisible] = useState(true); // 新增：默认显示菜单栏
   
   const { state: examState } = useAsyncOperation();
 
@@ -89,8 +92,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         exams,
         loading: examState.loading,
         error: examState.error,
+        isHeaderVisible, // 新增
         setCurrentView,
         setSubViewInfo,
+        setHeaderVisible, // 新增
         addExam,
         updateExamStatus,
         refreshExams,

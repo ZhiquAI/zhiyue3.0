@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 import cv2
 import numpy as np
-from ultralytics import YOLO
 from PIL import Image
 import base64
 import io
@@ -13,32 +12,43 @@ import io
 from .gemini_ocr_service import GeminiOCRService
 from .template_matching_service import TemplateMatchingService
 from .quality_assessment_service import QualityAssessmentService
-from ..models.answer_sheet import AnswerSheet
+from ..models.production_models import AnswerSheet
 from ..database import get_db
 from ..config import settings
 
 class EnhancedProcessingService:
     """增强的答题卡处理服务"""
+
+    def segment_image_by_template(self, image_path: str, template: Dict[str, Any]) -> Dict[str, np.ndarray]:
+        """根据模板切割图像区域
+
+        Args:
+            image_path: 图像文件路径
+            template: 答题卡模板，包含各区域坐标
+
+        Returns:
+            Dict[str, np.ndarray]: 切割后的图像区域，键为区域名称
+        """
+        image = cv2.imread(image_path)
+        if image is None:
+            raise ValueError(f"无法读取图像文件: {image_path}")
+
+        segments = {}
+        for region_name, region_coords in template.get('regions', {}).items():
+            x, y, w, h = region_coords
+            segment = image[y:y+h, x:x+w]
+            segments[region_name] = segment
+
+        return segments
+    """增强的答题卡处理服务"""
     
     def __init__(self):
-        self.yolo_model = self._load_yolo_model()
         self.gemini_ocr = GeminiOCRService()
         self.template_matcher = TemplateMatchingService()
         self.quality_assessor = QualityAssessmentService()
         self.processing_cache = {}
         
-    def _load_yolo_model(self) -> Optional[YOLO]:
-        """加载YOLO模型"""
-        try:
-            model_path = getattr(settings, 'YOLO_MODEL_PATH', 'models/question_detection_yolo.pt')
-            if Path(model_path).exists():
-                return YOLO(model_path)
-            else:
-                print(f"YOLO模型文件不存在: {model_path}，将使用预训练模型")
-                return YOLO('yolov8n.pt')  # 使用预训练模型作为fallback
-        except Exception as e:
-            print(f"加载YOLO模型失败: {e}")
-            return None
+
     
     async def process_with_detection(self, image_path: str, config: Dict[str, Any]) -> Dict[str, Any]:
         """使用YOLO检测增强的图像处理流程"""
@@ -55,10 +65,8 @@ class EnhancedProcessingService:
                     'processing_time': time.time() - start_time
                 }
             
-            # 2. YOLO快速预检测（如果启用）
+            # 2. 跳过YOLO检测（已移除）
             detection_result = None
-            if config.get('enableYOLODetection', True) and self.yolo_model:
-                detection_result = await self._yolo_detect_regions(image_path)
             
             # 3. 模板匹配（如果启用）
             template_match = None
@@ -93,47 +101,7 @@ class EnhancedProcessingService:
                 'processing_time': time.time() - start_time
             }
     
-    async def _yolo_detect_regions(self, image_path: str) -> Dict[str, Any]:
-        """使用YOLO检测题目区域"""
-        if not self.yolo_model:
-            return {'regions': [], 'confidence': 0.0}
-        
-        try:
-            # 加载图像
-            image = cv2.imread(image_path)
-            if image is None:
-                raise ValueError(f"无法加载图像: {image_path}")
-            
-            # YOLO推理
-            results = self.yolo_model(image)
-            
-            regions = []
-            for result in results:
-                boxes = result.boxes
-                if boxes is not None:
-                    for box in boxes:
-                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                        confidence = box.conf[0].cpu().numpy()
-                        class_id = int(box.cls[0].cpu().numpy())
-                        
-                        regions.append({
-                            'bbox': [int(x1), int(y1), int(x2), int(y2)],
-                            'confidence': float(confidence),
-                            'class_id': class_id,
-                            'type': 'question_region'
-                        })
-            
-            avg_confidence = np.mean([r['confidence'] for r in regions]) if regions else 0.0
-            
-            return {
-                'regions': regions,
-                'confidence': float(avg_confidence),
-                'detection_count': len(regions)
-            }
-            
-        except Exception as e:
-            print(f"YOLO检测失败: {e}")
-            return {'regions': [], 'confidence': 0.0, 'error': str(e)}
+
     
     def _merge_results(self, detection_result: Optional[Dict], template_match: Optional[Dict], ocr_result: Dict) -> Dict[str, Any]:
         """融合多种检测结果"""
@@ -143,17 +111,9 @@ class EnhancedProcessingService:
             'layout_analysis': ocr_result.get('layout_analysis', {}),
             'confidence_scores': {
                 'ocr': ocr_result.get('confidence', 0.0),
-                'detection': detection_result.get('confidence', 0.0) if detection_result else 0.0,
                 'template': template_match.get('confidence', 0.0) if template_match else 0.0
             }
         }
-        
-        # 如果有YOLO检测结果，用于优化题目边界
-        if detection_result and detection_result.get('regions'):
-            merged['enhanced_regions'] = detection_result['regions']
-            merged['questions'] = self._optimize_question_boundaries(
-                merged['questions'], detection_result['regions']
-            )
         
         # 如果有模板匹配结果，用于验证和校正
         if template_match and template_match.get('matched_template'):
@@ -164,9 +124,8 @@ class EnhancedProcessingService:
         
         # 计算综合置信度
         confidence_weights = {
-            'ocr': 0.5,
-            'detection': 0.3,
-            'template': 0.2
+            'ocr': 0.7,
+            'template': 0.3
         }
         
         overall_confidence = sum(
@@ -177,37 +136,7 @@ class EnhancedProcessingService:
         
         return merged
     
-    def _optimize_question_boundaries(self, questions: List[Dict], detection_regions: List[Dict]) -> List[Dict]:
-        """使用YOLO检测结果优化题目边界"""
-        optimized_questions = []
-        
-        for question in questions:
-            best_match = None
-            best_iou = 0.0
-            
-            question_bbox = question.get('bbox', [])
-            if len(question_bbox) != 4:
-                optimized_questions.append(question)
-                continue
-            
-            # 寻找最佳匹配的检测区域
-            for region in detection_regions:
-                iou = self._calculate_iou(question_bbox, region['bbox'])
-                if iou > best_iou:
-                    best_iou = iou
-                    best_match = region
-            
-            # 如果找到好的匹配，使用检测结果优化边界
-            if best_match and best_iou > 0.3:
-                optimized_question = question.copy()
-                optimized_question['bbox'] = best_match['bbox']
-                optimized_question['detection_confidence'] = best_match['confidence']
-                optimized_question['boundary_optimized'] = True
-                optimized_questions.append(optimized_question)
-            else:
-                optimized_questions.append(question)
-        
-        return optimized_questions
+
     
     def _validate_with_template(self, questions: List[Dict], template_match: Dict) -> List[Dict]:
         """使用模板匹配结果验证题目"""

@@ -17,9 +17,13 @@ from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException
 try:
     from backend.models.file_storage import FileStorage, PaperDocument, AnswerSheet, ProcessingQueue
+    from backend.models.production_models import Student
+    from backend.services.barcode_service import BarcodeService
     from backend.config.settings import settings
 except ImportError:
-    from models.file_storage import FileStorage, PaperDocument, AnswerSheet, ProcessingQueue
+    from models.file_storage import FileStorage, PaperDocument, AnswerSheetFile, ProcessingQueue
+    from models.production_models import Student, AnswerSheet
+    from services.barcode_service import BarcodeService
     from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -32,6 +36,7 @@ class FileStorageService:
         self.base_storage_path = Path(settings.STORAGE_BASE_PATH)
         self.max_file_size = settings.MAX_FILE_SIZE
         self.allowed_extensions = settings.ALLOWED_FILE_EXTENSIONS
+        self.barcode_service = BarcodeService()
         
         # 确保存储目录存在
         self._ensure_storage_directories()
@@ -226,7 +231,7 @@ class FileStorageService:
         }
         return priority_map.get(task_type, 5)
     
-    def batch_upload_answer_sheets(self, files: List[UploadFile], 
+    async def batch_upload_answer_sheets(self, files: List[UploadFile], 
                                  exam_id: str, uploaded_by: str) -> Dict[str, Any]:
         """批量上传答题卡"""
         results = {
@@ -234,17 +239,32 @@ class FileStorageService:
             'failed': [],
             'total': len(files),
             'success_count': 0,
-            'failed_count': 0
+            'failed_count': 0,
+            'student_matches': [],
+            'unmatched_files': []
         }
         
         for file in files:
             try:
-                file_record = self.upload_file(file, exam_id, 'answer_sheet', uploaded_by)
-                results['success'].append({
+                file_record = await self.upload_file(file, exam_id, 'answer_sheet', uploaded_by)
+                
+                # 尝试识别条形码并匹配学生信息
+                student_info = await self._process_answer_sheet_barcode(file_record, exam_id)
+                
+                result_item = {
                     'filename': file.filename,
                     'file_id': file_record.id
-                })
+                }
+                
+                if student_info:
+                    result_item['student_info'] = student_info
+                    results['student_matches'].append(result_item)
+                else:
+                    results['unmatched_files'].append(result_item)
+                
+                results['success'].append(result_item)
                 results['success_count'] += 1
+                
             except Exception as e:
                 results['failed'].append({
                     'filename': file.filename,
@@ -348,3 +368,75 @@ class FileStorageService:
                         logger.info(f"Cleaned up temp file: {file_path}")
                     except Exception as e:
                         logger.error(f"Failed to cleanup temp file {file_path}: {str(e)}")
+    
+    async def _process_answer_sheet_barcode(self, file_record: FileStorage, exam_id: str) -> Optional[Dict[str, Any]]:
+        """处理答题卡条形码识别和学生信息匹配"""
+        try:
+            # 获取文件路径
+            file_path = self.base_storage_path / file_record.file_path
+            
+            # 识别条形码
+            barcode_result = self.barcode_service.recognize_barcode(str(file_path))
+            
+            if not barcode_result or not barcode_result.get('success'):
+                logger.warning(f"No barcode found in file: {file_record.id}")
+                return None
+            
+            # 从数据库匹配学生信息
+            student_info = self.barcode_service.match_student_from_database(
+                barcode_result['data'], exam_id, self.db
+            )
+            
+            if student_info:
+                # 创建或更新答题卡记录
+                await self._create_answer_sheet_record(file_record, student_info, barcode_result)
+                
+                return {
+                    'student_id': student_info.student_id,
+                    'student_name': student_info.student_name,
+                    'class_name': student_info.class_name,
+                    'barcode_data': barcode_result['data']
+                }
+            else:
+                logger.warning(f"No student match found for barcode in file: {file_record.id}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Barcode processing failed for file {file_record.id}: {str(e)}")
+            return None
+    
+    async def _create_answer_sheet_record(self, file_record: FileStorage, 
+                                        student_info: Student, barcode_result: Dict[str, Any]):
+        """创建答题卡记录"""
+        try:
+            # 检查是否已存在答题卡记录
+            existing_sheet = self.db.query(AnswerSheet).filter(
+                AnswerSheet.exam_id == file_record.exam_id,
+                AnswerSheet.student_uuid == student_info.id
+            ).first()
+            
+            if existing_sheet:
+                # 更新现有记录
+                existing_sheet.original_file_path = file_record.file_path
+                existing_sheet.barcode_data = barcode_result.get('data')
+                existing_sheet.updated_at = datetime.now()
+            else:
+                # 创建新记录
+                answer_sheet = AnswerSheet(
+                    exam_id=file_record.exam_id,
+                    student_uuid=student_info.id,
+                    student_id=student_info.student_id,
+                    student_name=student_info.student_name,
+                    class_name=student_info.class_name,
+                    original_file_path=file_record.file_path,
+                    grading_status='pending'
+                )
+                self.db.add(answer_sheet)
+            
+            self.db.commit()
+            logger.info(f"Answer sheet record created/updated for student: {student_info.student_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to create answer sheet record: {str(e)}")
+            self.db.rollback()
+            raise

@@ -406,3 +406,106 @@ async def update_exam_status(
     db.commit()
     
     return {"message": f"考试状态已更新为：{status}"}
+
+# 批量操作
+class BatchOperationRequest(BaseModel):
+    exam_ids: List[int]
+
+@router.delete("/batch", response_model=dict)
+async def batch_delete_exams(
+    request: BatchOperationRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """批量删除考试"""
+    if not request.exam_ids:
+        raise HTTPException(status_code=400, detail="请提供要删除的考试ID列表")
+    
+    deleted_count = 0
+    failed_exams = []
+    
+    for exam_id in request.exam_ids:
+        try:
+            # 检查考试是否存在
+            exam = db.query(Exam).filter(Exam.id == exam_id).first()
+            if not exam:
+                failed_exams.append({"id": exam_id, "reason": "考试不存在"})
+                continue
+            
+            # 检查权限
+            if current_user.role == "teacher" and exam.created_by != current_user.id:
+                failed_exams.append({"id": exam_id, "reason": "没有权限删除此考试"})
+                continue
+            
+            # 检查是否有关联的答题卡
+            answer_sheet_count = db.query(AnswerSheet).filter(AnswerSheet.exam_id == exam_id).count()
+            if answer_sheet_count > 0:
+                failed_exams.append({"id": exam_id, "reason": f"考试有 {answer_sheet_count} 份答题卡，无法删除"})
+                continue
+            
+            # 删除考试
+            db.delete(exam)
+            deleted_count += 1
+            
+        except Exception as e:
+            failed_exams.append({"id": exam_id, "reason": str(e)})
+    
+    db.commit()
+    
+    return {
+        "message": f"批量删除完成，成功删除 {deleted_count} 个考试",
+        "deleted_count": deleted_count,
+        "failed_exams": failed_exams
+    }
+
+class BatchStatusUpdateRequest(BaseModel):
+    exam_ids: List[int]
+    status: str
+
+@router.put("/batch/status", response_model=dict)
+async def batch_update_exam_status(
+    request: BatchStatusUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """批量更新考试状态"""
+    if not request.exam_ids:
+        raise HTTPException(status_code=400, detail="请提供要更新的考试ID列表")
+    
+    # 验证状态值
+    valid_statuses = ["待配置", "配置完成", "上传中", "处理中", "已完成", "已归档"]
+    if request.status not in valid_statuses:
+        raise HTTPException(status_code=400, detail="无效的状态值")
+    
+    updated_count = 0
+    failed_exams = []
+    
+    for exam_id in request.exam_ids:
+        try:
+            # 检查考试是否存在
+            exam = db.query(Exam).filter(Exam.id == exam_id).first()
+            if not exam:
+                failed_exams.append({"id": exam_id, "reason": "考试不存在"})
+                continue
+            
+            # 检查权限
+            if current_user.role == "teacher" and exam.created_by != current_user.id:
+                failed_exams.append({"id": exam_id, "reason": "没有权限修改此考试"})
+                continue
+            
+            # 更新状态
+            exam.status = request.status
+            exam.updated_at = datetime.utcnow()
+            updated_count += 1
+            
+        except Exception as e:
+            failed_exams.append({"id": exam_id, "reason": str(e)})
+    
+    db.commit()
+    
+    return {
+        "message": f"批量状态更新完成，成功更新 {updated_count} 个考试",
+        "updated_count": updated_count,
+        "failed_exams": failed_exams,
+        "new_status": request.status
+    }

@@ -102,7 +102,6 @@ const { Option } = Select;
 
 // 增强配置接口
 interface EnhancementConfig {
-  enableYOLODetection: boolean;
   enableTemplateMatching: boolean;
   enableMultimodalFusion: boolean;
   processingMode: 'fast' | 'accurate' | 'hybrid';
@@ -128,14 +127,14 @@ interface EnhancedWorkflowStep extends WorkflowStep {
   optimizations: string[];
 }
 
-// 实时监控数据接口
-interface RealtimeMonitoring {
-  currentLoad: number;
-  queueSize: number;
-  activeWorkers: number;
-  memoryUsage: number;
-  gpuUsage?: number;
-}
+// 实时监控数据接口已移除
+// interface RealtimeMonitoring {
+//   currentLoad: number;
+//   queueSize: number;
+//   activeWorkers: number;
+//   memoryUsage: number;
+//   gpuUsage?: number;
+// }
 
 interface EnhancedOptimizedWorkflowManagerProps {
   answerSheets: ProcessedAnswerSheet[];
@@ -151,7 +150,6 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
   // 状态管理
   const [currentStep, setCurrentStep] = useState(0);
   const [enhancementConfig, setEnhancementConfig] = useState<EnhancementConfig>({
-    enableYOLODetection: true,
     enableTemplateMatching: true,
     enableMultimodalFusion: true,
     processingMode: 'hybrid',
@@ -166,13 +164,14 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
     errorRate: 0,
     cacheHitRate: 0
   });
-  const [realtimeMonitoring, setRealtimeMonitoring] = useState<RealtimeMonitoring>({
-    currentLoad: 0,
-    queueSize: 0,
-    activeWorkers: 0,
-    memoryUsage: 0,
-    gpuUsage: 0
-  });
+  // 实时监控状态已移除
+  // const [realtimeMonitoring, setRealtimeMonitoring] = useState<RealtimeMonitoring>({
+  //   currentLoad: 0,
+  //   queueSize: 0,
+  //   activeWorkers: 0,
+  //   memoryUsage: 0,
+  //   gpuUsage: 0
+  // });
   const [configModalVisible, setConfigModalVisible] = useState(false);
   const [monitoringModalVisible, setMonitoringModalVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -182,14 +181,13 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
     {
       key: 'enhanced_upload',
       title: '智能批量处理',
-      description: 'YOLO检测 + 质量预检 + 模板匹配',
+      description: '质量预检 + 模板匹配 + 智能处理',
       icon: <ThunderboltOutlined />,
       status: 'process',
       progress: 0,
       enhancementConfig,
       performanceMetrics,
       aiFeatures: [
-        'YOLO目标检测',
         '图像质量预检',
         '模板智能匹配',
         '并行批处理',
@@ -415,20 +413,20 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
     // 实现评分结果显示逻辑
   };
 
-  // 实时监控数据更新
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch('/api/monitoring/realtime');
-        const data = await response.json();
-        setRealtimeMonitoring(data);
-      } catch (error) {
-        console.error('Failed to fetch monitoring data:', error);
-      }
-    }, 5000);
+  // 实时监控数据更新已移除
+  // useEffect(() => {
+  //   const interval = setInterval(async () => {
+  //     try {
+  //       const response = await fetch('/api/monitoring/realtime');
+  //       const data = await response.json();
+  //       setRealtimeMonitoring(data);
+  //     } catch (error) {
+  //       console.error('Failed to fetch monitoring data:', error);
+  //     }
+  //   }, 5000);
 
-    return () => clearInterval(interval);
-  }, []);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // 渲染配置模态框
   const renderConfigModal = () => (
@@ -443,13 +441,6 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
         <div>
           <h4>AI功能开关</h4>
           <Space direction="vertical" style={{ width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>YOLO目标检测</span>
-              <Switch
-                checked={enhancementConfig.enableYOLODetection}
-                onChange={(checked) => setEnhancementConfig(prev => ({ ...prev, enableYOLODetection: checked }))}
-              />
-            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>模板匹配</span>
               <Switch
@@ -519,9 +510,9 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
           <Card size="small">
             <Statistic
               title="当前负载"
-              value={realtimeMonitoring.currentLoad}
+              value={0}
               suffix="%"
-              valueStyle={{ color: realtimeMonitoring.currentLoad > 80 ? '#cf1322' : '#3f8600' }}
+              valueStyle={{ color: '#3f8600' }}
             />
           </Card>
         </Col>
@@ -529,7 +520,7 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
           <Card size="small">
             <Statistic
               title="队列大小"
-              value={realtimeMonitoring.queueSize}
+              value={0}
               suffix="个任务"
             />
           </Card>
@@ -538,7 +529,7 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
           <Card size="small">
             <Statistic
               title="活跃工作线程"
-              value={realtimeMonitoring.activeWorkers}
+              value={0}
               suffix={`/ ${enhancementConfig.parallelWorkers}`}
             />
           </Card>
@@ -547,23 +538,12 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
           <Card size="small">
             <Statistic
               title="内存使用"
-              value={realtimeMonitoring.memoryUsage}
+              value={0}
               suffix="MB"
             />
           </Card>
         </Col>
-        {realtimeMonitoring.gpuUsage !== undefined && (
-          <Col span={24}>
-            <Card size="small">
-              <Statistic
-                title="GPU使用率"
-                value={realtimeMonitoring.gpuUsage}
-                suffix="%"
-                valueStyle={{ color: realtimeMonitoring.gpuUsage > 90 ? '#cf1322' : '#3f8600' }}
-              />
-            </Card>
-          </Col>
-        )}
+        {/* GPU使用率监控已移除 */}
       </Row>
       
       <Divider />
@@ -645,7 +625,7 @@ const EnhancedOptimizedWorkflowManager: React.FC<EnhancedOptimizedWorkflowManage
       {/* 增强功能提示 */}
       <Alert
         message="AI增强功能已启用"
-        description="当前工作流已集成YOLO目标检测、多模态融合和自适应评分等先进AI技术，预计可提升50-70%的处理效率。"
+        description="当前工作流已集成多模态融合和自适应评分等先进AI技术，预计可提升50-70%的处理效率。"
         type="success"
         showIcon
         className="mb-4"

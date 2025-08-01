@@ -9,7 +9,8 @@ from pathlib import Path
 import time
 
 from sqlalchemy.orm import Session
-from models.file_storage import FileStorage, PaperDocument, AnswerSheet
+from models.file_storage import FileStorage, PaperDocument, AnswerSheetFile
+from models.production_models import AnswerSheet
 from services.gemini_ocr_service import GeminiOCRService
 from services.bubble_sheet_service import BubbleSheetService
 from services.barcode_service import BarcodeService

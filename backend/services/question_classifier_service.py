@@ -27,6 +27,57 @@ class QuestionType(Enum):
     ANALYSIS = "analysis"  # 分析题
     DESIGN = "design"  # 设计题
     UNKNOWN = "unknown"  # 未知类型
+    
+    def get_display_name(self) -> str:
+        """获取显示名称"""
+        display_names = {
+            self.CHOICE: "单选题",
+            self.MULTIPLE_CHOICE: "多选题",
+            self.TRUE_FALSE: "判断题",
+            self.FILL_BLANK: "填空题",
+            self.SHORT_ANSWER: "简答题",
+            self.ESSAY: "论述题",
+            self.CALCULATION: "计算题",
+            self.PROOF: "证明题",
+            self.ANALYSIS: "分析题",
+            self.DESIGN: "设计题",
+            self.UNKNOWN: "未知类型"
+        }
+        return display_names.get(self, "未知类型")
+    
+    def get_description(self) -> str:
+        """获取题型描述"""
+        descriptions = {
+            self.CHOICE: "单项选择题，从多个选项中选择一个正确答案",
+            self.MULTIPLE_CHOICE: "多项选择题，从多个选项中选择多个正确答案",
+            self.TRUE_FALSE: "判断题，判断陈述的正误",
+            self.FILL_BLANK: "填空题，在空白处填入正确答案",
+            self.SHORT_ANSWER: "简答题，用简短文字回答问题",
+            self.ESSAY: "论述题，需要详细论述和分析",
+            self.CALCULATION: "计算题，需要进行数学计算",
+            self.PROOF: "证明题，需要逻辑推理和证明",
+            self.ANALYSIS: "分析题，需要分析和比较",
+            self.DESIGN: "设计题，需要设计方案或创作",
+            self.UNKNOWN: "未知题型，无法确定具体类型"
+        }
+        return descriptions.get(self, "未知题型")
+    
+    def get_grading_strategy(self) -> str:
+        """获取评分策略"""
+        strategies = {
+            self.CHOICE: "exact_match",
+            self.MULTIPLE_CHOICE: "partial_match",
+            self.TRUE_FALSE: "exact_match",
+            self.FILL_BLANK: "keyword_match",
+            self.SHORT_ANSWER: "semantic_analysis",
+            self.ESSAY: "comprehensive_analysis",
+            self.CALCULATION: "step_by_step",
+            self.PROOF: "logical_analysis",
+            self.ANALYSIS: "comprehensive_analysis",
+            self.DESIGN: "creative_assessment",
+            self.UNKNOWN: "manual_review"
+        }
+        return strategies.get(self, "manual_review")
 
 class QuestionDifficulty(Enum):
     """题目难度枚举"""

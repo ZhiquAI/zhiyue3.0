@@ -26,6 +26,7 @@ class Settings:
     
     # 文件存储配置
     STORAGE_BASE_PATH = Path(os.getenv("STORAGE_BASE_PATH", "./storage"))
+    STORAGE_PATH = Path(os.getenv("STORAGE_PATH", "./storage/image_quality"))  # 图像质量存储路径
     MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", "50")) * 1024 * 1024  # 50MB
     ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.tif']
     
@@ -83,8 +84,8 @@ class Settings:
     SENTRY_DSN = os.getenv("SENTRY_DSN")
     ENABLE_METRICS = os.getenv("ENABLE_METRICS", "True").lower() == "true"
     
-    # WebSocket配置
-    WS_URL = os.getenv("WS_URL", "ws://localhost:8000")
+    # WebSocket配置已移除
+    # WS_URL = os.getenv("WS_URL", "ws://localhost:8000")
     
     @classmethod
     def validate_gemini_config(cls) -> bool:

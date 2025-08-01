@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { Card, Form, Select, List, Button, Breadcrumb, Row, Col, Statistic, Tabs, DatePicker, Space, Tag, Empty, Spin } from 'antd';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { ArrowUpOutlined, ArrowDownOutlined, UserOutlined, BookOutlined, BarChartOutlined, PieChartOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, ArrowDownOutlined, UserOutlined, BookOutlined, BarChartOutlined, PieChartOutlined, FundOutlined, TeamOutlined, DashboardOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { mockScoreTrendData } from '../../data/mockData';
 import { Exam } from '../../types/exam';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
-const { TabPane } = Tabs;
+// 移除废弃的TabPane导入
 
 const DataAnalysisView: React.FC = () => {
   const { exams, setSubViewInfo } = useAppContext();
@@ -17,8 +17,101 @@ const DataAnalysisView: React.FC = () => {
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
+  const [showSubMenu, setShowSubMenu] = useState(true); // 控制是否显示子菜单卡片
 
   const finishedExams = exams.filter(e => e.status === '已完成');
+
+  // 子菜单卡片数据
+  const subMenuCards = [
+    {
+      key: 'overview',
+      title: '数据概览',
+      description: '查看考试整体数据统计和关键指标',
+      icon: <DashboardOutlined className="text-2xl" />,
+      color: 'from-blue-500 to-blue-600',
+      onClick: () => {
+        setShowSubMenu(false);
+        setActiveTab('overview');
+      }
+    },
+    {
+      key: 'scoreAnalysis',
+      title: '成绩分析',
+      description: '深入分析成绩分布、趋势和统计数据',
+      icon: <BarChartOutlined className="text-2xl" />,
+      color: 'from-green-500 to-green-600',
+      onClick: () => {
+        setShowSubMenu(false);
+        setActiveTab('scoreAnalysis');
+      }
+    },
+    {
+      key: 'classComparison',
+      title: '班级对比',
+      description: '对比不同班级的成绩表现和排名',
+      icon: <TeamOutlined className="text-2xl" />,
+      color: 'from-purple-500 to-purple-600',
+      onClick: () => {
+        setShowSubMenu(false);
+        setActiveTab('classComparison');
+      }
+    },
+    {
+      key: 'trendAnalysis',
+      title: '趋势分析',
+      description: '分析成绩变化趋势和发展轨迹',
+      icon: <FundOutlined className="text-2xl" />,
+      color: 'from-orange-500 to-orange-600',
+      onClick: () => {
+        setShowSubMenu(false);
+        setActiveTab('trendAnalysis');
+      }
+    }
+  ];
+
+  // 渲染卡片式子菜单
+  const renderSubMenuCards = () => (
+    <div className="space-y-6">
+      <Breadcrumb className="mb-4" items={[{ title: '数据分析' }]} />
+      
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">数据分析</h2>
+        <p className="text-gray-600">选择您要查看的分析模块</p>
+      </div>
+      
+      <Row gutter={[24, 24]}>
+        {subMenuCards.map((card) => (
+          <Col xs={24} sm={12} lg={6} key={card.key}>
+            <Card
+              hoverable
+              className="h-full transition-all duration-300 hover:shadow-lg border-0 overflow-hidden"
+              onClick={card.onClick}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className={`bg-gradient-to-br ${card.color} p-6 -m-6 mb-4 text-white`}>
+                <div className="flex items-center justify-center mb-3">
+                  {card.icon}
+                </div>
+                <h3 className="text-lg font-semibold text-center text-white">
+                  {card.title}
+                </h3>
+              </div>
+              <div className="pt-2">
+                <p className="text-gray-600 text-sm text-center leading-relaxed">
+                  {card.description}
+                </p>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    </div>
+  );
+
+  // 如果显示子菜单，则渲染卡片式子菜单
+  if (showSubMenu) {
+    return renderSubMenuCards();
+  }
 
   const handleViewReport = (exam: Exam) => {
     setSubViewInfo({ view: 'analysis', exam });
@@ -179,8 +272,8 @@ const DataAnalysisView: React.FC = () => {
       <Breadcrumb
         className="mb-6"
         items={[
-          { title: '数据分析', href: '#' },
-          { title: '学情概览' }
+          { title: <span style={{ cursor: 'pointer' }} onClick={() => setShowSubMenu(true)}>数据分析</span> },
+          { title: activeTab === 'overview' ? '数据概览' : activeTab === 'scoreAnalysis' ? '成绩分析' : activeTab === 'classComparison' ? '班级对比' : '趋势分析' }
         ]}
       />
 

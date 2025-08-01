@@ -3,72 +3,92 @@ import { Exam, Question, Rubric, MarkingData } from '../types/exam';
 export const mockExams: Exam[] = [
   {
     id: '4',
-    name: '经开区八年级历史期末',
+    name: '经开区八年级历史期末考试',
     subject: '历史',
     grade: '八年级',
     status: '已完成',
-    createdAt: '2025-06-25',
+    createdAt: '2025-01-15',
     tasks: { total: 980, completed: 980, hasError: false },
     avgScore: 85.2
   },
   {
+    id: '8',
+    name: '九年级数学第一次模拟考试',
+    subject: '数学',
+    grade: '九年级',
+    status: '已完成',
+    createdAt: '2025-01-12',
+    tasks: { total: 756, completed: 756, hasError: false },
+    avgScore: 78.6
+  },
+  {
     id: '1',
-    name: '初二期中 · 中国古代史',
-    subject: '历史',
+    name: '初二期中语文测试',
+    subject: '语文',
     grade: '初二',
     status: '待配置',
-    createdAt: '2025-06-28',
+    createdAt: '2025-01-20',
     tasks: { total: 0, completed: 0, hasError: false },
     avgScore: null
   },
   {
     id: '2',
-    name: '高一月考 · 世界近代史',
-    subject: '历史',
+    name: '高一月考英语试卷',
+    subject: '英语',
     grade: '高一',
     status: '待阅卷',
-    createdAt: '2025-06-27',
+    createdAt: '2025-01-18',
     tasks: { total: 1251, completed: 0, hasError: true, errorCount: 7 },
     avgScore: null
   },
   {
     id: '3',
-    name: '初三模拟 · 中国近现代史',
-    subject: '历史',
+    name: '初三物理期末复习测试',
+    subject: '物理',
     grade: '初三',
     status: '阅卷中',
-    createdAt: '2025-06-26',
-    tasks: { total: 850, completed: 320, hasError: false },
+    createdAt: '2025-01-17',
+    tasks: { total: 850, completed: 520, hasError: false },
     avgScore: null
   },
   {
     id: '5',
-    name: '高二期末 · 世界现代史',
-    subject: '历史',
+    name: '高二化学实验专题测试',
+    subject: '化学',
     grade: '高二',
     status: '待阅卷',
-    createdAt: '2025-06-24',
+    createdAt: '2025-01-16',
     tasks: { total: 720, completed: 0, hasError: false },
     avgScore: null
   },
   {
     id: '6',
-    name: '初一月考 · 中华文明的起源',
-    subject: '历史',
+    name: '初一生物期中考试',
+    subject: '生物',
     grade: '初一',
     status: '阅卷中',
-    createdAt: '2025-06-23',
-    tasks: { total: 450, completed: 180, hasError: true, errorCount: 3 },
+    createdAt: '2025-01-14',
+    tasks: { total: 450, completed: 280, hasError: true, errorCount: 3 },
     avgScore: null
   },
   {
     id: '7',
-    name: '高三一模 · 综合测试',
-    subject: '历史',
+    name: '高三政治综合模拟测试',
+    subject: '政治',
     grade: '高三',
     status: '待阅卷',
-    createdAt: '2025-06-22',
+    createdAt: '2025-01-13',
     tasks: { total: 1580, completed: 0, hasError: false },
+    avgScore: null
+  },
+  {
+    id: '9',
+    name: '初二地理期末测试',
+    subject: '地理',
+    grade: '初二',
+    status: '阅卷中',
+    createdAt: '2025-01-11',
+    tasks: { total: 680, completed: 420, hasError: false },
     avgScore: null
   }
 ];
@@ -411,17 +431,32 @@ export const mockAnalysisData = {
 export const mockNotifications = [
   {
     color: 'green',
-    text: '"经开区八年级历史期末"已完成阅卷，分析报告已生成。',
-    time: '2小时前'
+    text: '"经开区八年级历史期末考试"已完成阅卷，分析报告已生成，可查看详细数据分析。',
+    time: '30分钟前'
   },
   {
     color: 'blue',
-    text: 'AI已完成"初三模拟 · 中国近现代史"的初步阅卷，请您开始复核。',
-    time: '5小时前'
+    text: 'AI已完成"初三物理期末复习测试"的智能阅卷，当前进度61.2%，请您继续复核。',
+    time: '1小时前'
   },
   {
     color: 'orange',
-    text: '"高一月考 · 世界近代史"的答题卡有7份识别失败，需要您人工处理。',
+    text: '"高一月考英语试卷"的答题卡有7份识别失败，建议检查图片质量后重新上传。',
+    time: '3小时前'
+  },
+  {
+    color: 'purple',
+    text: '"九年级数学第一次模拟考试"分析报告显示：计算题得分率偏低，建议加强专项训练。',
+    time: '6小时前'
+  },
+  {
+    color: 'cyan',
+    text: '系统提醒："初二地理期末测试"阅卷进度61.8%，预计2小时内完成全部阅卷工作。',
+    time: '8小时前'
+  },
+  {
+    color: 'red',
+    text: '重要提醒："初二期中语文测试"尚未配置评分标准，请及时完成设置以开始阅卷流程。',
     time: '1天前'
   }
 ];

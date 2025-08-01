@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Card, Row, Col, Button, Space, Tag, Divider,
-  Progress, Table, message, Spin, Alert, Select,
+  Progress, Table, Spin, Alert, Select,
   Checkbox, Input, Form, Radio, Tooltip, Badge,
   Steps, Upload, List, Avatar, Typography
 } from 'antd';
@@ -13,6 +13,8 @@ import {
   SettingOutlined, FileImageOutlined, TeamOutlined,
   ThunderboltOutlined, RobotOutlined
 } from '@ant-design/icons';
+import { barcodeApi } from '../../services/api';
+import { message } from '../../utils/message';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Step } = Steps;

@@ -36,13 +36,12 @@ async def upload_and_process_enhanced(
 ):
     """
     增强的答题卡上传和处理接口
-    集成YOLO检测、模板匹配、质量评估等功能
+    集成模板匹配、质量评估等功能
     """
     try:
         # 解析配置
         exam_config_dict = json.loads(exam_config) if exam_config else {}
         processing_config_dict = json.loads(processing_config) if processing_config else {
-            'enable_yolo': True,
             'enable_template_matching': True,
             'enable_quality_assessment': True,
             'batch_size': 10,
@@ -155,7 +154,7 @@ async def enhanced_question_segmentation(
 ):
     """
     增强的题目切分接口
-    使用YOLO检测和智能分类
+    使用智能分类和图像分析
     """
     try:
         # 解析考试配置

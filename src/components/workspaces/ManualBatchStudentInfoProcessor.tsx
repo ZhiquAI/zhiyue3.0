@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Modal, Card, Row, Col, Button, Space, Tag, Divider,
-  Progress, Table, message, Alert, Select,
+  Progress, Table, Alert, Select,
   Input, Form, Radio, Tooltip, Badge,
   Steps, List, Typography, Drawer
 } from 'antd';
@@ -13,6 +13,7 @@ import {
   FormOutlined, HistoryOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { message } from '../../utils/message';
 
 const { Step } = Steps;
 const { TextArea } = Input;

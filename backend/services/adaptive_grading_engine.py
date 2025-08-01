@@ -8,8 +8,7 @@ from abc import ABC, abstractmethod
 
 from .gemini_ocr_service import GeminiOCRService
 from .enhanced_question_segmentation import EnhancedQuestionSegmentation
-from ..models.exam import Exam
-from ..models.answer_sheet import AnswerSheet
+from ..models.production_models import Exam, AnswerSheet
 from ..database import get_db
 from sqlalchemy.orm import Session
 

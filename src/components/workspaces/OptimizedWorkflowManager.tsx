@@ -150,12 +150,12 @@ const OptimizedWorkflowManager: React.FC<OptimizedWorkflowManagerProps> = ({
     completed: processedSheets.filter(s => s.status === 'completed').length,
     failed: processedSheets.filter(s => s.status === 'error').length,
     pending: processedSheets.filter(s => s.status === 'pending_student_info').length,
-    processing: processedSheets.filter(s => s.status === 'processing' || s.status === 'student_info_processing').length
+        processing: processedSheets.filter(s => s.status === 'processing').length
   };
 
   // 学生信息处理统计
   const studentInfoStats = {
-    total: processedSheets.filter(s => s.status === 'completed' || s.status === 'pending_student_info' || s.status === 'student_info_processing').length,
+    total: processedSheets.filter(s => s.status === 'completed' || s.status === 'pending_student_info').length,
     completed: processedSheets.filter(s => s.status === 'completed' && s.studentInfo && s.studentInfo.id && s.studentInfo.name).length,
     failed: 0,
     pending: processedSheets.filter(s => s.status === 'pending_student_info' || (s.status === 'completed' && (!s.studentInfo || !s.studentInfo.id || !s.studentInfo.name))).length
@@ -201,52 +201,7 @@ const OptimizedWorkflowManager: React.FC<OptimizedWorkflowManagerProps> = ({
     }
   }
 
-  // 批量学生信息识别处理
-  const handleBatchStudentInfoProcessing = async () => {
-    const sheetsToProcess = processedSheets.filter(s => s.status === 'pending_student_info');
-    if (sheetsToProcess.length === 0) return;
-
-    // 更新状态为处理中
-    const updatedSheets = processedSheets.map(sheet => {
-      if (sheet.status === 'pending_student_info') {
-        return { ...sheet, status: 'student_info_processing' as const };
-      }
-      return sheet;
-    });
-    onSheetsUpdate?.(updatedSheets);
-
-    // 模拟批量处理
-    for (let i = 0; i < sheetsToProcess.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 模拟处理时间
-      
-      const mockStudents = [
-        { id: '2024001', name: '张三', class: '八年级1班', exam_number: 'E001', paper_type: 'A卷' },
-        { id: '2024002', name: '李四', class: '八年级1班', exam_number: 'E002', paper_type: 'A卷' },
-        { id: '2024003', name: '王五', class: '八年级2班', exam_number: 'E003', paper_type: 'B卷' },
-        { id: '2024004', name: '赵六', class: '八年级2班', exam_number: 'E004', paper_type: 'B卷' },
-        { id: '2024005', name: '钱七', class: '八年级3班', exam_number: 'E005', paper_type: 'A卷' },
-      ];
-      
-      const randomStudent = mockStudents[Math.floor(Math.random() * mockStudents.length)];
-      
-      const finalSheets = processedSheets.map(sheet => {
-        if (sheet.id === sheetsToProcess[i].id) {
-          return {
-            ...sheet,
-            status: 'completed' as const,
-            studentInfo: randomStudent,
-            recognitionResult: {
-              confidence: Math.floor(Math.random() * 30) + 70, // 70-100的置信度
-              issues: Math.random() > 0.8 ? ['图片略微模糊'] : [],
-              needsReview: Math.random() > 0.7
-            }
-          };
-        }
-        return sheet;
-      });
-      onSheetsUpdate?.(finalSheets);
-    }
-  };
+  
 
   // 工作流程步骤定义
   const workflowSteps: WorkflowStep[] = [
@@ -255,7 +210,7 @@ const OptimizedWorkflowManager: React.FC<OptimizedWorkflowManagerProps> = ({
       title: '① 批量上传处理',
       description: '上传答题卡文件并自动识别学生信息',
       icon: <FileTextOutlined />,
-      status: fileList.length > 0 ? (studentInfoStats.completed > 0 ? 'finish' : (uploading || processedSheets.some(s => s.status === 'student_info_processing') ? 'process' : 'wait')) : 'wait',
+      status: fileList.length > 0 ? (studentInfoStats.completed > 0 ? 'finish' : (uploading ? 'process' : 'wait')) : 'wait',
       progress: fileList.length > 0 ? (studentInfoStats.completed / fileList.length) * 100 : 0,
       statistics: {
         total: fileList.length,
@@ -290,15 +245,7 @@ const OptimizedWorkflowManager: React.FC<OptimizedWorkflowManagerProps> = ({
           loading: uploading,
           count: fileList.length
         },
-        {
-          label: '批量学生信息识别',
-          type: 'default',
-          icon: <BarcodeOutlined />,
-          onClick: handleBatchStudentInfoProcessing,
-          disabled: studentInfoStats.pending === 0,
-          loading: processedSheets.some(s => s.status === 'student_info_processing'),
-          count: studentInfoStats.pending
-        },
+        
         {
           label: '预览答题卡',
           type: 'default',
@@ -333,14 +280,13 @@ const OptimizedWorkflowManager: React.FC<OptimizedWorkflowManagerProps> = ({
           type: 'primary',
           icon: <ScissorOutlined />,
           onClick: () => {
-            const sheetsWithStudentInfo = processedSheets.filter(s => s.studentInfo);
-            if (sheetsWithStudentInfo.length === 0) {
-              message.warning('请先完成学生信息识别');
+            if (processedSheets.length === 0) {
+              message.warning('请先上传答题卡');
               return;
             }
             
-            // 选择第一个有学生信息且有previewUrl的答题卡进行切割
-            const sheetsWithPreview = sheetsWithStudentInfo.filter(s => s.previewUrl);
+            // 选择第一个有previewUrl的答题卡进行切割
+            const sheetsWithPreview = processedSheets.filter(s => s.previewUrl);
             
             if (sheetsWithPreview.length === 0) {
               message.error('没有找到有效的答题卡图片，请重新上传');
@@ -352,7 +298,7 @@ const OptimizedWorkflowManager: React.FC<OptimizedWorkflowManagerProps> = ({
             setSegmentationWorkspaceVisible(true);
             message.success('正在打开试题分类切割工作台...');
           },
-          disabled: studentInfoStats.completed === 0,
+          disabled: processedSheets.length === 0,
           count: studentInfoStats.completed
         },
         {
@@ -366,7 +312,7 @@ const OptimizedWorkflowManager: React.FC<OptimizedWorkflowManagerProps> = ({
               message.success('AI检测完成，请手动验证结果');
             }, 3000);
           },
-          disabled: studentInfoStats.completed === 0
+          disabled: processedSheets.length === 0
         },
         {
           label: '查看切割历史',
@@ -429,10 +375,7 @@ const OptimizedWorkflowManager: React.FC<OptimizedWorkflowManagerProps> = ({
     message.loading('正在执行智能工作流程...', 0);
     
     try {
-      // 自动执行批量学生信息识别
-      if (studentInfoStats.pending > 0) {
-        await handleBatchStudentInfoProcessing();
-      }
+      // 批量学生信息识别功能已移除
 
       message.destroy();
       message.success('智能工作流程执行完成！');
@@ -528,11 +471,11 @@ const OptimizedWorkflowManager: React.FC<OptimizedWorkflowManagerProps> = ({
                   {currentStep === 0 && studentInfoStats.completed > 0 && (
                     <span className="text-green-600">✅ 已完成 {studentInfoStats.completed} 个文件的学生信息识别</span>
                   )}
-                  {currentStep === 1 && studentInfoStats.completed === 0 && (
-                    <span className="text-gray-500">请先完成第一步的学生信息识别</span>
+                  {currentStep === 1 && processedSheets.length === 0 && (
+                    <span className="text-gray-500">请先上传答题卡</span>
                   )}
-                  {currentStep === 1 && studentInfoStats.completed > 0 && (
-                    <span className="text-blue-600">📝 可以开始题目切割，共 {studentInfoStats.completed} 份答题卡</span>
+                  {currentStep === 1 && processedSheets.length > 0 && (
+                    <span className="text-blue-600">📝 可以开始题目切割，共 {processedSheets.length} 份答题卡</span>
                   )}
                   {currentStep === 2 && getQuestionSegmentationStats().completed === 0 && (
                     <span className="text-gray-500">请先完成题目切割</span>

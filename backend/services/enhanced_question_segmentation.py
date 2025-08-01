@@ -7,36 +7,28 @@ import json
 import re
 from datetime import datetime
 
-from .gemini_ocr_service import GeminiOCRService
-from .yolo_detection_service import YOLODetectionService
+from services.gemini_ocr_service import GeminiOCRService
 
 class QuestionRegionDetector:
     """题目区域检测器"""
     
     def __init__(self):
-        self.yolo_service = YOLODetectionService()
+        pass
     
     async def detect_question_regions(self, image: np.ndarray) -> List[Dict[str, Any]]:
         """检测题目区域"""
         try:
-            # 使用YOLO检测题目区域
-            yolo_results = await self.yolo_service.detect_objects(image, target_classes=['question', 'text_block'])
-            
-            # 传统图像处理作为补充
+            # 使用传统图像处理检测题目区域
             traditional_regions = self._detect_regions_traditional(image)
             
-            # 融合结果
-            merged_regions = self._merge_detection_results(yolo_results, traditional_regions)
-            
             # 排序和编号
-            sorted_regions = self._sort_and_number_regions(merged_regions)
+            sorted_regions = self._sort_and_number_regions(traditional_regions)
             
             return sorted_regions
             
         except Exception as e:
             print(f"题目区域检测错误: {e}")
-            # 回退到传统方法
-            return self._detect_regions_traditional(image)
+            return []
     
     def _detect_regions_traditional(self, image: np.ndarray) -> List[Dict[str, Any]]:
         """传统图像处理检测题目区域"""
@@ -44,68 +36,208 @@ class QuestionRegionDetector:
             # 转换为灰度图
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             
+            # 多种检测方法组合
+            regions = []
+            
+            # 方法1: 基于文本行检测
+            text_regions = self._detect_text_regions(gray)
+            regions.extend(text_regions)
+            
+            # 方法2: 基于题号检测
+            number_regions = self._detect_question_numbers(gray)
+            regions.extend(number_regions)
+            
+            # 方法3: 基于布局分析
+            layout_regions = self._detect_layout_regions(gray)
+            regions.extend(layout_regions)
+            
+            # 如果没有检测到任何区域，使用网格分割作为备选方案
+            if not regions:
+                regions = self._create_grid_regions(image)
+            
+            # 去重和合并重叠区域
+            merged_regions = self._merge_overlapping_regions(regions)
+            
+            return merged_regions
+            
+        except Exception as e:
+            print(f"传统检测方法错误: {e}")
+            # 返回默认的网格分割
+            return self._create_grid_regions(image)
+    
+    def _detect_text_regions(self, gray: np.ndarray) -> List[Dict[str, Any]]:
+        """检测文本区域"""
+        regions = []
+        try:
             # 自适应阈值
             binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
             
-            # 形态学操作
-            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+            # 水平形态学操作，连接文本
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 1))
+            dilated = cv2.dilate(binary, kernel, iterations=1)
             
             # 查找轮廓
-            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
-            regions = []
-            for i, contour in enumerate(contours):
-                # 计算轮廓面积
+            for contour in contours:
                 area = cv2.contourArea(contour)
-                if area < 1000:  # 过滤小区域
+                if area < 500:  # 过滤小区域
                     continue
                 
-                # 获取边界框
                 x, y, w, h = cv2.boundingRect(contour)
                 
                 # 过滤不合理的区域
-                if w < 50 or h < 20:
+                if w < 100 or h < 30 or w/h > 20 or h/w > 10:
                     continue
                 
                 regions.append({
                     'bbox': [x, y, x + w, y + h],
-                    'confidence': 0.7,
+                    'confidence': 0.8,
                     'area': area,
-                    'detection_method': 'traditional'
+                    'detection_method': 'text_detection'
                 })
-            
-            return regions
-            
         except Exception as e:
-            print(f"传统检测方法错误: {e}")
-            return []
+            print(f"文本区域检测错误: {e}")
+        
+        return regions
     
-    def _merge_detection_results(self, yolo_results: List[Dict], traditional_results: List[Dict]) -> List[Dict[str, Any]]:
-        """融合检测结果"""
+    def _detect_question_numbers(self, gray: np.ndarray) -> List[Dict[str, Any]]:
+        """检测题号区域"""
+        regions = []
+        try:
+            # 使用模板匹配检测数字
+            # 这里简化处理，实际可以使用OCR检测题号
+            binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+            
+            # 查找小的矩形区域（可能是题号）
+            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            number_candidates = []
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if 50 < area < 500:  # 题号通常是小区域
+                    x, y, w, h = cv2.boundingRect(contour)
+                    if 10 < w < 50 and 10 < h < 50:  # 题号的大小范围
+                        number_candidates.append((x, y, w, h))
+            
+            # 基于题号位置推断题目区域
+            for x, y, w, h in number_candidates:
+                # 假设题目在题号右侧和下方
+                question_x = x
+                question_y = y
+                question_w = min(gray.shape[1] - x, 400)  # 题目宽度
+                question_h = min(gray.shape[0] - y, 150)  # 题目高度
+                
+                regions.append({
+                    'bbox': [question_x, question_y, question_x + question_w, question_y + question_h],
+                    'confidence': 0.6,
+                    'area': question_w * question_h,
+                    'detection_method': 'number_based'
+                })
+        
+        except Exception as e:
+            print(f"题号检测错误: {e}")
+        
+        return regions
+    
+    def _detect_layout_regions(self, gray: np.ndarray) -> List[Dict[str, Any]]:
+        """基于布局分析检测区域"""
+        regions = []
+        try:
+            h, w = gray.shape
+            
+            # 水平投影，检测行
+            horizontal_projection = np.sum(gray < 128, axis=1)
+            
+            # 找到文本行的起始和结束位置
+            in_text = False
+            start_y = 0
+            
+            for y, projection in enumerate(horizontal_projection):
+                if projection > w * 0.1:  # 有足够的文本像素
+                    if not in_text:
+                        start_y = y
+                        in_text = True
+                else:
+                    if in_text:
+                        # 结束一个文本区域
+                        if y - start_y > 20:  # 最小高度
+                            regions.append({
+                                'bbox': [0, start_y, w, y],
+                                'confidence': 0.7,
+                                'area': w * (y - start_y),
+                                'detection_method': 'layout_analysis'
+                            })
+                        in_text = False
+            
+            # 处理最后一个区域
+            if in_text and h - start_y > 20:
+                regions.append({
+                    'bbox': [0, start_y, w, h],
+                    'confidence': 0.7,
+                    'area': w * (h - start_y),
+                    'detection_method': 'layout_analysis'
+                })
+        
+        except Exception as e:
+            print(f"布局分析错误: {e}")
+        
+        return regions
+    
+    def _create_grid_regions(self, image: np.ndarray) -> List[Dict[str, Any]]:
+        """创建网格分割区域作为备选方案"""
+        h, w = image.shape[:2]
+        regions = []
+        
+        # 假设试卷有4-6道题目，按网格分割
+        rows = 3
+        cols = 1
+        
+        region_h = h // rows
+        region_w = w // cols
+        
+        for row in range(rows):
+            for col in range(cols):
+                x1 = col * region_w
+                y1 = row * region_h
+                x2 = min((col + 1) * region_w, w)
+                y2 = min((row + 1) * region_h, h)
+                
+                regions.append({
+                    'bbox': [x1, y1, x2, y2],
+                    'confidence': 0.5,
+                    'area': (x2 - x1) * (y2 - y1),
+                    'detection_method': 'grid_fallback'
+                })
+        
+        return regions
+    
+    def _merge_overlapping_regions(self, regions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """合并重叠的区域"""
+        if not regions:
+            return regions
+        
+        # 按面积排序，保留大的区域
+        sorted_regions = sorted(regions, key=lambda r: r['area'], reverse=True)
         merged = []
         
-        # 添加YOLO结果
-        for result in yolo_results:
-            merged.append({
-                'bbox': result['bbox'],
-                'confidence': result['confidence'],
-                'detection_method': 'yolo',
-                'class': result.get('class', 'question')
-            })
-        
-        # 添加传统方法结果，避免重复
-        for trad_result in traditional_results:
-            is_duplicate = False
-            for existing in merged:
-                if self._calculate_iou(trad_result['bbox'], existing['bbox']) > 0.5:
-                    is_duplicate = True
+        for region in sorted_regions:
+            should_merge = False
+            for i, existing in enumerate(merged):
+                iou = self._calculate_iou(region['bbox'], existing['bbox'])
+                if iou > 0.3:  # 重叠阈值
+                    # 合并区域，保留置信度更高的
+                    if region['confidence'] > existing['confidence']:
+                        merged[i] = region
+                    should_merge = True
                     break
             
-            if not is_duplicate:
-                merged.append(trad_result)
+            if not should_merge:
+                merged.append(region)
         
         return merged
+    
+
     
     def _calculate_iou(self, bbox1: List[int], bbox2: List[int]) -> float:
         """计算IoU"""
@@ -579,3 +711,130 @@ class EnhancedQuestionSegmentation:
         except Exception as e:
             print(f"可视化错误: {e}")
             return image
+    
+    async def process_manual_annotations(self, image: np.ndarray, annotations: List[Dict], exam_config: Dict) -> Dict:
+        """处理手动标注的题目区域"""
+        try:
+            print(f"开始处理手动标注，共 {len(annotations)} 个区域")
+            
+            questions = []
+            processing_start = datetime.now()
+            
+            for annotation in annotations:
+                try:
+                    # 提取标注信息
+                    bbox = annotation.get('bbox', [])
+                    question_number = annotation.get('questionNumber', len(questions) + 1)
+                    
+                    if len(bbox) != 4:
+                        print(f"跳过无效的标注区域: {annotation}")
+                        continue
+                    
+                    x1, y1, x2, y2 = map(int, bbox)
+                    
+                    # 确保坐标在图像范围内
+                    h, w = image.shape[:2]
+                    x1 = max(0, min(x1, w))
+                    y1 = max(0, min(y1, h))
+                    x2 = max(0, min(x2, w))
+                    y2 = max(0, min(y2, h))
+                    
+                    # 提取题目区域图像
+                    question_image = image[y1:y2, x1:x2]
+                    
+                    if question_image.size == 0:
+                        print(f"题目 {question_number} 区域为空，跳过")
+                        continue
+                    
+                    # OCR识别题目文本
+                    question_text = ""
+                    try:
+                        ocr_result = await self.gemini_service.process_image(question_image)
+                        if ocr_result.get('success'):
+                            question_text = ocr_result.get('response', '')
+                    except Exception as e:
+                        print(f"题目 {question_number} OCR识别失败: {str(e)}")
+                    
+                    # 题目类型分类
+                    question_type = "unknown"
+                    question_type_display = "手动标注"
+                    try:
+                        classification_result = await self.type_classifier.classify_question_type(
+                            question_text, question_image
+                        )
+                        question_type = classification_result.get('question_type', 'unknown')
+                        question_type_display = classification_result.get('question_type', '手动标注')
+                    except Exception as e:
+                        print(f"题目 {question_number} 类型分类失败: {str(e)}")
+                    
+                    # 构建题目信息
+                    question_info = {
+                        'id': f'manual_q{question_number}',
+                        'number': str(question_number),
+                        'type': question_type,
+                        'type_display': question_type_display,
+                        'question_text': question_text or f'手动标注题目 {question_number}',
+                        'student_answer': '',
+                        'bbox': [x1, y1, x2, y2],
+                        'confidence': {
+                            'detection': 1.0,  # 手动标注置信度为1
+                            'manual': 1.0
+                        },
+                        'metadata': {
+                            'manual_annotation': True,
+                            'annotation_id': annotation.get('id', f'manual_{question_number}')
+                        },
+                        'processing_timestamp': datetime.now().isoformat()
+                    }
+                    
+                    questions.append(question_info)
+                    print(f"成功处理手动标注题目 {question_number}")
+                    
+                except Exception as e:
+                    print(f"处理标注 {annotation} 失败: {str(e)}")
+                    continue
+            
+            processing_time = (datetime.now() - processing_start).total_seconds()
+            
+            # 生成处理报告
+            type_distribution = {}
+            for question in questions:
+                q_type = question.get('type_display', '未知')
+                type_distribution[q_type] = type_distribution.get(q_type, 0) + 1
+            
+            processing_report = {
+                'total_questions': len(questions),
+                'successful_processing': len(questions),
+                'failed_processing': len(annotations) - len(questions),
+                'type_distribution': type_distribution,
+                'average_confidence': 1.0,  # 手动标注置信度为1
+                'processing_time': int(processing_time * 1000),  # 毫秒
+                'quality_metrics': {
+                    'manual_annotation': True,
+                    'annotation_count': len(annotations),
+                    'processed_count': len(questions)
+                }
+            }
+            
+            print(f"手动标注处理完成，成功处理 {len(questions)} 道题目")
+            
+            return {
+                'success': True,
+                'questions': questions,
+                'processing_report': processing_report,
+                'processing_timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            print(f"手动标注处理失败: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'questions': [],
+                'processing_report': {
+                    'total_questions': 0,
+                    'successful_processing': 0,
+                    'failed_processing': len(annotations) if annotations else 0,
+                    'processing_time': 0
+                }
+            }

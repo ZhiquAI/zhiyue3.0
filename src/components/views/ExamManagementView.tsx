@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Tag, Space, Form, Input, Select, Breadcrumb, Modal, message, Popconfirm } from 'antd';
-import { PlusOutlined, BarChartOutlined, DeleteOutlined, EditOutlined, UploadOutlined, FileTextOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Tag, Space, Form, Input, Select, Breadcrumb, Popconfirm, Row, Col } from 'antd';
+import { PlusOutlined, BarChartOutlined, DeleteOutlined, EditOutlined, UnorderedListOutlined, TeamOutlined, BarcodeOutlined, FormOutlined } from '@ant-design/icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { useAsyncOperation } from '../../hooks/useAsyncOperation';
 import { useDebounce } from '../../utils/performance';
-import { validateExamName } from '../../utils/validation';
 import CreateExamModal from '../modals/CreateExamModal';
 import { Exam } from '../../types/exam';
 import VirtualTable from '../common/VirtualTable';
 import ErrorBoundary from '../common/ErrorBoundary';
+import { message } from '../../utils/message';
+import AnswerSheetTemplateEditor from '../TemplateDesigner/AnswerSheetTemplateEditor';
 
 const ExamManagementView: React.FC = () => {
   const { exams, setSubViewInfo, setCurrentView, deleteExam, refreshExams } = useAppContext();
   const [isCreateModalVisible, setCreateModalVisible] = useState(false);
+  const [templateEditorVisible, setTemplateEditorVisible] = useState(false);
   const [filteredExams, setFilteredExams] = useState(exams);
   const [form] = Form.useForm();
   const { state: deleteState, execute: executeDelete } = useAsyncOperation();
+  const [showSubMenu, setShowSubMenu] = useState(true); // 控制是否显示子菜单卡片
 
   // 防抖搜索
   const debouncedSearch = useDebounce((values: any) => {
@@ -50,29 +53,16 @@ const ExamManagementView: React.FC = () => {
     setFilteredExams(exams);
   };
 
-  const handleNavigate = (type: string, exam: Exam) => {
-    const navigationMap = {
-      '待配置': 'upload',
-      '待阅卷': 'upload', // 待阅卷状态跳转到上传答题卡
-      '阅卷中': 'marking',
-      '已完成': 'analysis'
-    };
+  const handleExamAction = (exam: Exam) => {
+    console.log('Handling exam action for:', exam.name, 'status:', exam.status);
 
-    const targetView = navigationMap[exam.status] || 'upload';
-    console.log('Navigating to:', targetView, 'for exam:', exam.name);
-
+    // 所有考试都通过阅卷中心进行处理，由阅卷中心决定具体的工作流步骤
+    setCurrentView('markingCenter');
     setSubViewInfo({
-      view: targetView,
+      view: null, // 不指定具体的子视图，让阅卷中心自动决定
       exam,
       source: 'examManagement' // 标识来源为考试管理
     });
-  };
-
-  const handleJumpToMarkingCenter = (exam: Exam) => {
-    // 跳转到阅卷中心并高亮对应考试
-    setCurrentView('markingCenter');
-    // 可以通过URL参数或其他方式传递考试ID以便在阅卷中心高亮
-    message.info(`已跳转到阅卷中心，查看考试：${exam.name}`);
   };
 
   const handleDeleteExam = async (examId: string) => {
@@ -94,56 +84,122 @@ const ExamManagementView: React.FC = () => {
     return colorMap[status] || 'default';
   };
 
+  // 子菜单卡片数据
+  const subMenuCards = [
+    {
+      key: 'examList',
+      title: '考试任务列表',
+      description: '查看和管理所有考试任务，跟踪考试进度',
+      icon: <UnorderedListOutlined className="text-2xl" />,
+      color: 'from-blue-500 to-blue-600',
+      onClick: () => setShowSubMenu(false)
+    },
+    {
+      key: 'studentInfo',
+      title: '学生信息管理',
+      description: '管理学生基本信息，导入导出学生数据',
+      icon: <TeamOutlined className="text-2xl" />,
+      color: 'from-green-500 to-green-600',
+      onClick: () => {
+        setCurrentView('studentManagement');
+        setSubViewInfo({ view: 'studentManagement', exam: null, source: 'examManagement' });
+      }
+    },
+
+    {
+      key: 'barcodeGenerator',
+      title: '条形码制作工具',
+      description: '生成条形码，制作标准化条形码标签',
+      icon: <BarcodeOutlined className="text-2xl" />,
+      color: 'from-orange-500 to-orange-600',
+      onClick: () => {
+        setCurrentView('barcodeGenerator');
+      }
+    },
+    {
+      key: 'answerSheetDesigner',
+      title: '答题卡模板设计器',
+      description: '可视化设计答题卡模板，自定义区域布局',
+      icon: <FormOutlined className="text-2xl" />, 
+      color: 'from-indigo-500 to-indigo-600',
+      onClick: () => {
+        setShowSubMenu(false);
+        setTimeout(() => setTemplateEditorVisible(true), 0);
+      }
+    }
+  ];
+
+  // 渲染卡片式子菜单
+  const renderSubMenuCards = () => (
+    <div className="space-y-6">
+      <Breadcrumb className="mb-4" items={[{ title: '考试管理' }]} />
+      
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">考试管理</h2>
+        <p className="text-gray-600">选择您要使用的功能模块</p>
+      </div>
+      
+      <Row gutter={[24, 24]}>
+        {subMenuCards.map((card) => (
+          <Col xs={24} sm={12} lg={6} key={card.key}>
+            <Card
+              hoverable
+              className="h-full transition-all duration-300 hover:shadow-lg border-0 overflow-hidden"
+              onClick={card.onClick}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className={`bg-gradient-to-br ${card.color} p-6 -m-6 mb-4 text-white`}>
+                <div className="flex items-center justify-center mb-3">
+                  {card.icon}
+                </div>
+                <h3 className="text-lg font-semibold text-center text-white">
+                  {card.title}
+                </h3>
+              </div>
+              <div className="pt-2">
+                <p className="text-gray-600 text-sm text-center leading-relaxed">
+                  {card.description}
+                </p>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    </div>
+  );
+
   const getActionButton = (exam: Exam) => {
     const actionMap: Record<string, JSX.Element> = {
       '待配置': (
         <Button 
           type="primary" 
-          icon={<UploadOutlined />}
-          onClick={() => handleNavigate('upload', exam)}
+          onClick={() => handleExamAction(exam)}
         >
-          上传答题卡
+          开始阅卷流程
         </Button>
       ),
       '待阅卷': (
-        <Space>
-          <Button 
-            type="primary" 
-            icon={<UploadOutlined />}
-            onClick={() => handleNavigate('upload', exam)}
-          >
-            上传答题卡
-          </Button>
-          <Button 
-            type="default"
-            onClick={() => handleJumpToMarkingCenter(exam)}
-          >
-            去阅卷中心
-          </Button>
-        </Space>
+        <Button 
+          type="primary"
+          onClick={() => handleExamAction(exam)}
+        >
+          继续阅卷流程
+        </Button>
       ),
       '阅卷中': (
-        <Space>
-          <Button 
-            type="primary" 
-            onClick={() => handleNavigate('marking', exam)}
-          >
-            进入阅卷
-          </Button>
-          <Button 
-            type="default"
-            onClick={() => handleJumpToMarkingCenter(exam)}
-          >
-            去阅卷中心
-          </Button>
-        </Space>
+        <Button 
+          type="primary"
+          onClick={() => handleExamAction(exam)}
+        >
+          进入阅卷中心
+        </Button>
       ),
       '已完成': (
         <Button 
           type="primary" 
           ghost 
           icon={<BarChartOutlined />} 
-          onClick={() => handleNavigate('analysis', exam)}
+          onClick={() => handleExamAction(exam)}
         >
           查看报告
         </Button>
@@ -154,8 +210,8 @@ const ExamManagementView: React.FC = () => {
 
   const getStatusDescription = (exam: Exam) => {
     const descriptions: Record<string, string> = {
-      '待配置': '等待上传答题卡开始阅卷',
-      '待阅卷': '等待上传答题卡开始阅卷',
+      '待配置': '等待在阅卷中心开始处理',
+      '待阅卷': '可在阅卷中心继续处理',
       '阅卷中': `阅卷进行中 (${exam.tasks.completed}/${exam.tasks.total})`,
       '已完成': `阅卷已完成，平均分 ${exam.avgScore}分`
     };
@@ -171,7 +227,7 @@ const ExamManagementView: React.FC = () => {
         <div>
           <Button 
             type="link" 
-            onClick={() => handleNavigate('view', record)} 
+            onClick={() => handleExamAction(record)} 
             className="p-0 h-auto font-semibold text-left"
           >
             {text}
@@ -272,9 +328,27 @@ const ExamManagementView: React.FC = () => {
     }
   ];
 
+  // 如果显示子菜单，则渲染卡片式子菜单
+  if (showSubMenu) {
+    return (
+      <ErrorBoundary>
+
+        {renderSubMenuCards()}
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
-      <Breadcrumb className="mb-4" items={[{ title: '考试管理' }]} />
+
+      
+      <Breadcrumb 
+        className="mb-4" 
+        items={[
+          { title: <span style={{ cursor: 'pointer' }} onClick={() => setShowSubMenu(true)}>考试管理</span> },
+          { title: '考试任务列表' }
+        ]} 
+      />
       
       <Card>
         <Form 
@@ -366,6 +440,20 @@ const ExamManagementView: React.FC = () => {
         visible={isCreateModalVisible}
         onClose={() => setCreateModalVisible(false)}
       />
+      
+      {/* 模板设计器组件 - 始终渲染以便调试 */}
+      {templateEditorVisible && (
+        <AnswerSheetTemplateEditor
+          visible={templateEditorVisible}
+          onClose={() => setTemplateEditorVisible(false)}
+          onSave={(template) => {
+            console.log('保存模板:', template);
+            message.success('答题卡模板保存成功');
+            setTemplateEditorVisible(false);
+          }}
+          mode="create"
+        />
+      )}
     </ErrorBoundary>
   );
 };

@@ -21,7 +21,7 @@ export const NetworkDiagnostic: React.FC = () => {
     {
       name: '后端服务连接',
       test: async () => {
-        const response = await fetch('http://localhost:8000/health');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/health`);
         if (response.ok) {
           const data = await response.json();
           return { success: true, message: '后端服务正常', details: `状态: ${data.status}` };
@@ -32,7 +32,7 @@ export const NetworkDiagnostic: React.FC = () => {
     {
       name: 'CORS配置检查',
       test: async () => {
-        const response = await fetch('http://localhost:8000/', {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/`, {
           method: 'OPTIONS',
           headers: {
             'Origin': window.location.origin,
@@ -157,6 +157,16 @@ export const NetworkDiagnostic: React.FC = () => {
             onClick={() => setShowTestAccount(!showTestAccount)}
           >
             {showTestAccount ? '隐藏' : '显示'}测试账户
+          </Button>
+          
+          <Button 
+            type="default"
+            onClick={() => {
+              localStorage.setItem('auth_token', 'test_token_for_upload');
+              alert('测试token已设置，现在可以测试上传功能了');
+            }}
+          >
+            设置测试Token
           </Button>
         </Space>
 

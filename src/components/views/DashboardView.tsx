@@ -11,7 +11,17 @@ import {
 import { useAppContext } from '../../contexts/AppContext';
 import CreateExamModal from '../modals/CreateExamModal';
 import { mockNotifications } from '../../data/mockData';
-import { Exam, ExamStatus } from '../../types/exam';
+import { Exam } from '../../types/exam';
+
+interface QuickAction {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  onClick: () => void;
+  disabled?: boolean;
+  tips?: string;
+}
 
 const DashboardView: React.FC = () => {
   const { exams, setSubViewInfo, setCurrentView } = useAppContext();
@@ -33,35 +43,33 @@ const DashboardView: React.FC = () => {
     if (type === 'create') {
       setCreateModalVisible(true);
     } else if (type === 'startMarking') {
-      // 开始阅卷 - 如果有待阅卷的考试，提示需要先上传答题卡
-      if (markingExams.length > 0) {
-        const firstMarkingExam = markingExams[0];
-        if (firstMarkingExam.status === '待阅卷') {
-          // 如果是待阅卷状态，提示需要先上传答题卡
-          setCurrentView('markingCenter');
-        } else {
-          setSubViewInfo({ view: 'marking', exam: firstMarkingExam });
-        }
-      } else {
-        // 如果没有待阅卷的考试，跳转到阅卷中心
-        setCurrentView('markingCenter');
-      }
+      // 开始阅卷 - 直接跳转到阅卷中心
+      setCurrentView('markingCenter');
     } else if (type === 'viewAnalysis') {
       // 查看分析 - 如果有已完成的考试，进入第一个的分析
       if (completedExams.length > 0) {
         const firstCompletedExam = completedExams[0];
-        setSubViewInfo({ view: 'analysis', exam: firstCompletedExam });
+        setSubViewInfo({ view: 'analysis', exam: firstCompletedExam, source: null });
       } else {
         // 如果没有已完成的考试，跳转到数据分析页面
         setCurrentView('dataAnalysis');
       }
-    } else if (exam) {
-      const viewMap: Partial<Record<ExamStatus, string>> = {
-        '待配置': 'upload',
-        '待阅卷': 'upload', // 待阅卷状态跳转到上传答题卡工作台
-        '阅卷中': 'marking'
-      };
-      setSubViewInfo({ view: viewMap[exam.status] || 'upload', exam });
+    } else if (type === 'handle' && exam) {
+      // 处理待办事项的点击 - 统一跳转到阅卷中心，由阅卷中心决定具体的工作流步骤
+      setCurrentView('markingCenter');
+      setSubViewInfo({ view: null, exam, source: null });
+    }
+  };
+
+  const handleExamAction = (exam: Exam) => {
+    if (exam.status === '已完成') {
+      // 如果是已完成的考试，跳转到数据分析
+      setCurrentView('dataAnalysis');
+      setSubViewInfo({ view: 'analysis', exam, source: null });
+    } else {
+      // 其他状态的考试都跳转到阅卷中心，由阅卷中心决定具体的工作流步骤
+      setCurrentView('markingCenter');
+      setSubViewInfo({ view: null, exam, source: null });
     }
   };
 
@@ -91,29 +99,32 @@ const DashboardView: React.FC = () => {
     }
   };
 
-  const quickActions = [
+  const quickActions: QuickAction[] = [
     {
       title: '创建考试',
-      description: '上传试卷，开启智能评阅',
+      description: '上传试卷文件，配置考试信息，开启智能阅卷流程',
       icon: <UploadOutlined />,
       color: 'bg-blue-100 text-blue-600',
-      onClick: () => handleNavigate('create')
+      onClick: () => handleNavigate('create'),
+      tips: '支持PDF、图片格式，AI自动识别题目结构'
     },
     {
-      title: '开始阅卷',
-      description: `处理 ${markingExams.length} 个待办阅卷任务`,
+      title: '智能阅卷',
+      description: `${markingExams.length} 个考试等待处理，AI辅助快速完成阅卷`,
       icon: <CheckCircleOutlined />,
       color: 'bg-green-100 text-green-600',
       onClick: () => handleNavigate('startMarking'),
-      disabled: markingExams.length === 0
+      disabled: markingExams.length === 0,
+      tips: markingExams.length > 0 ? '包含答题卡上传、智能分割、评分设置等完整流程' : '暂无待阅卷任务'
     },
     {
-      title: '查看分析',
-      description: `查看 ${completedExams.length} 个已完成考试的分析报告`,
+      title: '数据分析',
+      description: `${completedExams.length} 份报告可查看，深度分析学情数据`,
       icon: <BarChartOutlined />,
       color: 'bg-purple-100 text-purple-600',
       onClick: () => handleNavigate('viewAnalysis'),
-      disabled: completedExams.length === 0
+      disabled: completedExams.length === 0,
+      tips: completedExams.length > 0 ? '提供班级对比、能力分析、个人诊断等多维度报告' : '完成阅卷后可查看分析报告'
     }
   ];
 
@@ -140,8 +151,10 @@ const DashboardView: React.FC = () => {
                   <div className="ml-3 sm:ml-4 flex-1 min-w-0">
                     <h3 className="font-semibold text-sm sm:text-base m-0 truncate">{action.title}</h3>
                     <p className="text-gray-500 text-xs sm:text-sm m-0 line-clamp-2">{action.description}</p>
-                    {action.disabled && (
-                      <p className="text-gray-400 text-xs mt-1">暂无可用任务</p>
+                    {action.tips && (
+                      <p className="text-blue-600 text-xs mt-1 line-clamp-1">
+                        💡 {action.tips}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -188,7 +201,7 @@ const DashboardView: React.FC = () => {
                       <Button 
                         type="primary" 
                         size="small"
-                        onClick={() => handleNavigate('handle', item)}
+                        onClick={() => handleExamAction(item)}
                         className="text-xs sm:text-sm"
                       >
                         {getActionText(item.status)}
@@ -206,7 +219,7 @@ const DashboardView: React.FC = () => {
                       title={
                         <div className="flex flex-col">
                           <a 
-                            onClick={() => handleNavigate('handle', item)}
+                            onClick={() => handleExamAction(item)}
                             className="font-semibold text-sm sm:text-base text-gray-800 mb-1 hover:text-blue-600 line-clamp-1"
                           >
                             {item.name || '未命名考试'}

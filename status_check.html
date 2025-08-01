@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智阅AI服务状态检查</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .timestamp { font-size: 0.9em; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 智阅AI服务状态检查</h1>
+        <div class="timestamp">检查时间: <span id="timestamp"></span></div>
+        
+        <div id="status-container">
+            <div class="info">正在检查服务状态...</div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="checkAllServices()">🔄 重新检查</button>
+            <button onclick="testAnswerSheetUpload()">📤 测试答题卡上传</button>
+            <button onclick="testWorkflowInit()">⚙️ 测试工作流初始化</button>
+        </div>
+        
+        <div id="results" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let authToken = null;
+
+        function updateTimestamp() {
+            document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        }
+
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        async function checkService(url, name) {
+            try {
+                const response = await fetch(url);
+                const data = await response.text();
+                
+                if (response.ok) {
+                    return { name, status: 'success', message: `✅ ${name} 正常`, data: data.substring(0, 200) };
+                } else {
+                    return { name, status: 'error', message: `❌ ${name} 错误 (${response.status})`, data };
+                }
+            } catch (error) {
+                return { name, status: 'error', message: `❌ ${name} 连接失败: ${error.message}` };
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'demo', password: 'demo123' })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    return { status: 'success', message: '✅ 登录成功', data: '已获取访问令牌' };
+                } else {
+                    const errorData = await response.text();
+                    return { status: 'error', message: '❌ 登录失败', data: errorData };
+                }
+            } catch (error) {
+                return { status: 'error', message: '❌ 登录请求失败', data: error.message };
+            }
+        }
+
+        async function testAnswerSheetUpload() {
+            if (!authToken) {
+                addResult('请先进行登录测试以获取访问令牌', 'warning');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('exam_id', 'test-exam-123');
+                formData.append('files', new Blob(['test content'], { type: 'image/jpeg' }), 'test.jpg');
+
+                const response = await fetch(`${API_BASE}/api/files/upload/answer-sheets`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` },
+                    body: formData
+                });
+
+                const data = await response.text();
+                if (response.ok) {
+                    addResult('✅ 答题卡上传API测试成功', 'success');
+                    addResult(`<pre>${data.substring(0, 500)}</pre>`, 'info');
+                } else {
+                    addResult('❌ 答题卡上传API测试失败', 'error');
+                    addResult(`<pre>${data}</pre>`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ 答题卡上传测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testWorkflowInit() {
+            if (!authToken) {
+                addResult('请先进行登录测试以获取访问令牌', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/pre-grading/workflows`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        examId: 'test-exam-123',
+                        configuration: {
+                            exam: { id: 'test-exam-123', name: '测试考试' },
+                            processing: { enableQualityEnhancement: true },
+                            identity: { verificationMethod: 'auto' },
+                            structure: { useTemplate: true }
+                        }
+                    })
+                });
+
+                const data = await response.text();
+                if (response.ok) {
+                    addResult('✅ 工作流初始化API测试成功', 'success');
+                    addResult(`<pre>${data.substring(0, 500)}</pre>`, 'info');
+                } else {
+                    addResult('❌ 工作流初始化API测试失败', 'error');
+                    addResult(`<pre>${data}</pre>`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ 工作流初始化测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkAllServices() {
+            updateTimestamp();
+            document.getElementById('results').innerHTML = '';
+            
+            const services = [
+                { url: `${API_BASE}/health`, name: '后端健康检查' },
+                { url: `${API_BASE}/api/config`, name: '配置API' },
+                { url: 'http://localhost:5173/', name: '前端服务' }
+            ];
+
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = '';
+
+            // 检查基础服务
+            for (const service of services) {
+                const result = await checkService(service.url, service.name);
+                const div = document.createElement('div');
+                div.className = `status ${result.status}`;
+                div.innerHTML = result.message;
+                statusContainer.appendChild(div);
+            }
+
+            // 测试登录
+            const loginResult = await testLogin();
+            const loginDiv = document.createElement('div');
+            loginDiv.className = `status ${loginResult.status}`;
+            loginDiv.innerHTML = loginResult.message;
+            statusContainer.appendChild(loginDiv);
+
+            if (loginResult.status === 'success') {
+                statusContainer.innerHTML += '<div class="status success">🎉 所有基础服务检查完成！可以进行功能测试。</div>';
+            }
+        }
+
+        // 页面加载时自动检查
+        window.onload = function() {
+            updateTimestamp();
+            checkAllServices();
+        };
+    </script>
+</body>
+</html> 
