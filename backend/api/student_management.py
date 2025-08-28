@@ -12,12 +12,12 @@ import json
 import logging
 
 try:
-    from backend.database import get_db
-    from backend.auth import get_current_user
-    from backend.models.production_models import User, Exam, Student
-    from backend.services.barcode_service import BarcodeService
-except ImportError:
     from database import get_db
+    from auth import get_current_user
+    from models.production_models import User, Exam, Student
+    from services.barcode_service import BarcodeService
+except ImportError:
+    from db_connection import get_db
     from auth import get_current_user
     from models.production_models import User, Exam, Student
     from services.barcode_service import BarcodeService

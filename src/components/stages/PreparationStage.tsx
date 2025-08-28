@@ -45,7 +45,7 @@ import { Exam } from '../../types/exam';
 import { PreGradingConfiguration } from '../../types/preGrading';
 import { message } from '../../utils/message';
 import { studentApi, Student, StudentCreate, StudentUpdate } from '../../api/studentApi';
-import TemplateDesigner from '../TemplateDesigner/TemplateDesigner';
+import OptimizedAnswerSheetDesigner from '../TemplateDesigner/OptimizedAnswerSheetDesigner';
 
 // 移除废弃的TabPane导入
 const { Dragger } = Upload;
@@ -689,7 +689,7 @@ const PreparationStage: React.FC<PreparationStageProps> = ({
                         icon={<PlusOutlined />}
                         onClick={handleCreateTemplate}
                       >
-                        创建模板
+                        模板设计器
                       </Button>
                       <Button 
                         icon={<SettingOutlined />}
@@ -870,24 +870,14 @@ const PreparationStage: React.FC<PreparationStageProps> = ({
         </Form>
       </Modal>
 
-      {/* 模板设计器模态框 */}
-      <Modal
-        title={designerMode === 'create' ? '创建答题卡模板' : designerMode === 'edit' ? '编辑答题卡模板' : '预览答题卡模板'}
-        open={designerVisible}
+      {/* 使用新的优化答题卡模板设计器 */}
+      <OptimizedAnswerSheetDesigner
+        visible={designerVisible}
+        mode={designerMode === 'preview' ? 'edit' : designerMode}
+        initialTemplate={currentTemplate || undefined}
+        onSave={handleSaveTemplate}
         onCancel={() => setDesignerVisible(false)}
-        width="90%"
-        style={{ top: 20 }}
-        footer={null}
-        destroyOnClose
-      >
-        <TemplateDesigner
-            visible={designerVisible}
-            mode={designerMode === 'preview' ? 'edit' : designerMode}
-            initialTemplate={currentTemplate || undefined}
-            onSave={handleSaveTemplate}
-            onClose={() => setDesignerVisible(false)}
-          />
-      </Modal>
+      />
     </div>
   );
 };

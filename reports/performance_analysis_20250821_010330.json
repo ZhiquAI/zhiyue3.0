@@ -1,0 +1,83 @@
+{
+  "database_name": "zhiyue_ai.db",
+  "report_time": "2025-08-20T17:03:30.515695",
+  "slow_queries": [],
+  "table_analysis": [
+    {
+      "table_name": "exams",
+      "row_count": 1,
+      "size_mb": 0.3671875,
+      "index_count": 3,
+      "missing_indexes": [
+        "CREATE INDEX IF NOT EXISTS idx_exams_status_created ON exams(status, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_exams_creator_subject ON exams(created_by, subject)"
+      ],
+      "unused_indexes": [],
+      "fragmentation_ratio": 0.1,
+      "last_analyzed": "2025-08-20T17:03:30.512956"
+    },
+    {
+      "table_name": "answer_sheets",
+      "row_count": 1,
+      "size_mb": 0.3671875,
+      "index_count": 5,
+      "missing_indexes": [
+        "CREATE INDEX IF NOT EXISTS idx_answer_sheets_exam_student ON answer_sheets(exam_id, student_id)",
+        "CREATE INDEX IF NOT EXISTS idx_answer_sheets_grading_status ON answer_sheets(grading_status)",
+        "CREATE INDEX IF NOT EXISTS idx_answer_sheets_score ON answer_sheets(total_score)"
+      ],
+      "unused_indexes": [],
+      "fragmentation_ratio": 0.1,
+      "last_analyzed": "2025-08-20T17:03:30.513327"
+    },
+    {
+      "table_name": "students",
+      "row_count": 0,
+      "size_mb": 0.3671875,
+      "index_count": 5,
+      "missing_indexes": [
+        "CREATE INDEX IF NOT EXISTS idx_students_exam_class ON students(exam_id, class_name)",
+        "CREATE INDEX IF NOT EXISTS idx_students_student_id ON students(student_id)",
+        "CREATE INDEX IF NOT EXISTS idx_students_name ON students(name)"
+      ],
+      "unused_indexes": [],
+      "fragmentation_ratio": 0.1,
+      "last_analyzed": "2025-08-20T17:03:30.513703"
+    },
+    {
+      "table_name": "users",
+      "row_count": 1,
+      "size_mb": 0.3671875,
+      "index_count": 6,
+      "missing_indexes": [
+        "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+        "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+        "CREATE INDEX IF NOT EXISTS idx_users_active_role ON users(is_active, role)"
+      ],
+      "unused_indexes": [],
+      "fragmentation_ratio": 0.1,
+      "last_analyzed": "2025-08-20T17:03:30.514729"
+    },
+    {
+      "table_name": "grading_tasks",
+      "row_count": 0,
+      "size_mb": 0.3671875,
+      "index_count": 3,
+      "missing_indexes": [
+        "CREATE INDEX IF NOT EXISTS idx_grading_tasks_status_priority ON grading_tasks(status, priority)",
+        "CREATE INDEX IF NOT EXISTS idx_grading_tasks_created ON grading_tasks(created_at)"
+      ],
+      "unused_indexes": [],
+      "fragmentation_ratio": 0.1,
+      "last_analyzed": "2025-08-20T17:03:30.515665"
+    }
+  ],
+  "recommendations": [
+    "数据库性能良好，建议定期监控和维护",
+    "建议启用查询日志记录，持续监控慢查询",
+    "定期更新表统计信息，确保查询优化器做出正确决策",
+    "考虑实施数据归档策略，控制表大小增长",
+    "建议配置适当的数据库连接池大小"
+  ],
+  "overall_score": 100
+}

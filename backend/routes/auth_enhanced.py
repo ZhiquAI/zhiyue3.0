@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from datetime import datetime
 import logging
 
@@ -18,9 +18,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["认证增强"])
 security = HTTPBearer()
 
+
+@router.get("/")
+async def auth_root():
+    """认证模块根路径"""
+    return {
+        "message": "智阅AI认证服务",
+        "version": "1.0.0",
+        "endpoints": [
+            "/login",
+            "/login-enhanced",
+            "/refresh",
+            "/logout",
+            "/permissions"
+        ]
+    }
+
+
 # Pydantic模型
 class TokenRefreshRequest(BaseModel):
     refresh_token: str
+
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -35,6 +53,7 @@ class SessionInfo(BaseModel):
     created_at: str
     expires_at: str
 
+
 class UserSessionsResponse(BaseModel):
     active_sessions: List[SessionInfo]
     total_count: int
@@ -44,6 +63,7 @@ class SecurityLogEntry(BaseModel):
     timestamp: str
     details: Dict[str, Any] = {}
 
+
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
@@ -52,6 +72,7 @@ class RoleUpdateRequest(BaseModel):
     user_id: str
     new_role: str
     reason: str = ""
+
 
 @router.post("/login-enhanced", response_model=TokenResponse)
 async def enhanced_login(
@@ -335,5 +356,7 @@ async def revoke_user_sessions_admin(
     jwt_manager.revoke_all_user_tokens(user_id)
     permission_middleware.invalidate_user_permissions(user_id)
     
-    logger.info(f"管理员撤销用户会话: {user_id} by {current_user.id}")
+    logger.info(
+        f"管理员撤销用户会话: {user_id} by {current_user.id}"
+    )
     return {"message": f"已撤销用户 {user_id} 的所有会话"}

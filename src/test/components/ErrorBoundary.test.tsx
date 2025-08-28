@@ -21,14 +21,14 @@ const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
 };
 
 describe('ErrorBoundary', () => {
-  it('should render children when there is no error', () => {
+  it('should render children when there is no error', async () => {
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={false} />
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('No error')).toBeInTheDocument();
+    expect(await screen.findByText('No error')).toBeInTheDocument();
   });
 
   it('should render error UI when there is an error', () => {

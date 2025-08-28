@@ -4,7 +4,7 @@ import { UserOutlined, MailOutlined, BankOutlined, BookOutlined, CameraOutlined,
 import type { UploadProps } from 'antd';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../services/api';
-import { cn } from '../../utils/cn';
+import { cn, cardStyles, buttonStyles, layout } from '../../design-system';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -167,12 +167,12 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className={cn(layout.container.default(), "p-6")}>
       <div className="mb-6">
-        <Title level={2} className="!mb-2">
+        <Title level={2} className="!mb-2 !text-neutral-800">
           个人资料
         </Title>
-        <Text type="secondary">
+        <Text type="secondary" className="text-neutral-600">
           管理您的个人信息和账户设置
         </Text>
       </div>
@@ -204,8 +204,8 @@ export const ProfilePage: React.FC = () => {
               </span>
             ),
             children: (
-              <Card className="shadow-sm">
-                <div className="flex flex-col lg:flex-row gap-8">
+              <Card className={cn(cardStyles.base, cardStyles.variants.default, cardStyles.sizes.lg)}>
+                <div className={cn("flex flex-col lg:flex-row gap-8")}>
                   {/* 头像部分 */}
                   <div className="flex flex-col items-center">
                     <Upload {...uploadProps}>
@@ -214,14 +214,14 @@ export const ProfilePage: React.FC = () => {
                           size={120}
                           src={avatarUrl}
                           icon={!avatarUrl && <UserOutlined />}
-                          className="border-4 border-white shadow-lg"
+                          className="border-4 border-neutral-0 shadow-lg"
                         />
                         <div className={cn(
-                          'absolute inset-0 bg-black/50 rounded-full',
+                          'absolute inset-0 bg-neutral-900/50 rounded-full',
                           'flex items-center justify-center opacity-0 hover:opacity-100',
                           'transition-opacity duration-200 cursor-pointer'
                         )}>
-                          <CameraOutlined className="text-white text-xl" />
+                          <CameraOutlined className="text-neutral-0 text-xl" />
                         </div>
                       </div>
                     </Upload>
@@ -259,7 +259,7 @@ export const ProfilePage: React.FC = () => {
                           ]}
                         >
                           <Input
-                            prefix={<UserOutlined className="text-gray-400" />}
+                            prefix={<UserOutlined className="text-neutral-400" />}
                             placeholder="请输入真实姓名"
                           />
                         </Form.Item>
@@ -273,7 +273,7 @@ export const ProfilePage: React.FC = () => {
                           ]}
                         >
                           <Input
-                            prefix={<MailOutlined className="text-gray-400" />}
+                            prefix={<MailOutlined className="text-neutral-400" />}
                             placeholder="请输入邮箱地址"
                           />
                         </Form.Item>
@@ -284,7 +284,7 @@ export const ProfilePage: React.FC = () => {
                         label="学校名称"
                       >
                         <Input
-                          prefix={<BankOutlined className="text-gray-400" />}
+                          prefix={<BankOutlined className="text-neutral-400" />}
                           placeholder="请输入学校名称（可选）"
                         />
                       </Form.Item>
@@ -296,7 +296,7 @@ export const ProfilePage: React.FC = () => {
                         >
                           <Select
                             placeholder="请选择任教学科（可选）"
-                            suffixIcon={<BookOutlined className="text-gray-400" />}
+                            suffixIcon={<BookOutlined className="text-neutral-400" />}
                           >
                             {subjects.map(subject => (
                               <Option key={subject.value} value={subject.value}>
@@ -329,12 +329,13 @@ export const ProfilePage: React.FC = () => {
                             type="primary"
                             htmlType="submit"
                             loading={loading}
-                            className="px-8"
+                            className={cn(buttonStyles.base, buttonStyles.variants.primary, buttonStyles.sizes.md, "px-8")}
                           >
                             保存更改
                           </Button>
                           <Button
                             onClick={() => profileForm.resetFields()}
+                            className={cn(buttonStyles.base, buttonStyles.variants.secondary, buttonStyles.sizes.md)}
                           >
                             重置
                           </Button>
@@ -355,7 +356,7 @@ export const ProfilePage: React.FC = () => {
               </span>
             ),
             children: (
-              <Card className="shadow-sm">
+              <Card className={cn(cardStyles.base, cardStyles.variants.default, cardStyles.sizes.lg)}>
                 <div className="max-w-md">
                   <div className="mb-6">
                     <Title level={4} className="!mb-2">
@@ -380,7 +381,7 @@ export const ProfilePage: React.FC = () => {
                       ]}
                     >
                       <Input.Password
-                        prefix={<LockOutlined className="text-gray-400" />}
+                        prefix={<LockOutlined className="text-neutral-400" />}
                         placeholder="请输入当前密码"
                         iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                       />
@@ -392,7 +393,7 @@ export const ProfilePage: React.FC = () => {
                       rules={[{ validator: validatePassword }]}
                     >
                       <Input.Password
-                        prefix={<LockOutlined className="text-gray-400" />}
+                        prefix={<LockOutlined className="text-neutral-400" />}
                         placeholder="请输入新密码"
                         iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                       />
@@ -404,7 +405,7 @@ export const ProfilePage: React.FC = () => {
                       rules={[{ validator: validateConfirmPassword }]}
                     >
                       <Input.Password
-                        prefix={<LockOutlined className="text-gray-400" />}
+                        prefix={<LockOutlined className="text-neutral-400" />}
                         placeholder="请再次输入新密码"
                         iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                       />
@@ -416,12 +417,13 @@ export const ProfilePage: React.FC = () => {
                           type="primary"
                           htmlType="submit"
                           loading={passwordLoading}
-                          className="px-8"
+                          className={cn(buttonStyles.base, buttonStyles.variants.primary, buttonStyles.sizes.md, "px-8")}
                         >
                           修改密码
                         </Button>
                         <Button
                           onClick={() => passwordForm.resetFields()}
+                          className={cn(buttonStyles.base, buttonStyles.variants.secondary, buttonStyles.sizes.md)}
                         >
                           重置
                         </Button>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Typography, Alert, Select, Divider } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, BookOutlined, BankOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { authApi } from '../../services/api';
-import { cn } from '../../utils/cn';
+import { cn, buttonStyles, inputStyles, layout } from '../../design-system';
 
 const { Title, Text, Link } = Typography;
 const { Option } = Select;
@@ -142,7 +142,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   return (
     <div>
       <div className="text-center mb-6">
-        <Title level={3} className="!mb-2 !text-gray-800">
+        <Title level={3} className="!mb-2 !text-neutral-800">
           创建账户
         </Title>
         <Text type="secondary" className="text-base">
@@ -201,7 +201,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           ]}
         >
           <Input
-            prefix={<UserOutlined className="text-gray-400" />}
+            prefix={<UserOutlined className="text-neutral-400" />}
             placeholder="请输入真实姓名"
             className="h-11"
           />
@@ -217,7 +217,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           ]}
         >
           <Input
-            prefix={<UserOutlined className="text-gray-400" />}
+            prefix={<UserOutlined className="text-neutral-400" />}
             placeholder="请输入用户名"
             className="h-11"
           />
@@ -232,7 +232,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           ]}
         >
           <Input
-            prefix={<MailOutlined className="text-gray-400" />}
+            prefix={<MailOutlined className="text-neutral-400" />}
             placeholder="请输入邮箱地址"
             className="h-11"
           />
@@ -244,7 +244,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           rules={[{ validator: validatePassword }]}
         >
           <Input.Password
-            prefix={<LockOutlined className="text-gray-400" />}
+            prefix={<LockOutlined className="text-neutral-400" />}
             placeholder="请输入密码"
             className="h-11"
             iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
@@ -257,7 +257,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           rules={[{ validator: validateConfirmPassword }]}
         >
           <Input.Password
-            prefix={<LockOutlined className="text-gray-400" />}
+            prefix={<LockOutlined className="text-neutral-400" />}
             placeholder="请再次输入密码"
             className="h-11"
             iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
@@ -273,7 +273,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           label="学校名称"
         >
           <Input
-            prefix={<BankOutlined className="text-gray-400" />}
+            prefix={<BankOutlined className="text-neutral-400" />}
             placeholder="请输入学校名称（可选）"
             className="h-11"
           />
@@ -286,7 +286,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           <Select
             placeholder="请选择任教学科（可选）"
             className="h-11"
-            suffixIcon={<BookOutlined className="text-gray-400" />}
+            suffixIcon={<BookOutlined className="text-neutral-400" />}
           >
             {subjects.map(subject => (
               <Option key={subject.value} value={subject.value}>
@@ -344,7 +344,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             </div>
           )}
           
-          <div className="pt-2 border-t border-gray-100">
+          <div className="pt-2 border-t border-neutral-100">
             <Text type="secondary" className="text-xs">
               测试账户：<Text code className="text-xs">demo</Text> / <Text code className="text-xs">Demo123456</Text>
             </Text>

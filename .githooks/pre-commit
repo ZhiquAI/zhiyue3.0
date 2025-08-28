@@ -1,0 +1,218 @@
+#!/bin/bash
+
+# Git Pre-commit Hook
+# 在提交前执行代码质量检查
+
+set -e
+
+echo "🔍 运行 pre-commit 检查..."
+
+# 检查是否在项目根目录
+if [ ! -f "package.json" ] || [ ! -f "backend/requirements.txt" ]; then
+    echo "❌ 错误: 请在项目根目录运行此脚本"
+    exit 1
+fi
+
+# 获取暂存的文件
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$STAGED_FILES" ]; then
+    echo "✅ 没有暂存的文件需要检查"
+    exit 0
+fi
+
+echo "📁 检查暂存的文件:"
+echo "$STAGED_FILES"
+echo ""
+
+# 检查前端文件
+FRONTEND_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|js|jsx)$' | grep -v 'node_modules' || true)
+if [ ! -z "$FRONTEND_FILES" ]; then
+    echo "🎨 检查前端代码..."
+    
+    # ESLint 检查
+    echo "  📋 运行 ESLint..."
+    if ! npm run lint:check; then
+        echo "❌ ESLint 检查失败，请修复错误后重新提交"
+        echo "💡 提示: 运行 'npm run lint:fix' 自动修复部分问题"
+        exit 1
+    fi
+    
+    # TypeScript 类型检查
+    echo "  🔍 运行 TypeScript 类型检查..."
+    if ! npm run type-check; then
+        echo "❌ TypeScript 类型检查失败，请修复类型错误后重新提交"
+        exit 1
+    fi
+    
+    # 运行前端单元测试
+    echo "  🧪 运行前端单元测试..."
+    if ! npm run test:unit; then
+        echo "❌ 前端单元测试失败，请修复测试后重新提交"
+        exit 1
+    fi
+    
+    echo "✅ 前端代码检查通过"
+fi
+
+# 检查后端文件
+BACKEND_FILES=$(echo "$STAGED_FILES" | grep -E '\.py$' | grep 'backend/' || true)
+if [ ! -z "$BACKEND_FILES" ]; then
+    echo "🐍 检查后端代码..."
+    
+    cd backend
+    
+    # 激活虚拟环境（如果存在）
+    if [ -d "venv" ]; then
+        source venv/bin/activate
+    elif [ -d ".venv" ]; then
+        source .venv/bin/activate
+    fi
+    
+    # Black 代码格式化检查
+    echo "  🎨 运行 Black 格式检查..."
+    if ! black --check --diff .; then
+        echo "❌ Black 格式检查失败，请运行 'black .' 格式化代码"
+        cd ..
+        exit 1
+    fi
+    
+    # isort 导入排序检查
+    echo "  📦 运行 isort 导入排序检查..."
+    if ! isort --check-only --diff .; then
+        echo "❌ isort 检查失败，请运行 'isort .' 排序导入"
+        cd ..
+        exit 1
+    fi
+    
+    # flake8 代码质量检查
+    echo "  📋 运行 flake8 代码质量检查..."
+    if ! flake8 .; then
+        echo "❌ flake8 检查失败，请修复代码质量问题"
+        cd ..
+        exit 1
+    fi
+    
+    # mypy 类型检查
+    echo "  🔍 运行 mypy 类型检查..."
+    if ! mypy .; then
+        echo "❌ mypy 类型检查失败，请修复类型错误"
+        cd ..
+        exit 1
+    fi
+    
+    # 运行后端单元测试
+    echo "  🧪 运行后端单元测试..."
+    if ! python -m pytest tests/ -v --tb=short; then
+        echo "❌ 后端单元测试失败，请修复测试后重新提交"
+        cd ..
+        exit 1
+    fi
+    
+    cd ..
+    echo "✅ 后端代码检查通过"
+fi
+
+# 检查配置文件
+CONFIG_FILES=$(echo "$STAGED_FILES" | grep -E '\.(json|yml|yaml|toml)$' || true)
+if [ ! -z "$CONFIG_FILES" ]; then
+    echo "⚙️ 检查配置文件..."
+    
+    # 检查 JSON 文件语法
+    JSON_FILES=$(echo "$CONFIG_FILES" | grep '\.json$' || true)
+    if [ ! -z "$JSON_FILES" ]; then
+        echo "  📄 检查 JSON 语法..."
+        for file in $JSON_FILES; do
+            if [ -f "$file" ]; then
+                if ! python -m json.tool "$file" > /dev/null; then
+                    echo "❌ JSON 语法错误: $file"
+                    exit 1
+                fi
+            fi
+        done
+    fi
+    
+    # 检查 YAML 文件语法
+    YAML_FILES=$(echo "$CONFIG_FILES" | grep -E '\.(yml|yaml)$' || true)
+    if [ ! -z "$YAML_FILES" ]; then
+        echo "  📄 检查 YAML 语法..."
+        for file in $YAML_FILES; do
+            if [ -f "$file" ]; then
+                if ! python -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
+                    echo "❌ YAML 语法错误: $file"
+                    exit 1
+                fi
+            fi
+        done
+    fi
+    
+    echo "✅ 配置文件检查通过"
+fi
+
+# 检查敏感信息
+echo "🔒 检查敏感信息..."
+SENSITIVE_PATTERNS=(
+    "password\s*=\s*['\"][^'\"]+['\"]" 
+    "secret\s*=\s*['\"][^'\"]+['\"]" 
+    "token\s*=\s*['\"][^'\"]+['\"]" 
+    "api_key\s*=\s*['\"][^'\"]+['\"]" 
+    "private_key" 
+    "-----BEGIN.*PRIVATE KEY-----"
+)
+
+for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+    if echo "$STAGED_FILES" | xargs grep -l -i -E "$pattern" 2>/dev/null; then
+        echo "❌ 检测到可能的敏感信息，请检查并移除"
+        echo "🔍 搜索模式: $pattern"
+        exit 1
+    fi
+done
+echo "✅ 敏感信息检查通过"
+
+# 检查文件大小
+echo "📏 检查文件大小..."
+MAX_FILE_SIZE=5242880  # 5MB
+for file in $STAGED_FILES; do
+    if [ -f "$file" ]; then
+        file_size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo 0)
+        if [ "$file_size" -gt "$MAX_FILE_SIZE" ]; then
+            echo "❌ 文件过大: $file ($(($file_size / 1024 / 1024))MB > 5MB)"
+            echo "💡 提示: 请使用 Git LFS 管理大文件"
+            exit 1
+        fi
+    fi
+done
+echo "✅ 文件大小检查通过"
+
+# 检查提交信息格式
+echo "📝 检查提交信息格式..."
+COMMIT_MSG_FILE=".git/COMMIT_EDITMSG"
+if [ -f "$COMMIT_MSG_FILE" ]; then
+    COMMIT_MSG=$(head -n 1 "$COMMIT_MSG_FILE")
+    
+    # 检查提交信息长度
+    if [ ${#COMMIT_MSG} -lt 10 ]; then
+        echo "❌ 提交信息太短，至少需要 10 个字符"
+        exit 1
+    fi
+    
+    if [ ${#COMMIT_MSG} -gt 72 ]; then
+        echo "⚠️ 警告: 提交信息超过 72 个字符，建议简化"
+    fi
+    
+    # 检查是否包含常见的不良模式
+    if echo "$COMMIT_MSG" | grep -q -i "^fix$\|^update$\|^change$\|^修改$\|^更新$\|^修复$"; then
+        echo "❌ 提交信息过于简单，请提供更详细的描述"
+        exit 1
+    fi
+fi
+
+echo ""
+echo "🎉 所有检查通过！准备提交..."
+echo "📊 检查统计:"
+echo "  - 前端文件: $(echo "$FRONTEND_FILES" | wc -l | tr -d ' ') 个"
+echo "  - 后端文件: $(echo "$BACKEND_FILES" | wc -l | tr -d ' ') 个"
+echo "  - 配置文件: $(echo "$CONFIG_FILES" | wc -l | tr -d ' ') 个"
+echo ""
+
+exit 0

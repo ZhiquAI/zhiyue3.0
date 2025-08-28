@@ -1,5 +1,5 @@
 // Gemini AI API服务 - 更新为支持OCR功能
-import { message } from 'antd';
+import axios, { AxiosInstance } from 'axios';
 
 // Gemini API配置
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -80,12 +80,38 @@ const SAFETY_SETTINGS = [
 ];
 
 // 基础API调用函数
-const callGeminiAPI = async (prompt: string, imageData?: string): Promise<string> => {
-  if (!GEMINI_API_KEY) {
-    throw new Error('Gemini API key not configured');
-  }
+// 创建专门的 Gemini API 客户端
+const createGeminiClient = (): AxiosInstance => {
+  const geminiClient = axios.create({
+    baseURL: GEMINI_BASE_URL,
+    timeout: 60000, // Gemini API 可能需要更长时间
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
 
-  const parts: any[] = [{ text: prompt }];
+  // 添加请求拦截器来处理 API key
+  geminiClient.interceptors.request.use((config) => {
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
+    }
+    config.params = { ...config.params, key: GEMINI_API_KEY };
+    return config;
+  });
+
+  return geminiClient;
+};
+
+const geminiClient = createGeminiClient();
+
+const callGeminiAPI = async (prompt: string, imageData?: string): Promise<string> => {
+  const parts: Array<{
+    text?: string;
+    inline_data?: {
+      mime_type: string;
+      data: string;
+    };
+  }> = [{ text: prompt }];
   
   // 如果有图像数据，添加到请求中
   if (imageData) {
@@ -109,31 +135,20 @@ const callGeminiAPI = async (prompt: string, imageData?: string): Promise<string
   };
 
   try {
-    const apiUrl = `${GEMINI_BASE_URL}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     console.log('🔍 Gemini API调用信息:', {
-      url: apiUrl.replace(GEMINI_API_KEY, '***'),
       model: GEMINI_MODEL,
       hasApiKey: !!GEMINI_API_KEY,
       apiKeyLength: GEMINI_API_KEY?.length
     });
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    });
+    const response = await geminiClient.post<GeminiResponse>(
+      `/models/${GEMINI_MODEL}:generateContent`,
+      requestBody
+    );
 
-    console.log('📡 API响应状态:', response.status, response.statusText);
+    console.log('📡 API响应状态: 200 OK');
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ Gemini API错误详情:', errorData);
-      throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`);
-    }
-
-    const data: GeminiResponse = await response.json();
+    const data = response.data;
     
     if (!data.candidates || data.candidates.length === 0) {
       throw new Error('No response generated from Gemini');
@@ -220,8 +235,7 @@ export const geminiOCRApi = {
 
       const response = await callGeminiAPI(prompt, imageData);
       return JSON.parse(response);
-    } catch (error) {
-      console.error('Answer sheet recognition failed:', error);
+    } catch {
       throw new Error('答题卡识别失败，请重试');
     }
   },
@@ -291,8 +305,7 @@ export const geminiOCRApi = {
 
       const response = await callGeminiAPI(prompt, imageData);
       return JSON.parse(response);
-    } catch (error) {
-      console.error('Paper document recognition failed:', error);
+    } catch {
       throw new Error('试卷识别失败，请重试');
     }
   },
@@ -322,7 +335,7 @@ export const geminiOCRApi = {
         results.push({
           filename: file.name,
           status: 'error',
-          error: error.message
+          error: error instanceof Error ? error.message : 'Unknown error'
         });
       }
     }
@@ -337,7 +350,7 @@ export const geminiGradingApi = {
   gradeSubjectiveQuestion: async (params: {
     question: string;
     referenceAnswer: string;
-    rubric: any;
+    rubric: unknown;
     studentAnswer: string;
   }) => {
     try {
@@ -373,14 +386,19 @@ export const geminiGradingApi = {
 
       const response = await callGeminiAPI(prompt);
       return JSON.parse(response);
-    } catch (error) {
-      console.error('Subjective grading failed:', error);
+    } catch {
       throw new Error('智能评分失败，请重试');
     }
   },
 
   // 其他原有功能保持不变...
-  batchGradeQuestions: async (questions: Array<any>) => {
+  batchGradeQuestions: async (questions: Array<{
+    id: string;
+    question: string;
+    referenceAnswer: string;
+    rubric: unknown;
+    studentAnswer: string;
+  }>) => {
     // 实现批量评分
     const results = [];
     
@@ -390,15 +408,15 @@ export const geminiGradingApi = {
         results.push({ id: q.id, result });
         
         await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
-        results.push({ id: q.id, error: error.message });
+      } catch (error: unknown) {
+        results.push({ id: q.id, error: error instanceof Error ? error.message : 'Unknown error' });
       }
     }
     
     return results;
   },
 
-  analyzeExamResults: async (params: any) => {
+  analyzeExamResults: async (params: unknown) => {
     // 学情分析功能
     try {
       const prompt = `
@@ -410,12 +428,12 @@ ${JSON.stringify(params)}
       
       const response = await callGeminiAPI(prompt);
       return JSON.parse(response);
-    } catch (error) {
+    } catch {
       throw new Error('学情分析失败，请重试');
     }
   },
 
-  generatePersonalizedSuggestion: async (params: any) => {
+  generatePersonalizedSuggestion: async (params: unknown) => {
     // 个性化建议生成
     try {
       const prompt = `
@@ -427,7 +445,7 @@ ${JSON.stringify(params)}
       
       const response = await callGeminiAPI(prompt);
       return JSON.parse(response);
-    } catch (error) {
+    } catch {
       throw new Error('个性化建议生成失败，请重试');
     }
   },
@@ -445,7 +463,7 @@ ${JSON.stringify(params)}
 
       const response = await callGeminiAPI(prompt);
       return JSON.parse(response);
-    } catch (error) {
+    } catch {
       throw new Error('试卷分析失败，请重试');
     }
   }
@@ -456,8 +474,7 @@ export const checkGeminiHealth = async (): Promise<boolean> => {
   try {
     await callGeminiAPI('Hello, this is a health check.');
     return true;
-  } catch (error) {
-    console.error('Gemini health check failed:', error);
+  } catch {
     return false;
   }
 };

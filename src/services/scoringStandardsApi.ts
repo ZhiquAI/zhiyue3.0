@@ -1,4 +1,4 @@
-import { message } from 'antd';
+// message import removed as it's not used
 
 // 题目类型定义
 export interface Question {
@@ -38,7 +38,7 @@ export const uploadPaperFile = async (file: File): Promise<UploadedFile> => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await fetch('http://localhost:8000/api/scoring-standards/upload/paper', {
+    const response = await fetch('/api/scoring-standards/upload/paper', {
       method: 'POST',
       body: formData
     });
@@ -64,7 +64,7 @@ export const uploadPaperFile = async (file: File): Promise<UploadedFile> => {
     
     return uploadedFile;
   } catch (error) {
-    throw new Error(`试卷文件上传失败: ${error}`);
+    throw new Error(`试卷文件上传失败: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
@@ -74,7 +74,7 @@ export const uploadAnswerFile = async (file: File): Promise<UploadedFile> => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await fetch('http://localhost:8000/api/scoring-standards/upload/answer', {
+    const response = await fetch('/api/scoring-standards/upload/answer', {
       method: 'POST',
       body: formData
     });
@@ -100,7 +100,7 @@ export const uploadAnswerFile = async (file: File): Promise<UploadedFile> => {
     
     return uploadedFile;
   } catch (error) {
-    throw new Error(`参考答案文件上传失败: ${error}`);
+    throw new Error(`参考答案文件上传失败: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
@@ -116,7 +116,7 @@ export const generateScoringStandards = async (
       formData.append('answer_file_id', answerFile.fileId);
     }
     
-    const response = await fetch('http://localhost:8000/api/scoring-standards/generate', {
+    const response = await fetch('/api/scoring-standards/generate', {
       method: 'POST',
       body: formData
     });
@@ -196,7 +196,7 @@ export const generateScoringStandards = async (
 // 保存评分标准API
 export const saveScoringStandards = async (questions: Question[], examId?: string): Promise<boolean> => {
   try {
-    const response = await fetch('http://localhost:8000/api/scoring-standards/save', {
+    const response = await fetch('/api/scoring-standards/save', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -219,14 +219,14 @@ export const saveScoringStandards = async (questions: Question[], examId?: strin
     
     return true;
   } catch (error) {
-    throw new Error(`保存评分标准失败: ${error}`);
+    throw new Error(`保存评分标准失败: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
 // 获取已保存的评分标准API
 export const getScoringStandards = async (examId: string): Promise<Question[]> => {
   try {
-    const response = await fetch(`http://localhost:8000/api/scoring-standards/exam/${examId}`);
+    const response = await fetch(`/api/scoring-standards/exam/${examId}`);
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

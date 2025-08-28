@@ -11,8 +11,8 @@ import io
 from datetime import datetime
 
 from .gemini_ocr_service import GeminiOCRService
-from ..database import get_db
-from ..models.student import Student
+from db_connection import get_db
+from models.student import Student
 from sqlalchemy.orm import Session
 
 class BarcodeDetectionService:

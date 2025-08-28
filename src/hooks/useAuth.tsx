@@ -1,7 +1,6 @@
 // 认证Hook - 管理用户认证状态
 import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
-import { authApi } from '../services/api';
-import { useAsyncOperation } from './useAsyncOperation';
+import { simpleAuthApi } from '../services/simpleAuthApi';
 
 export interface User {
   id: string;
@@ -29,26 +28,54 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  // 暂时屏蔽认证 - 直接设置虚拟用户
+  const [user, setUser] = useState<User | null>({
+    id: 'demo-user',
+    username: 'demo',
+    name: '演示用户',
+    email: 'demo@example.com',
+    role: 'admin',
+    permissions: ['read', 'write', 'admin'],
+    avatar: '',
+    school: '演示学校',
+    subject: '演示科目',
+    grades: ['高一', '高二', '高三']
+  });
   const [loading, setLoading] = useState<boolean>(false);
-  const { execute } = useAsyncOperation();
 
-  // 检查本地存储的token
+  // 暂时注释掉token检查逻辑
+  /*
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('authToken');
     if (token) {
       refreshAuth();
     }
   }, []);
+  */
 
   const login = async (username: string, password: string) => {
+    // 暂时屏蔽认证 - 直接成功
     setLoading(true);
+    console.log('演示模式：跳过实际登录，直接成功');
+    setTimeout(() => {
+      setLoading(false);
+      console.log('演示模式登录完成');
+    }, 500); // 模拟一点延迟
+    
+    /* 原始登录逻辑已暂时屏蔽
     try {
-      const response = await authApi.login({ username, password });
+      const response = await simpleAuthApi.login({ username, password });
       
-      // 检查响应格式 - 后端直接返回token和user，不是包装在success/data中
-      if (response.access_token && response.user) {
-        // 后端直接返回格式
+      // 检查响应格式 - 后端现在返回标准API格式
+      if (response.success && response.data) {
+        // 标准API格式
+        const { token, user: userData } = response.data;
+        localStorage.setItem('authToken', token);
+        setUser(userData);
+        console.log('用户状态已更新:', userData);
+        console.log('登录成功，用户状态更新完成，AppRouter应该会重新渲染');
+      } else if (response.access_token && response.user) {
+        // 兼容旧的直接返回格式
         const token = response.access_token;
         const userData = {
           id: response.user.id,
@@ -62,13 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           subject: response.user.subject,
           grades: response.user.grades
         };
-        localStorage.setItem('auth_token', token);
-        setUser(userData);
-        console.log('用户状态已更新:', userData);
-      } else if (response.success && response.data) {
-        // 包装格式（备用）
-        const { token, user: userData } = response.data;
-        localStorage.setItem('auth_token', token);
+        localStorage.setItem('authToken', token);
         setUser(userData);
         console.log('用户状态已更新:', userData);
       } else {
@@ -80,35 +101,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setLoading(false);
     }
+    */
   };
 
   const logout = async () => {
+    // 暂时屏蔽认证 - 演示模式下不实际退出
+    console.log('演示模式：跳过实际退出登录');
+    /* 原始退出逻辑已暂时屏蔽
     try {
-      await authApi.logout();
-    } catch (error) {
+      await simpleAuthApi.logout();
+    } catch {
       // 即使API调用失败也要清除本地状态
-      console.warn('Logout API call failed:', error);
+      console.warn('Logout API call failed');
     } finally {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('authToken');
       setUser(null);
     }
+    */
   };
 
   const refreshAuth = async () => {
+    // 暂时屏蔽认证 - 演示模式下直接返回
+    console.log('演示模式：跳过刷新用户信息');
+    /* 原始刷新逻辑已暂时屏蔽
     setLoading(true);
     try {
-      const response = await authApi.getCurrentUser();
+      const response = await simpleAuthApi.getCurrentUser();
       if (response.success) {
         setUser(response.data);
       } else {
         throw new Error('获取用户信息失败');
       }
-    } catch (error) {
-      localStorage.removeItem('auth_token');
+    } catch {
+      localStorage.removeItem('authToken');
       setUser(null);
     } finally {
       setLoading(false);
     }
+    */
   };
 
   const hasPermission = (permission: string): boolean => {

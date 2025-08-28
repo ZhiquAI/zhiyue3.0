@@ -9,7 +9,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy.orm import Session
-from database import SessionLocal, engine
+from db_connection import SessionLocal, engine
 from models.production_models import User, Base
 from auth import get_password_hash
 from datetime import datetime

@@ -1,0 +1,97 @@
+# CODEOWNERS 文件
+# 定义代码审查责任人和自动审查分配
+
+# 全局默认审查者
+* @maintainers
+
+# 前端代码
+/src/ @frontend-team @maintainers
+/e2e/ @frontend-team @qa-team
+/playwright.config.ts @frontend-team @qa-team
+/package.json @frontend-team @maintainers
+/package-lock.json @frontend-team
+/tsconfig*.json @frontend-team
+/vite.config.ts @frontend-team
+/vitest.config.ts @frontend-team @qa-team
+/tailwind.config.js @frontend-team
+/postcss.config.js @frontend-team
+/eslint.config.js @frontend-team
+
+# 后端代码
+/backend/ @backend-team @maintainers
+/backend/requirements.txt @backend-team @maintainers
+/backend/alembic.ini @backend-team @database-team
+/backend/migrations/ @backend-team @database-team
+/backend/models/ @backend-team @database-team
+/backend/api/ @backend-team
+/backend/services/ @backend-team
+/backend/tests/ @backend-team @qa-team
+
+# 基础设施和配置
+/.github/ @devops-team @maintainers
+/docker-compose*.yml @devops-team @maintainers
+/Dockerfile* @devops-team @maintainers
+/.env.example @devops-team @maintainers
+/sonar-project.properties @devops-team @qa-team
+
+# 数据库相关
+/backend/database.py @backend-team @database-team
+/backend/models/ @backend-team @database-team
+/backend/migrations/ @backend-team @database-team
+
+# 安全相关
+/backend/auth.py @backend-team @security-team
+/backend/middleware/ @backend-team @security-team
+/src/components/auth/ @frontend-team @security-team
+
+# API 相关
+/backend/api/ @backend-team @api-team
+/backend/routes/ @backend-team @api-team
+/backend/schemas/ @backend-team @api-team
+/src/services/ @frontend-team @api-team
+/src/types/ @frontend-team @api-team
+
+# 测试相关
+/src/test/ @frontend-team @qa-team
+/e2e/ @frontend-team @qa-team
+/backend/tests/ @backend-team @qa-team
+
+# 文档
+/docs/ @tech-writers @maintainers
+/README.md @tech-writers @maintainers
+/e2e/README.md @frontend-team @qa-team @tech-writers
+
+# AI/ML 相关
+/src/components/ai/ @ai-team @backend-team
+/src/hooks/useGemini*.ts @ai-team @frontend-team
+/src/services/geminiApi.ts @ai-team @frontend-team
+/backend/services/gemini* @ai-team @backend-team
+
+# OCR 相关
+/src/components/ocr/ @ai-team @frontend-team
+/src/hooks/useGeminiOCR.ts @ai-team @frontend-team
+
+# 阅卷相关
+/src/components/grading/ @grading-team @frontend-team
+/src/pages/ChoiceGrading.tsx @grading-team @frontend-team
+/backend/services/grading* @grading-team @backend-team
+
+# 配置文件（需要特别谨慎）
+/backend/config/ @backend-team @devops-team @maintainers
+/src/config/ @frontend-team @maintainers
+
+# 部署脚本
+/*.sh @devops-team @maintainers
+/manage_backend.sh @devops-team @backend-team
+
+# 依赖管理（需要安全审查）
+/package.json @frontend-team @security-team @maintainers
+/backend/requirements.txt @backend-team @security-team @maintainers
+
+# CI/CD 配置（需要 DevOps 和维护者审查）
+/.github/workflows/ @devops-team @maintainers
+/.github/dependabot.yml @devops-team @security-team @maintainers
+
+# 敏感配置文件（需要多重审查）
+/.github/CODEOWNERS @maintainers
+/sonar-project.properties @devops-team @qa-team @maintainers

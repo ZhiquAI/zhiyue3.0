@@ -12,12 +12,12 @@ import os
 import json
 
 try:
-    from backend.database import get_db
-    from backend.auth import get_current_user
-    from backend.models.production_models import User, Exam, AnswerSheet
-    from backend.config.settings import settings
-except ImportError:
     from database import get_db
+    from auth import get_current_user
+    from models.production_models import User, Exam, AnswerSheet
+    from config.settings import settings
+except ImportError:
+    from db_connection import get_db
     from auth import get_current_user
     from models.production_models import User, Exam, AnswerSheet
     from config.settings import settings
@@ -95,9 +95,22 @@ async def create_exam(
     db.commit()
     db.refresh(exam)
     
-    # 添加创建者姓名
-    exam_response = ExamResponse.from_orm(exam)
-    exam_response.creator_name = current_user.name
+    # 手动构建响应对象
+    exam_response = ExamResponse(
+        id=exam.id,
+        name=exam.name,
+        subject=exam.subject,
+        grade=exam.grade,
+        status=exam.status,
+        paper_config=exam.paper_config,
+        grading_config=exam.grading_config,
+        total_students=exam.total_students,
+        completed_count=exam.completed_count,
+        avg_score=exam.avg_score,
+        created_at=exam.created_at,
+        updated_at=exam.updated_at,
+        creator_name=current_user.name
+    )
     
     return exam_response
 
@@ -129,10 +142,23 @@ async def get_exams(
     # 转换为响应模型
     exams = []
     for exam, creator_name in results:
-        exam_response = ExamResponse.from_orm(exam)
-        exam_response.creator_name = creator_name
+        exam_response = ExamResponse(
+            id=exam.id,
+            name=exam.name,
+            subject=exam.subject,
+            grade=exam.grade,
+            status=exam.status,
+            paper_config=exam.paper_config,
+            grading_config=exam.grading_config,
+            total_students=exam.total_students,
+            completed_count=exam.completed_count,
+            avg_score=exam.avg_score,
+            created_at=exam.created_at,
+            updated_at=exam.updated_at,
+            creator_name=creator_name
+        )
         exams.append(exam_response)
-    
+
     return exams
 
 @router.get("/{exam_id}", response_model=ExamResponse)
@@ -153,9 +179,22 @@ async def get_exam(
     
     # 获取创建者姓名
     creator = db.query(User).filter(User.id == exam.created_by).first()
-    exam_response = ExamResponse.from_orm(exam)
-    exam_response.creator_name = creator.name if creator else "未知"
-    
+    exam_response = ExamResponse(
+        id=exam.id,
+        name=exam.name,
+        subject=exam.subject,
+        grade=exam.grade,
+        status=exam.status,
+        paper_config=exam.paper_config,
+        grading_config=exam.grading_config,
+        total_students=exam.total_students,
+        completed_count=exam.completed_count,
+        avg_score=exam.avg_score,
+        created_at=exam.created_at,
+        updated_at=exam.updated_at,
+        creator_name=creator.name if creator else "未知"
+    )
+
     return exam_response
 
 @router.put("/{exam_id}", response_model=ExamResponse)
@@ -185,9 +224,22 @@ async def update_exam(
     db.refresh(exam)
     
     # 添加创建者姓名
-    exam_response = ExamResponse.from_orm(exam)
-    exam_response.creator_name = current_user.name
-    
+    exam_response = ExamResponse(
+        id=exam.id,
+        name=exam.name,
+        subject=exam.subject,
+        grade=exam.grade,
+        status=exam.status,
+        paper_config=exam.paper_config,
+        grading_config=exam.grading_config,
+        total_students=exam.total_students,
+        completed_count=exam.completed_count,
+        avg_score=exam.avg_score,
+        created_at=exam.created_at,
+        updated_at=exam.updated_at,
+        creator_name=current_user.name
+    )
+
     return exam_response
 
 @router.delete("/{exam_id}", response_model=dict)
@@ -409,7 +461,7 @@ async def update_exam_status(
 
 # 批量操作
 class BatchOperationRequest(BaseModel):
-    exam_ids: List[int]
+    exam_ids: List[str]
 
 @router.delete("/batch", response_model=dict)
 async def batch_delete_exams(
@@ -459,7 +511,7 @@ async def batch_delete_exams(
     }
 
 class BatchStatusUpdateRequest(BaseModel):
-    exam_ids: List[int]
+    exam_ids: List[str]
     status: str
 
 @router.put("/batch/status", response_model=dict)

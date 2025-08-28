@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>应急登录页面</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .logo {
+            text-align: center;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .title {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #1890ff;
+            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+        }
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .login-btn:hover {
+            background: #40a9ff;
+        }
+        .login-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        .status.error {
+            background: #fff2f0;
+            color: #ff4d4f;
+            border: 1px solid #ffccc7;
+        }
+        .status.loading {
+            background: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+        }
+        .test-info {
+            background: #fafafa;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        .link-button {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            text-align: center;
+            color: #1890ff;
+            text-decoration: none;
+            border: 1px solid #1890ff;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .link-button:hover {
+            background: #1890ff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🔐</div>
+        <h1 class="title">智阅AI 应急登录</h1>
+        
+        <div class="test-info">
+            <strong>🚀 应急登录方案</strong><br>
+            • 绕过复杂的React组件系统<br>
+            • 直接使用fetch API调用后端<br>
+            • CSP策略已优化支持内联脚本<br>
+            • 测试凭据: demo / demo123
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" value="demo" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" value="demo123" required>
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">
+                立即登录
+            </button>
+        </form>
+
+        <div id="status" style="display: none;"></div>
+
+        <a href="http://localhost:5173/auth" class="link-button">
+            返回React登录页面
+        </a>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const status = document.getElementById('status');
+
+        function showStatus(message, type = 'loading') {
+            status.style.display = 'block';
+            status.className = `status ${type}`;
+            status.textContent = message;
+        }
+
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showStatus('请填写用户名和密码', 'error');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+            showStatus('正在验证用户信息...', 'loading');
+
+            try {
+                console.log('发起登录请求:', { username });
+
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                console.log('响应状态:', response.status);
+
+                const data = await response.json();
+                console.log('响应数据:', data);
+
+                if (response.ok && data.success) {
+                    // 保存认证信息到localStorage
+                    localStorage.setItem('authToken', data.data.token);
+                    localStorage.setItem('userInfo', JSON.stringify(data.data.user));
+                    
+                    showStatus(
+                        `登录成功！欢迎 ${data.data.user.name}，正在跳转...`, 
+                        'success'
+                    );
+
+                    // 延迟跳转，让用户看到成功消息
+                    setTimeout(() => {
+                        console.log('跳转到主应用');
+                        window.location.href = '/dashboard';
+                    }, 1500);
+
+                } else {
+                    throw new Error(data.message || '登录失败');
+                }
+
+            } catch (error) {
+                console.error('登录错误:', error);
+                showStatus(`登录失败: ${error.message}`, 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '立即登录';
+            }
+        });
+
+        // 页面加载时的调试信息
+        console.log('应急登录页面已加载');
+        console.log('当前URL:', window.location.href);
+        console.log('已保存的Token:', localStorage.getItem('authToken'));
+        console.log('已保存的用户信息:', localStorage.getItem('userInfo'));
+    </script>
+</body>
+</html>

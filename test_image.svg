@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="white" stroke="black" stroke-width="2"/>
+  <text x="50" y="50" font-family="Arial" font-size="16" fill="black">姓名：张三</text>
+  <text x="50" y="80" font-family="Arial" font-size="16" fill="black">学号：2023001</text>
+  <text x="50" y="110" font-family="Arial" font-size="16" fill="black">班级：高三(1)班</text>
+  <text x="50" y="150" font-family="Arial" font-size="14" fill="black">1. 下列哪个选项是正确的？</text>
+  <text x="70" y="180" font-family="Arial" font-size="12" fill="black">A. 选项A</text>
+  <text x="70" y="200" font-family="Arial" font-size="12" fill="black">B. 选项B</text>
+  <text x="70" y="220" font-family="Arial" font-size="12" fill="black">C. 选项C</text>
+  <text x="70" y="240" font-family="Arial" font-size="12" fill="black">D. 选项D</text>
+  <circle cx="60" cy="195" r="3" fill="black"/>
+</svg>

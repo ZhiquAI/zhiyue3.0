@@ -11,7 +11,7 @@ from services.question_segmentation_service import QuestionSegmentationService
 from services.question_classifier_service import QuestionClassifierService
 from models.production_models import User
 from auth import get_current_user
-from database import get_db
+from db_connection import get_db
 from sqlalchemy.orm import Session
 
 # 创建路由器

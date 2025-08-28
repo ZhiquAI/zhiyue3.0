@@ -1,25 +1,5 @@
-import axios from 'axios';
-
-// 创建API客户端实例
-const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// 添加请求拦截器
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+import { apiClient } from '../services/httpClient';
+import type { BaseApiResponse } from '../types/api';
 
 // ==================== 类型定义 ====================
 
@@ -110,10 +90,7 @@ export interface ArrangementResult {
   halls_used: number;
 }
 
-interface StandardResponse<T = any> {
-  success: boolean;
-  message: string;
-  data?: T;
+interface StandardResponse<T = unknown> extends BaseApiResponse<T> {
   timestamp?: string;
 }
 
@@ -122,7 +99,7 @@ interface StandardResponse<T = any> {
 export const studentApi = {
   // 创建学生
   createStudent: async (examId: string, studentData: StudentCreate): Promise<StandardResponse<Student>> => {
-    const response = await apiClient.post(`/api/students/${examId}`, studentData);
+    const response = await apiClient.post<StandardResponse<Student>>(`/api/students/${examId}`, studentData);
     return response.data;
   },
 
@@ -142,13 +119,13 @@ export const studentApi = {
     if (params?.skip !== undefined) queryParams.append('skip', params.skip.toString());
     if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
     
-    const response = await apiClient.get(`/api/students/${examId}?${queryParams.toString()}`);
+    const response = await apiClient.get<StandardResponse<Student[]>>(`/api/students/${examId}?${queryParams.toString()}`);
     return response.data;
   },
 
   // 获取单个学生
   getStudent: async (examId: string, studentUuid: string): Promise<StandardResponse<Student>> => {
-    const response = await apiClient.get(`/api/students/${examId}/${studentUuid}`);
+    const response = await apiClient.get<StandardResponse<Student>>(`/api/students/${examId}/${studentUuid}`);
     return response.data;
   },
 
@@ -158,13 +135,13 @@ export const studentApi = {
     studentUuid: string,
     studentData: StudentUpdate
   ): Promise<StandardResponse<Student>> => {
-    const response = await apiClient.put(`/api/students/${examId}/${studentUuid}`, studentData);
+    const response = await apiClient.put<StandardResponse<Student>>(`/api/students/${examId}/${studentUuid}`, studentData);
     return response.data;
   },
 
   // 删除学生
   deleteStudent: async (examId: string, studentUuid: string): Promise<StandardResponse> => {
-    const response = await apiClient.delete(`/api/students/${examId}/${studentUuid}`);
+    const response = await apiClient.delete<StandardResponse>(`/api/students/${examId}/${studentUuid}`);
     return response.data;
   },
 
@@ -173,20 +150,13 @@ export const studentApi = {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await apiClient.post(`/api/students/${examId}/batch-import`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiClient.upload<StandardResponse<BatchImportResult>>(`/api/students/${examId}/batch-import`, formData);
     return response.data;
   },
 
   // 导出学生信息
   exportStudents: async (examId: string, format: 'excel' | 'csv' = 'excel'): Promise<Blob> => {
-    const response = await apiClient.get(`/api/students/${examId}/export?format=${format}`, {
-      responseType: 'blob',
-    });
-    return response.data;
+    return await apiClient.download(`/api/students/${examId}/export?format=${format}`);
   },
 
   // 获取学生条形码
@@ -195,7 +165,7 @@ export const studentApi = {
     studentUuid: string,
     format: 'json' | 'delimited' | 'fixed_length' = 'json'
   ): Promise<StandardResponse<{ barcode_data: string; format: string }>> => {
-    const response = await apiClient.get(`/api/students/${examId}/${studentUuid}/barcode?format=${format}`);
+    const response = await apiClient.get<StandardResponse<{ barcode_data: string; format: string }>>(`/api/students/${examId}/${studentUuid}/barcode?format=${format}`);
     return response.data;
   },
 
@@ -204,7 +174,7 @@ export const studentApi = {
     examId: string,
     barcodeData: string
   ): Promise<StandardResponse<Student>> => {
-    const response = await apiClient.post(`/api/students/${examId}/match-barcode`, {
+    const response = await apiClient.post<StandardResponse<Student>>(`/api/students/${examId}/match-barcode`, {
       barcode_data: barcodeData,
     });
     return response.data;
@@ -212,31 +182,31 @@ export const studentApi = {
 
   // 获取学生统计信息
   getStudentStatistics: async (examId: string): Promise<StandardResponse<StudentStatistics>> => {
-    const response = await apiClient.get(`/api/students/${examId}/statistics`);
+    const response = await apiClient.get<StandardResponse<StudentStatistics>>(`/api/students/${examId}/statistics`);
     return response.data;
   },
 
   // 生成准考证号和座位号
   generateExamNumbers: async (examId: string): Promise<StandardResponse> => {
-    const response = await apiClient.post(`/api/students/${examId}/generate-exam-numbers`);
+    const response = await apiClient.post<StandardResponse>(`/api/students/${examId}/generate-exam-numbers`);
     return response.data;
   },
 
   // 获取考场列表
   getExamHalls: async (examId: string): Promise<StandardResponse<ExamHall[]>> => {
-    const response = await apiClient.get(`/api/exams/${examId}/halls`);
+    const response = await apiClient.get<StandardResponse<ExamHall[]>>(`/api/exams/${examId}/halls`);
     return response.data;
   },
 
   // 自动编排考场
   arrangeExamHalls: async (examId: string, config: ArrangementConfig): Promise<StandardResponse<ArrangementResult>> => {
-    const response = await apiClient.post(`/api/exams/${examId}/arrange`, config);
+    const response = await apiClient.post<StandardResponse<ArrangementResult>>(`/api/exams/${examId}/arrange`, config);
     return response.data;
   },
 
   // 健康检查
   healthCheck: async (): Promise<StandardResponse> => {
-    const response = await apiClient.get('/api/students/health');
+    const response = await apiClient.get<StandardResponse>('/api/students/health');
     return response.data;
   },
 };
@@ -266,8 +236,8 @@ export const fileUploadApi = {
     total: number;
     success_count: number;
     failed_count: number;
-    student_matches: Array<any>;
-    unmatched_files: Array<any>;
+    student_matches: Array<unknown>;
+    unmatched_files: Array<unknown>;
   }>> => {
     const formData = new FormData();
     formData.append('exam_id', examId);
@@ -276,11 +246,27 @@ export const fileUploadApi = {
       formData.append('files', files[i]);
     }
     
-    const response = await apiClient.post('/api/files/upload/answer-sheets', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiClient.upload<StandardResponse<{
+      success: Array<{
+        filename: string;
+        file_id: string;
+        student_info?: {
+          student_id: string;
+          student_name: string;
+          class_name: string;
+          barcode_data: string;
+        };
+      }>;
+      failed: Array<{
+        filename: string;
+        error: string;
+      }>;
+      total: number;
+      success_count: number;
+      failed_count: number;
+      student_matches: Array<unknown>;
+      unmatched_files: Array<unknown>;
+    }>>('/api/files/upload/answer-sheets', formData);
     return response.data;
   },
 };

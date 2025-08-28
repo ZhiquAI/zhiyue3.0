@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Card, Typography, Alert, Steps } from 'antd';
 import { MailOutlined, LockOutlined, SafetyCertificateOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { authApi } from '../../services/api';
-import { cn } from '../../utils/cn';
+import { cn, buttonStyles, inputStyles, layout } from '../../design-system';
 
 const { Title, Text, Link } = Typography;
 const { Step } = Steps;
@@ -181,7 +181,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
       styles={{ body: { padding: '2rem' } }}
     >
       <div className="text-center mb-6">
-        <Title level={2} className="!mb-2 !text-gray-800">
+        <Title level={2} className="!mb-2 !text-neutral-800">
           重置密码
         </Title>
         <Text type="secondary" className="text-base">
@@ -229,7 +229,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             ]}
           >
             <Input
-              prefix={<MailOutlined className="text-gray-400" />}
+              prefix={<MailOutlined className="text-neutral-400" />}
               placeholder="请输入注册时使用的邮箱地址"
               className="h-11"
             />
@@ -293,7 +293,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
           >
             <div className="flex gap-2">
               <Input
-                prefix={<SafetyCertificateOutlined className="text-gray-400" />}
+                prefix={<SafetyCertificateOutlined className="text-neutral-400" />}
                 placeholder="请输入6位验证码"
                 className="h-11 flex-1"
                 maxLength={6}
@@ -314,7 +314,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             rules={[{ validator: validatePassword }]}
           >
             <Input.Password
-              prefix={<LockOutlined className="text-gray-400" />}
+              prefix={<LockOutlined className="text-neutral-400" />}
               placeholder="请输入新密码"
               className="h-11"
               iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
@@ -327,7 +327,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             rules={[{ validator: validateConfirmPassword }]}
           >
             <Input.Password
-              prefix={<LockOutlined className="text-gray-400" />}
+              prefix={<LockOutlined className="text-neutral-400" />}
               placeholder="请再次输入新密码"
               className="h-11"
               iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}

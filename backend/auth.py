@@ -5,7 +5,7 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from database import get_db
+from db_connection import get_db
 from models.production_models import User
 from config.settings import settings
 from services.email_service import email_service, reset_token_manager
@@ -551,7 +551,7 @@ async def update_user_role(
 
     # 验证新角色
     try:
-        from backend.middleware.permissions import validate_role
+        from middleware.permissions import validate_role
     except ImportError:
         from middleware.permissions import validate_role
     if not validate_role(role_data.new_role):
@@ -621,7 +621,7 @@ async def update_user_status(
 async def get_available_roles(current_user: User = Depends(get_current_user)):
     """获取可用角色列表"""
     try:
-        from backend.middleware.permissions import PermissionInfo
+        from middleware.permissions import PermissionInfo
     except ImportError:
         from middleware.permissions import PermissionInfo
 
@@ -637,7 +637,7 @@ async def get_available_roles(current_user: User = Depends(get_current_user)):
 async def get_user_permissions_info(current_user: User = Depends(get_current_user)):
     """获取当前用户权限信息"""
     try:
-        from backend.middleware.permissions import PermissionInfo
+        from middleware.permissions import PermissionInfo
     except ImportError:
         from middleware.permissions import PermissionInfo
 

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Frontend Debug Test</h1>
+    <div id="test-output"></div>
+    
+    <script>
+        // 测试基本JavaScript执行
+        console.log("Debug: JavaScript is running");
+        document.getElementById('test-output').innerHTML = 'JavaScript is working';
+        
+        // 测试fetch到后端
+        fetch('http://localhost:8001/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Backend connection test:', data);
+                document.getElementById('test-output').innerHTML += '<br>Backend: ' + data.message;
+            })
+            .catch(error => {
+                console.error('Backend connection failed:', error);
+                document.getElementById('test-output').innerHTML += '<br>Backend connection failed';
+            });
+    </script>
+</body>
+</html>

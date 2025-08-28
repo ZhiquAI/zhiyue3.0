@@ -1,289 +1,281 @@
-// API服务层 - 统一管理所有后端交互
-import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+/**
+ * API服务层 - 统一管理所有后端交互
+ * 使用标准化HTTP客户端和错误处理
+ */
+
+import { createServiceClient } from './standardHttpClient';
+import { ApiResponse, PaginationInfo, ApiException, ApiErrorCode } from '../types/standardApi';
+import { 
+  User,
+  Exam,
+  Submission,
+  BarcodeData,
+  AuthLoginResponse,
+  ExamListResponse,
+  UserResponse,
+  ExamResponse,
+  MarkingTaskListResponse,
+  SubmissionResponse,
+  AnalysisResponse,
+  BarcodeResponse,
+  UploadResponse,
+  BatchUploadResponse,
+  ExamListParams,
+  MarkingTaskParams,
+  AnalysisParams,
+  LoginRequest,
+  RegisterRequest
+} from '../types/apiTypes';
+
+// 定义缺失的类型
+interface BarcodeTemplate {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
 import { message } from '../utils/message';
 
-// API配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
-const API_TIMEOUT = 30000;
+// API基础URL配置 - 使用代理路径
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-// 创建axios实例
-const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: API_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
+// 创建标准化API客户端
+const apiClient = createServiceClient(API_BASE_URL, {
+  timeout: 30000,
+  request: {
+    addAuthToken: true,
+    addRequestId: true,
+    addTimestamp: true
   },
+  response: {
+    validateResponse: true,
+    logResponse: true,
+    retryOnError: true,
+    maxRetries: 3
+  }
 });
 
-// 请求拦截器
-apiClient.interceptors.request.use(
-  (config) => {
-    // 添加认证token
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+// 全局错误处理中间件
+apiClient.getAxiosInstance().interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error instanceof ApiException) {
+      // 根据错误类型显示不同的提示
+      switch (error.code) {
+        case ApiErrorCode.UNAUTHORIZED:
+          message.error('登录已过期，请重新登录');
+          // 清除token并跳转到登录页
+          localStorage.removeItem('authToken');
+          sessionStorage.removeItem('authToken');
+          window.location.href = '/auth';
+          break;
+        case ApiErrorCode.FORBIDDEN:
+          message.error('权限不足，无法访问该资源');
+          break;
+        case ApiErrorCode.NOT_FOUND:
+          message.error('请求的资源不存在');
+          break;
+        case ApiErrorCode.VALIDATION_ERROR:
+          if (error.errors && error.errors.length > 0) {
+            error.errors.forEach(err => message.error(err.message));
+          } else {
+            message.error('请求参数有误');
+          }
+          break;
+        case ApiErrorCode.SERVICE_UNAVAILABLE:
+          message.error('服务暂时不可用，请稍后重试');
+          break;
+        case ApiErrorCode.RATE_LIMITED:
+          message.error('请求过于频繁，请稍后重试');
+          break;
+        default:
+          message.error(error.message || '操作失败');
+      }
+    } else {
+      message.error('网络连接失败，请检查网络设置');
     }
-    
-    // 添加请求ID用于追踪
-    config.headers['X-Request-ID'] = generateRequestId();
-    
-    return config;
-  },
-  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
 
-// 响应拦截器
-apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  (error: AxiosError) => {
-    handleApiError(error);
-    return Promise.reject(error);
-  }
-);
-
-// 错误处理
-const handleApiError = (error: AxiosError) => {
-  if (error.response) {
-    const { status, data } = error.response;
-    
-    switch (status) {
-      case 401:
-        message.error('登录已过期，请重新登录');
-        localStorage.removeItem('auth_token');
-        window.location.href = '/login';
-        break;
-      case 403:
-        message.error('权限不足，无法访问该资源');
-        break;
-      case 404:
-        message.error('请求的资源不存在');
-        break;
-      case 422:
-        const validationErrors = (data as any)?.errors;
-        if (validationErrors) {
-          Object.values(validationErrors).forEach((errorMsg: any) => {
-            message.error(errorMsg);
-          });
-        } else {
-          message.error('请求参数有误');
-        }
-        break;
-      case 500:
-        message.error('服务器内部错误，请稍后重试');
-        break;
-      default:
-        message.error(`请求失败: ${(data as any)?.message || '未知错误'}`);
-    }
-  } else if (error.request) {
-    message.error('网络连接失败，请检查网络设置');
-  } else {
-    message.error('请求配置错误');
-  }
-};
-
-// 生成请求ID
-const generateRequestId = (): string => {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
-// API接口定义
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data: T;
-  message?: string;
-  errors?: Record<string, string[]>;
-}
-
+// 分页响应接口
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationInfo;
 }
 
-// 考试相关API
+// 考试相关接口
 export const examApi = {
   // 获取考试列表
-  getExams: async (params?: {
-    page?: number;
-    limit?: number;
-    subject?: string;
-    grade?: string;
-    status?: string;
-    search?: string;
-  }): Promise<PaginatedResponse<any>> => {
-    const response = await apiClient.get('/api/exams/', { params });
-    return response.data;
+  getExams: async (params?: ExamListParams): Promise<ExamListResponse> => {
+    return await apiClient.paginate('/exams', {
+      page: params?.page || 1,
+      pageSize: params?.pageSize || 20,
+      filters: {
+        subject: params?.subject,
+        grade: params?.grade,
+        status: params?.status,
+        search: params?.search
+      }
+    }) as ExamListResponse;
   },
 
   // 创建考试
-  createExam: async (examData: any): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/api/exams/', examData);
-    return response.data;
+  createExam: async (examData: Partial<Exam>): Promise<ExamResponse> => {
+    return await apiClient.post('/exams', examData);
   },
 
   // 获取考试详情
-  getExam: async (examId: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get(`/api/exams/${examId}`);
-    return response.data;
+  getExam: async (examId: string): Promise<ExamResponse> => {
+    return await apiClient.get(`/exams/${examId}`);
   },
 
   // 更新考试配置
-  updateExamConfig: async (examId: string, config: any): Promise<ApiResponse<any>> => {
-    const response = await apiClient.put(`/exams/${examId}/config`, config);
-    return response.data;
+  updateExamConfig: async (
+    examId: string,
+    config: Partial<Exam>
+  ): Promise<ExamResponse> => {
+    return await apiClient.put(`/exams/${examId}/config`, config);
   },
 
-  // 批量上传答题卡
-  uploadAnswerSheets: async (examId: string, files: FormData): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post(`/exams/${examId}/submissions/batch`, files, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      timeout: 120000, // 2分钟超时
-    });
-    return response.data;
+  // 上传答题卡
+  uploadAnswerSheets: async (
+    examId: string,
+    files: File[]
+  ): Promise<UploadResponse | BatchUploadResponse> => {
+    // 上传答题卡文件
+    if (files.length === 1) {
+      return await apiClient.upload(`/exams/${examId}/answer-sheets`, files[0]) as UploadResponse;
+    } else {
+      return await apiClient.batch(`/exams/${examId}/answer-sheets`, 
+        files.map(file => ({ file })), 
+        { stopOnError: false }
+      ) as BatchUploadResponse;
+    }
   },
 
   // 删除考试
-  deleteExam: async (examId: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.delete(`/exams/${examId}`);
-    return response.data;
+  deleteExam: async (examId: string): Promise<ApiResponse<boolean>> => {
+    return await apiClient.delete(`/exams/${examId}`);
   },
 };
 
-// 阅卷相关API
+// 阅卷相关接口
 export const markingApi = {
-  // 获取阅卷任务列表
-  getMarkingTasks: async (params?: {
-    status?: string;
-    examId?: string;
-  }): Promise<ApiResponse<any[]>> => {
-    const response = await apiClient.get('/marking/tasks', { params });
-    return response.data;
+  // 获取阅卷任务
+  getMarkingTasks: async (params?: MarkingTaskParams): Promise<MarkingTaskListResponse> => {
+    return await apiClient.get('/marking/tasks', {
+      status: params?.status,
+      examId: params?.examId
+    });
   },
 
-  // 获取下一份待阅卷答卷
-  getNextSubmission: async (examId: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get(`/exams/${examId}/marking/next_submission`);
-    return response.data;
+  // 获取下一个待阅卷提交
+  getNextSubmission: async (examId: string): Promise<SubmissionResponse> => {
+    return await apiClient.get(`/marking/exams/${examId}/next-submission`);
   },
 
   // 提交阅卷结果
-  submitMarkingResult: async (submissionId: string, result: any): Promise<ApiResponse<any>> => {
-    const response = await apiClient.put(`/submissions/${submissionId}/review`, result);
-    return response.data;
+  submitMarkingResult: async (
+    submissionId: string,
+    result: Partial<Submission>
+  ): Promise<SubmissionResponse> => {
+    return await apiClient.post(`/marking/submissions/${submissionId}/result`, result);
   },
 
   // 获取阅卷进度
-  getMarkingProgress: async (examId: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get(`/exams/${examId}/marking/progress`);
-    return response.data;
+  getMarkingProgress: async (examId: string): Promise<ApiResponse<{ progress: number; completed: number; total: number }>> => {
+    return await apiClient.get(`/marking/exams/${examId}/progress`);
   },
 };
 
-// 分析相关API
+// 分析相关接口
 export const analysisApi = {
-  // 获取考试分析报告
-  getExamAnalysis: async (examId: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get(`/analytics/exams/${examId}`);
-    return response.data;
+  // 获取考试分析
+  getExamAnalysis: async (examId: string): Promise<AnalysisResponse> => {
+    return await apiClient.get(`/analysis/exams/${examId}`);
   },
 
-  // 获取年级分析数据
-  getGradeAnalysis: async (params: {
-    subject: string;
-    grade: string;
-    timeRange?: string;
-  }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get('/analytics/grade', { params });
-    return response.data;
+  // 获取年级分析
+  getGradeAnalysis: async (params: AnalysisParams): Promise<AnalysisResponse> => {
+    return await apiClient.get('/analysis/grade', {
+      subject: params.subject,
+      grade: params.grade,
+      timeRange: params.timeRange
+    });
   },
 
-  // 获取班级分析数据
-  getClassAnalysis: async (examId: string, className: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get(`/analytics/exams/${examId}/classes/${className}`);
-    return response.data;
+  // 获取班级分析
+  getClassAnalysis: async (
+    examId: string,
+    className: string
+  ): Promise<AnalysisResponse> => {
+    return await apiClient.get(`/analysis/exams/${examId}/classes/${className}`);
   },
 
-  // 获取学生个人分析
-  getStudentAnalysis: async (examId: string, studentId: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get(`/analytics/exams/${examId}/students/${studentId}`);
-    return response.data;
+  // 获取学生分析
+  getStudentAnalysis: async (
+    examId: string,
+    studentId: string
+  ): Promise<AnalysisResponse> => {
+    return await apiClient.get(`/analysis/exams/${examId}/students/${studentId}`);
   },
 };
 
-// 用户认证API
+// 认证相关接口
 export const authApi = {
   // 登录
-  login: async (credentials: { username: string; password: string }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/auth/login', credentials);
-    return response.data;
+  login: async (credentials: LoginRequest): Promise<AuthLoginResponse> => {
+    const response = await apiClient.post('/auth/login', credentials) as AuthLoginResponse;
+    // 登录成功后保存token
+    if (response.success && response.data?.token) {
+      apiClient.setAuthToken(response.data.token, true);
+    }
+    return response;
   },
 
   // 注册
-  register: async (userData: {
-    username: string;
-    email: string;
-    password: string;
-    name: string;
-    school?: string;
-    subject?: string;
-  }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/auth/register', userData);
-    return response.data;
+  register: async (userData: RegisterRequest): Promise<UserResponse> => {
+    return await apiClient.post('/auth/register', userData);
   },
 
   // 登出
-  logout: async (): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/auth/logout');
-    return response.data;
+  logout: async (): Promise<ApiResponse<boolean>> => {
+    const response = await apiClient.post<boolean>('/auth/logout');
+    // 清除本地token
+    apiClient.clearAuthToken();
+    return response;
   },
 
   // 获取当前用户信息
-  getCurrentUser: async (): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get('/auth/me');
-    return response.data;
+  getCurrentUser: async (): Promise<UserResponse> => {
+    return await apiClient.get('/auth/me');
   },
 
   // 刷新token
-  refreshToken: async (): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/auth/refresh');
-    return response.data;
+  refreshToken: async (): Promise<AuthLoginResponse> => {
+    const response = await apiClient.post('/auth/refresh') as AuthLoginResponse;
+    if (response.success && response.data?.token) {
+      apiClient.setAuthToken(response.data.token, true);
+    }
+    return response;
   },
 
   // 更新用户资料
-  updateProfile: async (profileData: {
-    name?: string;
-    email?: string;
-    school?: string;
-    subject?: string;
-    grades?: string[];
-    avatar?: string;
-  }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.put('/auth/profile', profileData);
-    return response.data;
+  updateProfile: async (profileData: Partial<User>): Promise<UserResponse> => {
+    return await apiClient.put('/auth/profile', profileData);
   },
 
   // 更新密码
   updatePassword: async (passwordData: {
     currentPassword: string;
     newPassword: string;
-  }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.put('/auth/password', passwordData);
-    return response.data;
+  }): Promise<ApiResponse<boolean>> => {
+    return await apiClient.put('/auth/password', passwordData);
   },
 
   // 请求密码重置
-  requestPasswordReset: async (email: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/auth/password-reset/request', { email });
-    return response.data;
+  requestPasswordReset: async (email: string): Promise<ApiResponse<boolean>> => {
+    return await apiClient.post('/auth/password-reset/request', { email });
   },
 
   // 确认密码重置
@@ -291,73 +283,51 @@ export const authApi = {
     email: string;
     code: string;
     newPassword: string;
-  }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/auth/password-reset/confirm', data);
-    return response.data;
+  }): Promise<ApiResponse<boolean>> => {
+    return await apiClient.post('/auth/password-reset/confirm', data);
   },
 };
 
-// 条形码相关API
+// 条形码相关接口
 export const barcodeApi = {
   // 生成条形码
-  generateBarcode: async (data: {
-    student_id: string;
-    name: string;
-    class_name: string;
-    exam_number?: string;
-    paper_type?: string;
-    barcode_type?: string;
-    data_format?: string;
-  }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/api/barcode/generate', data);
-    return response.data;
-  },
-
-  // 识别条形码（文件上传）
-  recognizeBarcode: async (file: File): Promise<ApiResponse<any>> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const response = await apiClient.post('/api/barcode/recognize', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+  generateBarcode: async (data: BarcodeData): Promise<BarcodeResponse> => {
+    return await apiClient.post('/barcode/generate', {
+      student_id: data.studentId,
+      name: data.name,
+      class_name: data.className,
+      exam_number: data.examNumber,
+      paper_type: data.paperType,
+      barcode_type: data.barcodeType,
+      data_format: data.dataFormat
     });
-    return response.data;
   },
 
-  // 识别条形码（图片路径）
-  recognizeBarcodeByPath: async (imagePath: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/api/barcode/recognize', {
+  // 识别条形码
+  recognizeBarcode: async (file: File): Promise<BarcodeResponse> => {
+    return await apiClient.upload('/barcode/recognize', file);
+  },
+
+  // 通过路径识别条形码
+  recognizeBarcodeByPath: async (
+    imagePath: string
+  ): Promise<BarcodeResponse> => {
+    return await apiClient.post('/barcode/recognize-by-path', {
       image_path: imagePath
     });
-    return response.data;
   },
 
   // 创建条形码模板
-  createTemplate: async (templateData: {
-    name: string;
-    barcode_type: string;
-    data_format: string;
-    position: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    };
-    validation_rules?: any;
-  }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/api/barcode/template', templateData);
-    return response.data;
+  createTemplate: async (templateData: Omit<BarcodeTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<BarcodeTemplate>> => {
+    return await apiClient.post('/barcode/templates', templateData);
   },
 
-  // 获取条形码模板列表
-  getTemplates: async (): Promise<ApiResponse<any[]>> => {
-    const response = await apiClient.get('/api/barcode/templates');
-    return response.data;
+  // 获取模板列表
+  getTemplates: async (): Promise<ApiResponse<BarcodeTemplate[]>> => {
+    return await apiClient.get('/barcode/templates');
   },
 
-  // 验证条形码区域
+  // 验证区域
   validateRegion: async (data: {
     image_path: string;
     region: {
@@ -366,50 +336,53 @@ export const barcodeApi = {
       width: number;
       height: number;
     };
-  }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/api/barcode/validate', data);
-    return response.data;
+  }): Promise<ApiResponse<{ valid: boolean; confidence: number }>> => {
+    return await apiClient.post('/barcode/validate-region', data);
   },
 
-  // 获取条形码服务状态
-  getStatus: async (): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get('/api/barcode/status');
-    return response.data;
+  // 获取状态
+  getStatus: async (): Promise<ApiResponse<{ status: string; version: string }>> => {
+    return await apiClient.get('/barcode/status');
+  },
+
+  // 健康检查
+  healthCheck: async (): Promise<boolean> => {
+    return await apiClient.healthCheck();
   },
 };
 
-// 文件上传API
+// 文件上传相关接口
 export const uploadApi = {
   // 上传单个文件
-  uploadFile: async (file: File, type: 'paper' | 'answer' | 'submission'): Promise<ApiResponse<any>> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-    
-    const response = await apiClient.post('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+  uploadFile: async (
+    file: File,
+    type: 'paper' | 'answer' | 'submission',
+    options?: {
+      onProgress?: (progressEvent: ProgressEvent) => void;
+    }
+  ): Promise<UploadResponse> => {
+    return await apiClient.upload('/upload', file, {
+      onProgress: options?.onProgress,
+      metadata: { type }
+    }) as UploadResponse;
   },
 
-  // 批量上传文件
-  uploadFiles: async (files: File[], type: string): Promise<ApiResponse<any>> => {
-    const formData = new FormData();
-    files.forEach((file, index) => {
-      formData.append(`files[${index}]`, file);
-    });
-    formData.append('type', type);
-    
-    const response = await apiClient.post('/upload/batch', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      timeout: 300000, // 5分钟超时
-    });
-    return response.data;
+  // 上传多个文件
+  uploadFiles: async (
+    files: File[],
+    type: string,
+    options?: {
+      batchSize?: number;
+      stopOnError?: boolean;
+    }
+  ): Promise<BatchUploadResponse> => {
+    return await apiClient.batch('/upload/batch', 
+      files.map(file => ({ file, type })), 
+      options
+    ) as BatchUploadResponse;
   },
 };
 
+// 导出标准化API客户端实例
+export { apiClient };
 export default apiClient;

@@ -1,0 +1,58 @@
+[
+  {
+    "test_name": "数据库连接",
+    "success": false,
+    "message": "数据库初始化失败: Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')",
+    "data": null,
+    "timestamp": "2025-08-22T23:45:11.681718"
+  },
+  {
+    "test_name": "用户模型",
+    "success": false,
+    "message": "用户模型测试失败: (sqlite3.OperationalError) table users has no column named department\n[SQL: INSERT INTO users (id, username, email, hashed_password, name, role, school, subject, department, phone, address, is_active, is_verified, created_at, updated_at, last_login) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]\n[parameters: ('95cea3bc-99ae-449f-88d3-78308a33e1ad', 'test_teacher', 'test@zhiyue.ai', 'hashed_password_123', '测试教师', 'TEACHER', '测试学校', '数学', None, None, None, 1, 0, '2025-08-22 23:45:11.695488', '2025-08-22 23:45:11.695491', None)]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+    "data": null,
+    "timestamp": "2025-08-22T23:45:11.696454"
+  },
+  {
+    "test_name": "考试模型",
+    "success": false,
+    "message": "无有效用户，跳过考试模型测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:45:11.696464"
+  },
+  {
+    "test_name": "学生模型",
+    "success": false,
+    "message": "缺少依赖数据，跳过学生模型测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:45:11.696467"
+  },
+  {
+    "test_name": "答题卡模型",
+    "success": false,
+    "message": "缺少依赖数据，跳过答题卡模型测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:45:11.696469"
+  },
+  {
+    "test_name": "评分任务模型",
+    "success": false,
+    "message": "缺少答题卡数据，跳过评分任务测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:45:11.696471"
+  },
+  {
+    "test_name": "系统配置模型",
+    "success": false,
+    "message": "系统配置模型测试失败: (sqlite3.OperationalError) no such table: system_configs\n[SQL: INSERT INTO system_configs (id, config_key, config_value, description, category, is_public, required_role, version, is_active, created_at, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]\n[parameters: ('5f9383ba-7e70-4bd1-ae75-6e94509c818e', 'test_ai_grading_threshold', '{\"threshold\": 0.85, \"auto_review\": true}', '测试AI评分阈值配置', 'grading', 0, None, 1, 1, '2025-08-22 23:45:11.697101', '2025-08-22 23:45:11.697102', None)]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+    "data": null,
+    "timestamp": "2025-08-22T23:45:11.697307"
+  },
+  {
+    "test_name": "数据关系",
+    "success": false,
+    "message": "缺少测试数据，跳过关系测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:45:11.697312"
+  }
+]

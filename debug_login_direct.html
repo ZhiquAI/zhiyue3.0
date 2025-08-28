@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直接登录调试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center mb-6">🔧 登录调试工具</h1>
+        
+        <div class="space-y-4 mb-6">
+            <button onclick="testDirectAPI()" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+                🔗 测试直连API (8002端口)
+            </button>
+            <button onclick="testProxyAPI()" class="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                🌐 测试代理API (5173端口)
+            </button>
+            <button onclick="testCORS()" class="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">
+                ⚡ 测试CORS预检
+            </button>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded mb-4">
+            <h3 class="font-semibold mb-2">测试凭据</h3>
+            <p class="text-sm">用户名: demo</p>
+            <p class="text-sm">密码: demo123</p>
+        </div>
+
+        <div id="results" class="space-y-2"></div>
+    </div>
+
+    <script>
+        function addResult(title, status, details) {
+            const results = document.getElementById('results');
+            const result = document.createElement('div');
+            result.className = `p-3 rounded ${status === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`;
+            result.innerHTML = `
+                <div class="font-semibold ${status === 'success' ? 'text-green-800' : 'text-red-800'}">
+                    ${status === 'success' ? '✅' : '❌'} ${title}
+                </div>
+                <div class="text-sm mt-1 ${status === 'success' ? 'text-green-600' : 'text-red-600'}">
+                    ${details}
+                </div>
+            `;
+            results.appendChild(result);
+        }
+
+        async function testDirectAPI() {
+            try {
+                const response = await fetch('http://localhost:8002/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'demo',
+                        password: 'demo123'
+                    }),
+                    mode: 'cors'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('直连API测试', 'success', `状态: ${response.status}, 用户: ${data.user?.name}, Token: ${data.access_token?.substring(0, 20)}...`);
+                } else {
+                    addResult('直连API测试', 'error', `HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                addResult('直连API测试', 'error', `错误: ${error.message}`);
+            }
+        }
+
+        async function testProxyAPI() {
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'demo',
+                        password: 'demo123'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('代理API测试', 'success', `状态: ${response.status}, 用户: ${data.user?.name}, Token: ${data.access_token?.substring(0, 20)}...`);
+                } else {
+                    addResult('代理API测试', 'error', `HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                addResult('代理API测试', 'error', `错误: ${error.message}`);
+            }
+        }
+
+        async function testCORS() {
+            try {
+                const response = await fetch('http://localhost:8002/auth/login', {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+
+                addResult('CORS预检测试', 'success', `状态: ${response.status}, Headers: ${Array.from(response.headers.keys()).join(', ')}`);
+            } catch (error) {
+                addResult('CORS预检测试', 'error', `错误: ${error.message}`);
+            }
+        }
+
+        // 页面加载时显示当前环境信息
+        document.addEventListener('DOMContentLoaded', function() {
+            const info = document.createElement('div');
+            info.className = 'text-center mt-4 text-xs text-gray-500';
+            info.innerHTML = `
+                <div>当前页面: ${window.location.href}</div>
+                <div>User Agent: ${navigator.userAgent.substring(0, 50)}...</div>
+                <div>时间: ${new Date().toLocaleString('zh-CN')}</div>
+            `;
+            document.body.appendChild(info);
+        });
+    </script>
+</body>
+</html>

@@ -20,7 +20,7 @@ from services.enhanced_question_segmentation import EnhancedQuestionSegmentation
 from services.classified_grading_service import ClassifiedGradingService
 from services.question_classifier_service import QuestionType
 from services.gemini_service import GeminiService
-from database import get_db
+from db_connection import get_db
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/intelligent-segmentation", tags=["intelligent_segmentation"])

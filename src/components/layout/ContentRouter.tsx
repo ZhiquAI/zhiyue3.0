@@ -3,23 +3,19 @@ import { useAppContext } from '../../contexts/AppContext';
 import DashboardView from '../views/DashboardView';
 import ExamManagementView from '../views/ExamManagementView';
 import ExamDetailView from '../views/ExamDetailView';
-import MarkingCenterView from '../views/MarkingCenterView';
 import BarcodeGenerator from '../tools/BarcodeGenerator';
 
-import DataAnalysisView from '../views/DataAnalysisView';
 import LandingPage from '../views/LandingPage';
 import StudentManagement from '../../pages/StudentManagement';
 import ChoiceGrading from '../../pages/ChoiceGrading';
 import QuestionSegmentationPage from '../../pages/QuestionSegmentationPage';
+import DatabaseOptimizationDashboard from '../database/DatabaseOptimizationDashboard';
+import { Grading } from '../modules/Grading';
 
-
-
-import PreGradingCenterView from '../views/PreGradingCenterView';
-
-
-import NewMarkingWorkspace from '../workspaces/NewMarkingWorkspace';
 import AnalysisWorkspace from '../workspaces/AnalysisWorkspace';
 import AnswerSheetUploadWorkspace from '../workspaces/AnswerSheetUploadWorkspace';
+import AnalyticsWorkspace from '../workspaces/AnalyticsWorkspace';
+import PerformanceWorkspace from '../workspaces/PerformanceWorkspace';
 
 // 智能返回组件包装器
 const SmartReturnWrapper: React.FC<{ children: React.ReactElement; exam: unknown; source?: string | null }> = ({ children, source }) => {
@@ -65,6 +61,7 @@ const ContentRouter: React.FC = () => {
       case 'studentManagement':
         return (
           <StudentManagement 
+            examId={subViewInfo.exam?.id || ''}
             onBack={() => {
               setCurrentView('examList');
               setSubViewInfo({ view: null, exam: null, source: null });
@@ -80,11 +77,8 @@ const ContentRouter: React.FC = () => {
         );
       case 'marking':
         if (!subViewInfo.exam) return <ExamManagementView />;
-        return (
-          <SmartReturnWrapper exam={subViewInfo.exam} source={subViewInfo.source}>
-            <NewMarkingWorkspace exam={subViewInfo.exam} />
-          </SmartReturnWrapper>
-        );
+        // Marking functionality has been removed - redirect to exam management
+        return <ExamManagementView />;
       case 'analysis':
         if (!subViewInfo.exam) return <ExamManagementView />;
         return (
@@ -106,9 +100,10 @@ const ContentRouter: React.FC = () => {
     case 'examList':
       return <ExamManagementView />;
     case 'studentManagement':
-      return <StudentManagement />;
+      return <StudentManagement examId="" />;
     case 'markingCenter':
-      return <MarkingCenterView />;
+      // Marking center has been removed - redirect to exam management
+      return <ExamManagementView />;
 
     case 'barcodeGenerator':
       return (
@@ -156,8 +151,20 @@ const ContentRouter: React.FC = () => {
         </div>
       );
     case 'dataAnalysis':
-      return <DataAnalysisView />;
-
+      return <AnalyticsWorkspace />;
+    case 'performance':
+      return (
+        <PerformanceWorkspace 
+          onBack={() => {
+            setCurrentView('dashboard');
+            setSubViewInfo({ view: null, exam: null, source: null });
+          }}
+        />
+      );
+    case 'databaseOptimization':
+      return <DatabaseOptimizationDashboard />;
+    case 'grading':
+      return <Grading />;
 
  default:
       return <DashboardView />;

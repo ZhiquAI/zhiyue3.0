@@ -25,7 +25,7 @@ class GradingService:
         self.gemini_service = GeminiService()
         self.file_service = FileStorageService(db)
         
-    async def process_answer_sheet_batch(self, exam_id: str, file_paths: List[str]) -> Dict[str, Any]:
+    async def process_answer_sheet_batch(self, exam_id: str, file_paths: List[str], background_tasks=None) -> Dict[str, Any]:
         """批量处理答题卡"""
         try:
             results = {
@@ -44,7 +44,7 @@ class GradingService:
             
             # 并发处理OCR
             ocr_results = await asyncio.gather(
-                *[self._process_single_sheet(task) for task in tasks],
+                *[self._process_single_sheet(task, background_tasks) for task in tasks],
                 return_exceptions=True
             )
             
@@ -109,7 +109,7 @@ class GradingService:
             self.db.rollback()
             return None
     
-    async def _process_single_sheet(self, answer_sheet: AnswerSheet) -> Dict[str, Any]:
+    async def _process_single_sheet(self, answer_sheet: AnswerSheet, background_tasks=None) -> Dict[str, Any]:
         """处理单个答题卡"""
         try:
             # 更新状态为处理中
@@ -140,7 +140,7 @@ class GradingService:
             self.db.commit()
             
             # 创建评分任务
-            await self._create_grading_task(answer_sheet.id)
+            await self._create_grading_task(answer_sheet.id, background_tasks)
             
             return {
                 'sheet_id': answer_sheet.id,
@@ -154,7 +154,7 @@ class GradingService:
             self.db.commit()
             raise
     
-    async def _create_grading_task(self, answer_sheet_id: str):
+    async def _create_grading_task(self, answer_sheet_id: str, background_tasks=None):
         """创建评分任务"""
         task = GradingTask(
             answer_sheet_id=answer_sheet_id,
@@ -164,9 +164,12 @@ class GradingService:
         self.db.add(task)
         self.db.commit()
         
-        # 发送到Celery队列
-        from tasks.grading_tasks import grade_answer_sheet
-        grade_answer_sheet.delay(answer_sheet_id)
+        # 使用FastAPI BackgroundTasks替代Celery
+        if background_tasks:
+            background_tasks.add_task(self.grade_single_answer_sheet, answer_sheet_id)
+        else:
+            # 如果没有提供background_tasks，直接执行（同步模式）
+            await self.grade_single_answer_sheet(answer_sheet_id)
     
     def _extract_student_info(self, ocr_result: Dict) -> Dict[str, str]:
         """从OCR结果提取学生信息"""

@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 import logging
 
-from database import get_db
+from db_connection import get_db
 from services.barcode_service import BarcodeService
 from auth import get_current_user
 from models.production_models import User

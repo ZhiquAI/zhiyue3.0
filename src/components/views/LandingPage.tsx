@@ -213,6 +213,14 @@ const LandingPage: React.FC = () => {
               </Button>
               <Button
                 size="large"
+                className="w-full sm:w-auto h-12 lg:h-14 px-8 lg:px-10 text-base lg:text-lg font-medium border-2 border-emerald-400 text-emerald-600 hover:border-emerald-500 hover:text-emerald-700 transition-all duration-300 rounded-lg bg-white/90 backdrop-blur-sm"
+                onClick={() => window.open('/optimized-demo', '_blank')}
+              >
+                <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
+                体验优化版
+              </Button>
+              <Button
+                size="large"
                 className="w-full sm:w-auto h-12 lg:h-14 px-8 lg:px-10 text-base lg:text-lg font-medium border-2 border-slate-300 text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all duration-300 rounded-lg bg-white/90 backdrop-blur-sm"
               >
                 <Play className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />

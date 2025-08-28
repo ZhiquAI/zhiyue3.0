@@ -1,149 +1,85 @@
-# 智阅AI - 智能历史阅卷助手
+# 智岳3.0 项目文档索引
 
-一个专为初中历史教师设计的智能阅卷系统，结合先进的OCR识别和NLP技术，让您从繁重的阅卷工作中解脱，专注于更有价值的教学活动。
+## 📁 文档结构
 
-## ✨ 特性
+本文档库采用分类组织结构，便于查找和维护。
 
-- 🤖 **AI智能识别** - 先进的OCR技术，精准识别手写文字，准确率高达98%
-- 🎯 **多维度评分** - 基于历史学科特点，从知识点、论证能力、史料运用等维度智能评分
-- 📊 **深度数据分析** - 生成详细的学情分析报告，为教学决策提供数据支撑
-- 🚀 **高效便捷** - 阅卷效率提升85%，让教师有更多时间专注教学
+### 📖 使用指南 (`guides/`)
+- [**README.md**](guides/README.md) - 项目主文档
+- [**CLAUDE.md**](guides/CLAUDE.md) - Claude Code工作指南
+- [**QUICK_START.md**](guides/QUICK_START.md) - 快速启动指南
 
-## 🛠️ 技术栈
+### 🏗️ 架构设计 (`architecture/`)
+- [**智阅系统重构实施方案.md**](architecture/智阅系统重构实施方案.md) - 最新重构方案 ⭐⭐⭐
+- [**comprehensive_refactoring_plan.md**](architecture/comprehensive_refactoring_plan.md) - 全面重构计划 ⭐⭐⭐
+- [**comprehensive_system_architecture.md**](architecture/comprehensive_system_architecture.md) - 系统架构设计 ⭐⭐⭐
+- [**current_system_refactor_plan.md**](architecture/current_system_refactor_plan.md) - 当前系统重构方案 ⭐⭐
+- [**GEMINI_AI_GRADING_DESIGN.md**](architecture/GEMINI_AI_GRADING_DESIGN.md) - AI阅卷核心设计 ⭐⭐
+- [**STORAGE_ARCHITECTURE.md**](architecture/STORAGE_ARCHITECTURE.md) - 存储架构设计
 
-- **前端**: React 18 + TypeScript + Tailwind CSS + Ant Design
-- **状态管理**: Zustand
-- **图表**: Recharts
-- **构建工具**: Vite
-- **测试**: Vitest + Testing Library
-- **代码质量**: ESLint + TypeScript
+### 📋 进度管理 (`progress/`)
+- [**TASK_PROGRESS_CHECKLIST.md**](progress/TASK_PROGRESS_CHECKLIST.md) - 任务进度清单 ⭐⭐⭐
+- [**PROJECT_PROGRESS.md**](progress/PROJECT_PROGRESS.md) - 项目进度报告
 
-## 🚀 快速开始
+### ✅ 完成报告 (`completion-reports/`)
+- [**DATABASE_OPTIMIZATION_COMPLETE.md**](completion-reports/DATABASE_OPTIMIZATION_COMPLETE.md) - 数据库优化完成
+- [**API_STANDARDIZATION_COMPLETE.md**](completion-reports/API_STANDARDIZATION_COMPLETE.md) - API标准化完成
+- [**阅卷系统优化完成报告.md**](completion-reports/阅卷系统优化完成报告.md) - 系统优化完成
 
-### 环境要求
+### 🚀 功能特性 (`features/`)
+- [**ANSWER_SHEET_DESIGNER_REFACTOR.md**](features/ANSWER_SHEET_DESIGNER_REFACTOR.md) - 答题卡设计器重构
+- [**答题卡模板设计器 (Antd + Konva 方案).md**](features/答题卡模板设计器%20(Antd%20+%20Konva%20方案).md) - 模板设计器技术方案
+- [**条形码批量生成和打印工具.md**](features/条形码批量生成和打印工具.md) - 条形码工具
 
-- Node.js >= 16.0.0
-- npm >= 8.0.0
-- Python 3.8+ (用于日志同步服务)
+### 🔧 技术文档 (`technical/`)
+- [**SERVICE_PERSISTENCE_GUIDE.md**](technical/SERVICE_PERSISTENCE_GUIDE.md) - 服务持久化指南
+- [**LOG_SYNC_GUIDE.md**](technical/LOG_SYNC_GUIDE.md) - 日志同步指南
+- [**INTEGRATION_TEST_PLAN.md**](technical/INTEGRATION_TEST_PLAN.md) - 集成测试计划
+- [**GEMINI_SETUP.md**](technical/GEMINI_SETUP.md) - Gemini AI配置
+- [**GEMINI_OCR_SETUP.md**](technical/GEMINI_OCR_SETUP.md) - Gemini OCR配置
+- [**BUBBLE_SHEET_GUIDE.md**](technical/BUBBLE_SHEET_GUIDE.md) - 答题卡指南
+- [**README_BACKEND.md**](technical/README_BACKEND.md) - 后端开发文档
+- [**智阅阅卷系统模块功能说明.md**](technical/智阅阅卷系统模块功能说明.md) - 模块功能说明
 
-### 安装依赖
-
-```bash
-# 安装前端依赖
-npm install
-
-# 安装Python依赖（用于开发调试）
-pip3 install flask flask-cors watchdog
-```
-
-### 启动开发环境
-
-#### 方法1: 一键启动（推荐）
-```bash
-# 启动完整开发环境（包含实时日志同步）
-./start_dev_with_logs.sh
-```
-
-#### 方法2: 分别启动
-```bash
-# 启动前端服务
-bash start_frontend.sh
-
-# 启动后端服务（可选）
-python3 simple_backend.py
-```
-
-### 访问应用
-
-- 🌐 **前端应用**: http://localhost:5174/
-- 🔧 **日志服务**: http://localhost:3001/
-- 📊 **后端API**: http://localhost:8000/
-
-## 🔍 开发调试
-
-### 实时日志监控
-
-在开发过程中，您可以实时监控浏览器中的错误和API调用：
-
-```bash
-# 监控所有日志
-python3 watch_logs.py -t all
-
-# 只监控错误
-python3 watch_logs.py -t errors
-
-# 只监控API调用
-python3 watch_logs.py -t api
-```
-
-### 浏览器调试工具
-
-在浏览器控制台中使用以下命令：
-
-```javascript
-// 测试Gemini API连接
-testGemini()
-
-// 查看错误列表
-getErrors()
-
-// 下载调试日志
-__LOG_SYNC__.downloadLogs()
-```
-
-详细使用指南: [docs/QUICK_START.md](docs/QUICK_START.md)
-
-## 📚 文档
-
-- [快速开始指南](docs/QUICK_START.md) - 5分钟快速上手
-- [日志同步系统](docs/LOG_SYNC_GUIDE.md) - 完整的调试工具文档
-- [Gemini配置指南](docs/GEMINI_SETUP.md) - AI服务配置说明
-
-## 🎯 核心功能
-
-### 智能试卷识别
-- 📄 支持PDF、JPG、PNG格式试卷
-- 🔍 自动识别题目类型和分值
-- 📝 提取完整题目内容和知识点
-
-### 智能阅卷评分
-- 🤖 多维度评分标准
-- 📊 实时评分进度跟踪
-- 💡 AI生成评分建议
-
-### 数据分析报告
-- 📈 班级成绩分析
-- 👤 个人能力画像
-- 🎯 学习建议生成
-
-## 🛠️ 开发工具
-
-本项目集成了强大的开发调试工具：
-
-- **实时错误监控** - 浮动面板显示运行时错误
-- **API调用日志** - 详细记录所有网络请求
-- **日志文件同步** - 将浏览器日志同步到Cursor
-- **性能监控** - 响应时间和成功率统计
-
-## 🤝 贡献指南
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 🙏 致谢
-
-- [Ant Design](https://ant.design/) - 优秀的React UI组件库
-- [Recharts](https://recharts.org/) - 强大的图表库
-- [Gemini AI](https://ai.google.dev/) - 先进的AI服务
-- [Vite](https://vitejs.dev/) - 快速的构建工具
+### 📚 历史归档 (`archive/`)
+- 包含已过时或被替代的中间阶段文档
+- 保留作为历史参考，不用于当前开发
 
 ---
 
-**💡 提示**: 首次使用请查看 [快速开始指南](docs/QUICK_START.md) 获得最佳体验！
+## 🎯 重要文档快速索引
+
+### 🔥 必读文档
+1. [智阅系统重构实施方案](architecture/智阅系统重构实施方案.md) - 当前重构的核心指导
+2. [任务进度清单](progress/TASK_PROGRESS_CHECKLIST.md) - 实时任务状态
+3. [Claude工作指南](guides/CLAUDE.md) - 开发协助指南
+
+### ⚡ 开发相关
+- [快速启动](guides/QUICK_START.md) - 环境搭建和启动
+- [后端开发文档](technical/README_BACKEND.md) - 后端开发指南
+- [服务持久化](technical/SERVICE_PERSISTENCE_GUIDE.md) - 服务部署
+
+### 🤖 AI功能
+- [Gemini AI阅卷设计](architecture/GEMINI_AI_GRADING_DESIGN.md) - AI阅卷核心
+- [Gemini配置指南](technical/GEMINI_SETUP.md) - AI服务配置
+
+---
+
+## 📊 文档统计
+
+- **总文档数**: 31个 (清理前: 42个)
+- **活跃文档**: 28个
+- **归档文档**: 9个
+- **删除文档**: 10个
+
+## 📝 文档维护
+
+- **更新频率**: 重要文档实时更新
+- **维护责任**: 相关功能开发者
+- **版本控制**: Git版本管理
+- **清理周期**: 每月评估一次
+
+---
+
+*最后更新: 2025-08-21*  
+*文档清理完成，新结构生效*

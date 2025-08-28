@@ -1,0 +1,58 @@
+[
+  {
+    "test_name": "数据库连接",
+    "success": false,
+    "message": "数据库初始化失败: Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')",
+    "data": null,
+    "timestamp": "2025-08-22T23:47:59.301455+00:00"
+  },
+  {
+    "test_name": "用户模型",
+    "success": false,
+    "message": "用户模型测试失败: Instance <User at 0x107284590> is not bound to a Session; attribute refresh operation cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)",
+    "data": null,
+    "timestamp": "2025-08-22T23:47:59.318655+00:00"
+  },
+  {
+    "test_name": "考试模型",
+    "success": false,
+    "message": "无有效用户，跳过考试模型测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:47:59.318671+00:00"
+  },
+  {
+    "test_name": "学生模型",
+    "success": false,
+    "message": "缺少依赖数据，跳过学生模型测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:47:59.318675+00:00"
+  },
+  {
+    "test_name": "答题卡模型",
+    "success": false,
+    "message": "缺少依赖数据，跳过答题卡模型测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:47:59.318677+00:00"
+  },
+  {
+    "test_name": "评分任务模型",
+    "success": false,
+    "message": "缺少答题卡数据，跳过评分任务测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:47:59.318679+00:00"
+  },
+  {
+    "test_name": "系统配置模型",
+    "success": false,
+    "message": "系统配置模型测试失败: Instance <SystemConfig at 0x107284590> is not bound to a Session; attribute refresh operation cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)",
+    "data": null,
+    "timestamp": "2025-08-22T23:47:59.321093+00:00"
+  },
+  {
+    "test_name": "数据关系",
+    "success": false,
+    "message": "缺少测试数据，跳过关系测试",
+    "data": null,
+    "timestamp": "2025-08-22T23:47:59.321103+00:00"
+  }
+]

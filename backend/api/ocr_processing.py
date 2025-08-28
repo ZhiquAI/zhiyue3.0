@@ -17,13 +17,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 try:
-    from backend.database import get_db
-    from backend.auth import get_current_user
-    from backend.models.production_models import User, AnswerSheet, GradingTask
-    from backend.services.gemini_ocr_service import GeminiOCRService
-    from backend.services.question_segmentation_service import QuestionSegmentationService
-except ImportError:
     from database import get_db
+    from auth import get_current_user
+    from models.production_models import User, AnswerSheet, GradingTask
+    from services.gemini_ocr_service import GeminiOCRService
+    from services.question_segmentation_service import QuestionSegmentationService
+    from services.ocr_service import OCRService
+except ImportError:
+    from db_connection import get_db
     from auth import get_current_user
     from models.production_models import User, AnswerSheet, GradingTask
     try:
@@ -90,7 +91,7 @@ class TaskStatus(BaseModel):
     current_sheet: Optional[str] = None
 
 # 初始化服务
-ocr_service = GeminiOCRService()
+# ocr_service = GeminiOCRService() # 将在依赖注入中创建
 segmentation_service = QuestionSegmentationService()
 
 # 线程池执行器
@@ -118,6 +119,28 @@ class PriorityTask:
 task_queue = []
 task_cache = {}
 queue_lock = asyncio.Lock()
+
+@router.post("/grade_subjective/{answer_sheet_id}", status_code=status.HTTP_202_ACCEPTED)
+async def grade_subjective_questions_endpoint(
+    answer_sheet_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """触发单个答题卡的主观题智能评分"""
+    answer_sheet = db.query(AnswerSheet).filter(AnswerSheet.id == answer_sheet_id).first()
+    if not answer_sheet:
+        raise HTTPException(status_code=404, detail="答题卡不存在")
+
+    # 权限检查 (示例)
+    # if answer_sheet.exam.created_by != current_user.id:
+    #     raise HTTPException(status_code=403, detail="无权操作")
+
+    ocr_service = OCRService(db)
+    background_tasks.add_task(ocr_service.grade_subjective_questions, answer_sheet_id)
+
+    return {"message": "主观题评分任务已启动", "answer_sheet_id": answer_sheet_id}
+
 
 @router.post("/process", response_model=OCRResult)
 async def process_single_answer_sheet(
@@ -325,7 +348,7 @@ async def process_batch_ocr_background(task_id: str, answer_sheet_ids: List[str]
         task_cache[task_id]["progress_details"] = []
         
         # 获取数据库会话
-        from backend.database import SessionLocal
+        from database import SessionLocal
         db = SessionLocal()
         
         try:
@@ -590,7 +613,7 @@ async def get_ocr_statistics(
     
     if exam_id:
         # 权限检查
-        from backend.models.production_models import Exam
+        from models.production_models import Exam
         exam = db.query(Exam).filter(Exam.id == exam_id).first()
         if not exam:
             raise HTTPException(status_code=404, detail="考试不存在")
@@ -601,7 +624,7 @@ async def get_ocr_statistics(
         query = query.filter(AnswerSheet.exam_id == exam_id)
     elif current_user.role == "teacher":
         # 教师只能看自己创建的考试
-        from backend.models.production_models import Exam
+        from models.production_models import Exam
         teacher_exams = db.query(Exam).filter(Exam.created_by == current_user.id).all()
         exam_ids = [exam.id for exam in teacher_exams]
         query = query.filter(AnswerSheet.exam_id.in_(exam_ids))

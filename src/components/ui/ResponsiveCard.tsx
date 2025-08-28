@@ -1,46 +1,45 @@
 import React from 'react';
 import { Card, CardProps } from 'antd';
-import { cn } from '../../utils/cn';
+import { cn, cardStyles, layout } from '../../design-system';
 
-type CustomCardVariant = 'default' | 'compact' | 'elevated';
+type CustomCardVariant = 'default' | 'compact' | 'elevated' | 'flat' | 'outline' | 'interactive';
+type CardSize = 'sm' | 'md' | 'lg' | 'xl';
 
 interface ResponsiveCardProps extends Omit<CardProps, 'variant'> {
   customVariant?: CustomCardVariant;
+  customSize?: CardSize;
   responsive?: boolean;
   children: React.ReactNode;
 }
 
 const ResponsiveCard: React.FC<ResponsiveCardProps> = ({
   customVariant = 'default',
+  customSize = 'md',
   responsive = true,
   className,
   children,
   ...props
 }) => {
-  const getVariantClasses = () => {
-    switch (customVariant) {
-      case 'compact':
-        return responsive 
-          ? 'responsive-card-compact' 
-          : 'p-2 sm:p-3 md:p-4';
-      case 'elevated':
-        return responsive 
-          ? 'responsive-card shadow-strong' 
-          : 'p-3 sm:p-4 md:p-6 shadow-strong';
-      default:
-        return responsive 
-          ? 'responsive-card' 
-          : 'p-3 sm:p-4 md:p-6';
-    }
+  const getCardClasses = () => {
+    const baseClasses = cardStyles.base;
+    const variantClasses = cardStyles.variants[customVariant] || cardStyles.variants.default;
+    const sizeClasses = cardStyles.sizes[customSize];
+    
+    const responsiveClasses = responsive 
+      ? 'w-full' 
+      : '';
+
+    return cn(
+      baseClasses,
+      variantClasses,
+      sizeClasses,
+      responsiveClasses
+    );
   };
 
   return (
     <Card
-      className={cn(
-        'transition-all duration-200 hover:shadow-medium',
-        getVariantClasses(),
-        className
-      )}
+      className={cn(getCardClasses(), className)}
       {...props}
     >
       {children}

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录修复验证</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg">
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="text-3xl">🎉</span>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">登录问题已修复!</h1>
+            <p class="text-gray-600">后端API格式已更新，现在应该可以正常登录了</p>
+        </div>
+
+        <div class="space-y-4 mb-8">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 class="font-semibold text-green-800 mb-2">✅ 已完成的修复</h3>
+                <ul class="text-sm text-green-700 space-y-1">
+                    <li>• 后端返回标准API格式 (success/data 包装)</li>
+                    <li>• 前端兼容新的响应格式</li>
+                    <li>• CORS配置已优化</li>
+                    <li>• 支持demo123密码</li>
+                    <li>• 添加OPTIONS预检处理</li>
+                </ul>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 class="font-semibold text-blue-800 mb-2">🔑 测试凭据</h3>
+                <div class="text-sm text-blue-700 space-y-1">
+                    <div>用户名: <span class="font-mono bg-white px-2 py-1 rounded">demo</span></div>
+                    <div>密码: <span class="font-mono bg-white px-2 py-1 rounded">demo123</span></div>
+                </div>
+            </div>
+
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h3 class="font-semibold text-purple-800 mb-2">🚀 服务状态</h3>
+                <div class="text-sm text-purple-700 space-y-1">
+                    <div>前端: <span class="text-green-600">✅ http://localhost:5173</span></div>
+                    <div>后端: <span class="text-green-600">✅ http://localhost:8002</span></div>
+                    <div>代理: <span class="text-green-600">✅ /auth → 8002</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <a href="http://localhost:5173/auth" 
+               class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 flex items-center justify-center">
+                🚪 立即登录
+            </a>
+            
+            <div class="flex space-x-3">
+                <button onclick="testAPI()" 
+                        class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 transition duration-200">
+                    🧪 测试API
+                </button>
+                <a href="http://localhost:5173" 
+                   class="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-gray-700 transition duration-200 text-center">
+                    🏠 主页
+                </a>
+            </div>
+        </div>
+
+        <div id="test-result" class="mt-6 hidden"></div>
+
+        <div class="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
+            <p>修复时间: <span id="current-time"></span></p>
+            <p class="mt-1">如果仍有问题，请尝试清除浏览器缓存 (Ctrl+Shift+R)</p>
+        </div>
+    </div>
+
+    <script>
+        // 显示当前时间
+        document.getElementById('current-time').textContent = new Date().toLocaleString('zh-CN');
+
+        async function testAPI() {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.className = 'mt-6 p-4 rounded-lg border';
+            resultDiv.innerHTML = '<div class="text-center text-blue-600">🔄 测试API中...</div>';
+            resultDiv.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: 'demo',
+                        password: 'demo123'
+                    })
+                });
+
+                const data = await response.json();
+                console.log('API响应:', data);
+
+                if (response.ok && data.success) {
+                    resultDiv.className = 'mt-6 p-4 rounded-lg border bg-green-50 border-green-200';
+                    resultDiv.innerHTML = `
+                        <div class="text-green-800">
+                            <div class="font-semibold mb-2">✅ API测试成功!</div>
+                            <div class="text-sm space-y-1">
+                                <div>用户: ${data.data.user.name}</div>
+                                <div>Token: ${data.data.token.substring(0, 20)}...</div>
+                                <div>格式: 标准API响应 (success/data)</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.className = 'mt-6 p-4 rounded-lg border bg-red-50 border-red-200';
+                    resultDiv.innerHTML = `
+                        <div class="text-red-800">
+                            <div class="font-semibold">❌ API测试失败</div>
+                            <div class="text-sm mt-1">${data.message || '未知错误'}</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('测试错误:', error);
+                resultDiv.className = 'mt-6 p-4 rounded-lg border bg-red-50 border-red-200';
+                resultDiv.innerHTML = `
+                    <div class="text-red-800">
+                        <div class="font-semibold">❌ 网络错误</div>
+                        <div class="text-sm mt-1">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -4,8 +4,8 @@ import redis
 import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Set
-from backend.config.settings import settings
-from backend.middleware.permissions import permission_manager, get_user_permissions
+from config.settings import settings
+from middleware.permissions import permission_manager, get_user_permissions
 import hashlib
 import logging
 

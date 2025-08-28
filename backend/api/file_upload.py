@@ -1,351 +1,400 @@
-"""
-文件上传API端点
-"""
+"""文件上传API端点"""
+
+import json
+import logging
+from pathlib import Path
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from typing import List, Optional
-import logging
-from pathlib import Path
 
 try:
-    from backend.database import get_db
-    from backend.services.file_storage_service import FileStorageService
-    from backend.services.ocr_service import OCRService
-    from backend.models.file_storage import FileStorage
-    from backend.auth import get_current_user
-    from backend.config.settings import settings
-except ImportError:
     from database import get_db
     from services.file_storage_service import FileStorageService
-    from services.ocr_service import OCRService
+    from services.exam_service import ExamService
+    
+    from services.processing_queue_service import ProcessingQueueService
+    from services.auth_service import get_current_user
+    from models.user import User
+    
+    from models.processing_queue import (
+        ProcessingQueue, ProcessingStatus
+    )
     from models.file_storage import FileStorage
-    from auth import get_current_user
-    from config.settings import settings
+    from utils.response import success_response
+    from utils.file_security import FileSecurityValidator
+    from utils.logger import get_logger
+    from config import settings
+except ImportError as e:
+    logging.error(f"Import error: {e}")
+    raise
 
-logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/files", tags=["文件管理"])
+logger = get_logger(__name__)
+router = APIRouter(prefix="/api/files", tags=["files"])
 
-@router.post("/upload/paper", response_model=dict)
-async def upload_paper(
-    exam_id: str = Form(...),
-    paper_type: str = Form(..., description="试卷类型: original/reference_answer"),
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """上传试卷文件"""
-    try:
-        storage_service = FileStorageService(db)
-        
-        # 验证试卷类型
-        if paper_type not in ['original', 'reference_answer']:
-            raise HTTPException(status_code=400, detail="无效的试卷类型")
-        
-        # 上传文件
-        file_record = await storage_service.upload_file(
-            file=file,
-            exam_id=exam_id,
-            file_category='paper',
-            uploaded_by=current_user.id
-        )
-        
-        return {
-            "success": True,
-            "message": "试卷上传成功",
-            "data": {
-                "file_id": file_record.id,
-                "filename": file_record.original_filename,
-                "file_size": file_record.file_size,
-                "processing_status": file_record.processing_status
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"Paper upload failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"试卷上传失败: {str(e)}")
+# 初始化安全验证器
+security_validator = FileSecurityValidator()
 
-@router.post("/upload/answer-sheets", response_model=dict)
+
+@router.post("/upload/answer-sheets")
 async def upload_answer_sheets(
-    exam_id: str = Form(...),
+    exam_id: int = Form(...),
     files: List[UploadFile] = File(...),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    processing_config: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """批量上传答题卡"""
     try:
-        storage_service = FileStorageService(db)
-        
-        # 批量上传
-        results = await storage_service.batch_upload_answer_sheets(
-            files=files,
-            exam_id=exam_id,
-            uploaded_by=current_user.id
-        )
-        
-        return {
-            "success": True,
-            "message": f"答题卡上传完成，成功{results['success_count']}个，失败{results['failed_count']}个",
-            "data": results
-        }
-        
-    except Exception as e:
-        logger.error(f"Answer sheets upload failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"答题卡上传失败: {str(e)}")
+        # 验证考试是否存在
+        exam_service = ExamService(db)
+        exam = exam_service.get_exam_by_id(exam_id)
+        if not exam:
+            raise HTTPException(status_code=404, detail="考试不存在")
 
-@router.get("/exam/{exam_id}", response_model=dict)
+        # 验证文件
+        if not files:
+            raise HTTPException(status_code=400, detail="请选择要上传的文件")
+
+        # 使用增强的安全验证
+        for file in files:
+            validation_result = security_validator.validate_file(
+                file=file,
+                allowed_types=[".pdf", ".jpg", ".jpeg", ".png"],
+                max_size=10 * 1024 * 1024  # 10MB for answer sheets
+            )
+            
+            logger.info(
+                f"Security validation passed for {file.filename}: "
+                f"type={validation_result['mime_type']}, "
+                f"size={validation_result['file_size']}"
+            )
+
+        # 解析处理配置
+        config = None
+        if processing_config:
+            try:
+                config = json.loads(processing_config)
+            except json.JSONDecodeError:
+                raise HTTPException(
+                    status_code=400, detail="处理配置格式错误"
+                )
+
+        # 批量上传文件
+        storage_service = FileStorageService(db)
+        result = await storage_service.batch_upload_answer_sheets(
+            exam_id=exam_id,
+            files=files,
+            user_id=current_user.id,
+            processing_config=config
+        )
+
+        return success_response(data=result, message="答题卡上传成功")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Answer sheet upload failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"答题卡上传失败: {str(e)}"
+        )
+
+
+@router.get("/exam/{exam_id}")
 async def get_exam_files(
-    exam_id: str,
-    file_category: Optional[str] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    exam_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """获取考试相关文件列表"""
+    """获取考试的文件列表"""
     try:
         storage_service = FileStorageService(db)
-        files = storage_service.get_files_by_exam(exam_id, file_category)
-        
-        return {
-            "success": True,
-            "data": [
-                {
-                    "id": f.id,
-                    "original_filename": f.original_filename,
-                    "file_category": f.file_category,
-                    "file_purpose": f.file_purpose,
-                    "file_size": f.file_size,
-                    "processing_status": f.processing_status,
-                    "created_at": f.created_at.isoformat(),
-                    "mime_type": f.mime_type
-                }
-                for f in files
-            ]
-        }
-        
+        files = storage_service.get_files_by_exam(exam_id)
+        return success_response(data=files)
     except Exception as e:
         logger.error(f"Get exam files failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取文件列表失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"获取文件列表失败: {str(e)}"
+        )
+
 
 @router.get("/download/{file_id}")
 async def download_file(
     file_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """下载文件"""
     try:
         storage_service = FileStorageService(db)
         file_record = storage_service.get_file_by_id(file_id)
-        
+
         if not file_record:
             raise HTTPException(status_code=404, detail="文件不存在")
-        
+
         file_path = Path(settings.STORAGE_BASE_PATH) / file_record.file_path
-        
+
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="文件不存在")
-        
+
         return FileResponse(
             path=str(file_path),
             filename=file_record.original_filename,
             media_type=file_record.mime_type
         )
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"File download failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"文件下载失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"文件下载失败: {str(e)}"
+        )
 
-@router.delete("/{file_id}", response_model=dict)
+
+@router.delete("/delete/{file_id}")
 async def delete_file(
     file_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """删除文件"""
     try:
         storage_service = FileStorageService(db)
         success = storage_service.delete_file(file_id)
-        
+
         if not success:
-            raise HTTPException(status_code=404, detail="文件不存在或删除失败")
-        
-        return {
-            "success": True,
-            "message": "文件删除成功"
-        }
-        
+            raise HTTPException(status_code=404, detail="文件不存在")
+
+        return success_response(message="文件删除成功")
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"File deletion failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"文件删除失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"文件删除失败: {str(e)}"
+        )
 
-@router.post("/process/{file_id}", response_model=dict)
-async def process_file(
+
+@router.post("/process/paper/{file_id}")
+async def trigger_paper_processing(
     file_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """手动触发文件处理"""
+    """手动触发试卷文件处理"""
     try:
         storage_service = FileStorageService(db)
         file_record = storage_service.get_file_by_id(file_id)
-        
+
         if not file_record:
             raise HTTPException(status_code=404, detail="文件不存在")
-        
-        ocr_service = OCRService(db)
-        
-        if file_record.file_category == 'paper':
-            result = await ocr_service.process_paper_document(file_record)
-        elif file_record.file_category == 'answer_sheet':
-            result = await ocr_service.process_answer_sheet(file_record)
-        else:
-            raise HTTPException(status_code=400, detail="不支持的文件类型")
-        
-        return {
-            "success": True,
-            "message": "文件处理完成",
-            "data": result
-        }
-        
-    except Exception as e:
-        logger.error(f"File processing failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"文件处理失败: {str(e)}")
 
-@router.get("/processing-status/{file_id}", response_model=dict)
-async def get_processing_status(
+        if file_record.file_type != "paper":
+            raise HTTPException(
+                status_code=400, detail="只能处理试卷文件"
+            )
+
+        # 添加到处理队列
+        queue_service = ProcessingQueueService(db)
+        task = queue_service.add_task(
+            file_id=file_id,
+            task_type="paper_ocr",
+            priority=1
+        )
+
+        return success_response(
+            data={"task_id": task.id}, message="试卷处理任务已添加到队列"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Paper processing trigger failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"触发试卷处理失败: {str(e)}"
+        )
+
+
+@router.post("/process/answer-sheet/{file_id}")
+async def trigger_answer_sheet_processing(
     file_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """手动触发答题卡文件处理"""
+    try:
+        storage_service = FileStorageService(db)
+        file_record = storage_service.get_file_by_id(file_id)
+
+        if not file_record:
+            raise HTTPException(status_code=404, detail="文件不存在")
+
+        if file_record.file_type != "answer_sheet":
+            raise HTTPException(
+                status_code=400, detail="只能处理答题卡文件"
+            )
+
+        # 添加到处理队列
+        queue_service = ProcessingQueueService(db)
+        task = queue_service.add_task(
+            file_id=file_id,
+            task_type="answer_recognition",
+            priority=2
+        )
+
+        return success_response(
+            data={"task_id": task.id}, message="答题卡处理任务已添加到队列"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Answer sheet processing trigger failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"触发答题卡处理失败: {str(e)}"
+        )
+
+
+@router.get("/processing-status/{file_id}")
+async def get_file_processing_status(
+    file_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """获取文件处理状态"""
     try:
-        storage_service = FileStorageService(db)
-        file_record = storage_service.get_file_by_id(file_id)
-        
-        if not file_record:
-            raise HTTPException(status_code=404, detail="文件不存在")
-        
-        return {
-            "success": True,
-            "data": {
-                "file_id": file_record.id,
-                "processing_status": file_record.processing_status,
-                "processing_result": file_record.processing_result,
-                "error_message": file_record.error_message,
-                "updated_at": file_record.updated_at.isoformat()
-            }
-        }
-        
+        queue_service = ProcessingQueueService(db)
+        tasks = queue_service.get_tasks_by_file_id(file_id)
+
+        if not tasks:
+            return success_response(
+                data={"status": "not_queued", "tasks": []}
+            )
+
+        task_data = []
+        for task in tasks:
+            task_data.append({
+                "id": task.id,
+                "task_type": task.task_type,
+                "status": task.status.value,
+                "progress": task.progress,
+                "error_message": task.error_message,
+                "created_at": task.created_at.isoformat(),
+                "updated_at": task.updated_at.isoformat()
+            })
+
+        return success_response(data={"tasks": task_data})
+
     except Exception as e:
         logger.error(f"Get processing status failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取处理状态失败: {str(e)}")
-
-@router.get("/view/{file_id}")
-async def view_file(
-    file_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """查看文件（返回文件内容用于预览）"""
-    try:
-        storage_service = FileStorageService(db)
-        file_record = storage_service.get_file_by_id(file_id)
-        
-        if not file_record:
-            raise HTTPException(status_code=404, detail="文件不存在")
-        
-        file_path = Path(settings.STORAGE_BASE_PATH) / file_record.file_path
-        
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail="文件不存在")
-        
-        return FileResponse(
-            path=str(file_path),
-            media_type=file_record.mime_type,
-            headers={"Content-Disposition": "inline"}
+        raise HTTPException(
+            status_code=500, detail=f"获取处理状态失败: {str(e)}"
         )
-        
+
+
+@router.get("/exam/{exam_id}/processing-stats")
+async def get_exam_processing_stats(
+    exam_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取考试答题卡处理统计"""
+    try:
+        # 获取考试的所有答题卡文件
+        files = db.query(FileStorage).filter(
+            FileStorage.exam_id == exam_id,
+            FileStorage.file_type == "answer_sheet"
+        ).all()
+
+        total_count = len(files)
+        completed_count = 0
+        processing_count = 0
+        error_count = 0
+        pending_count = 0
+        matched_students = 0
+        unmatched_students = 0
+
+        for file in files:
+            # 检查处理状态
+            tasks = db.query(ProcessingQueue).filter(
+                ProcessingQueue.file_id == file.id
+            ).all()
+
+            if not tasks:
+                pending_count += 1
+            else:
+                latest_task = max(tasks, key=lambda t: t.updated_at)
+                if latest_task.status == ProcessingStatus.COMPLETED:
+                    completed_count += 1
+                elif latest_task.status == ProcessingStatus.PROCESSING:
+                    processing_count += 1
+                elif latest_task.status == ProcessingStatus.FAILED:
+                    error_count += 1
+                else:
+                    pending_count += 1
+
+            # 检查学生匹配状态
+            if hasattr(file, 'student_id') and file.student_id:
+                matched_students += 1
+            else:
+                unmatched_students += 1
+
+        stats = {
+            "total_count": total_count,
+            "completed_count": completed_count,
+            "processing_count": processing_count,
+            "error_count": error_count,
+            "pending_count": pending_count,
+            "matched_students": matched_students,
+            "unmatched_students": unmatched_students,
+            "completion_rate": (
+                completed_count / total_count * 100 if total_count > 0 else 0
+            ),
+            "match_rate": (
+                matched_students / total_count * 100 if total_count > 0 else 0
+            )
+        }
+
+        return success_response(data=stats)
+
     except Exception as e:
-        logger.error(f"File view failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"文件查看失败: {str(e)}")
+        logger.error(f"Get processing stats failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"获取处理统计失败: {str(e)}"
+        )
+
 
 @router.get("/segmentation/{file_id}", response_model=dict)
 async def get_file_segmentation(
     file_id: str,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """获取文件的分割数据"""
+    """获取文件的分割信息"""
     try:
         storage_service = FileStorageService(db)
         file_record = storage_service.get_file_by_id(file_id)
-        
+
         if not file_record:
             raise HTTPException(status_code=404, detail="文件不存在")
-        
-        # 检查是否有分割数据
-        segmented_questions = getattr(file_record, 'segmented_questions', None)
-        segmentation_quality = getattr(file_record, 'segmentation_quality', None)
-        
-        if not segmented_questions:
-            # 返回默认的空分割数据
-            return {
-                "success": True,
-                "data": {
-                    "questions": [],
-                    "total_questions": 0,
-                    "segmentation_quality": segmentation_quality or {"quality_level": "not_processed"},
-                    "processing_status": "pending"
-                }
-            }
-        
-        return {
-            "success": True,
-            "data": {
-                "questions": segmented_questions,
-                "total_questions": len(segmented_questions) if segmented_questions else 0,
-                "segmentation_quality": segmentation_quality,
-                "processing_status": "completed"
-            }
+
+        # 这里应该返回文件的分割信息
+        # 具体实现取决于分割数据的存储方式
+        segmentation_data = {
+            "file_id": file_id,
+            "segments": [],  # 实际的分割数据
+            "metadata": {}
         }
-        
+
+        return success_response(data=segmentation_data)
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Get file segmentation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取分割数据失败: {str(e)}")
-
-@router.post("/segmentation/{file_id}", response_model=dict)
-async def save_file_segmentation(
-    file_id: str,
-    segmentation_data: dict,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """保存文件的分割数据"""
-    try:
-        storage_service = FileStorageService(db)
-        file_record = storage_service.get_file_by_id(file_id)
-        
-        if not file_record:
-            raise HTTPException(status_code=404, detail="文件不存在")
-        
-        # 保存分割数据
-        file_record.segmented_questions = segmentation_data.get('questions', [])
-        file_record.segmentation_quality = segmentation_data.get('segmentation_quality', {})
-        
-        db.commit()
-        
-        return {
-            "success": True,
-            "message": "分割数据保存成功",
-            "data": {
-                "file_id": file_id,
-                "questions_count": len(segmentation_data.get('questions', [])),
-                "updated_at": file_record.updated_at.isoformat()
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"Save file segmentation failed: {str(e)}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"保存分割数据失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"获取文件分割信息失败: {str(e)}"
+        )

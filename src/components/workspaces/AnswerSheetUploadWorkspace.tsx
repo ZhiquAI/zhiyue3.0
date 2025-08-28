@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Breadcrumb, Button, Upload, Alert, Table, Tag, Modal, Space, Switch, Steps } from 'antd';
+import { Card, Row, Col, Breadcrumb, Button, Upload, Alert, Table, Tag, Modal, Space, Switch } from 'antd';
 import { message } from '../../utils/message';
 import apiClient from '../../services/api';
 import { CheckCircleOutlined, RobotOutlined, LeftOutlined, RightOutlined, SettingOutlined } from '@ant-design/icons';
@@ -7,16 +7,11 @@ import { useAppContext } from '../../contexts/AppContext';
 import { Exam } from '../../types/exam';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import QuestionSegmentationViewer from './QuestionSegmentationViewer';
-import SubjectiveQuestionSegmentation from './SubjectiveQuestionSegmentation';
-import ChoiceQuestionSegmentation from './ChoiceQuestionSegmentation';
 import StudentInfoProcessor from './StudentInfoProcessor';
 import StudentInfoRegionCutter from './StudentInfoRegionCutter';
-import BatchStudentInfoProcessor from './BatchStudentInfoProcessor';
-
 import BarcodeInfoProcessor from './BarcodeInfoProcessor';
 import OptimizedWorkflowManager from './OptimizedWorkflowManager';
-
-const { Step } = Steps;
+import UploadProgressStats from '../upload/UploadProgressStats';
 
 interface AnswerSheetUploadWorkspaceProps {
   exam: Exam;
@@ -35,20 +30,7 @@ interface QuestionRegion {
   isManuallyAdjusted: boolean;
 }
 
-interface SegmentationVersion {
-  id: string;
-  timestamp: string;
-  regions: QuestionRegion[];
-  statistics: {
-    totalQuestions: number;
-    subjectiveQuestions: number;
-    qualityScore: number;
-    issues: string[];
-  };
-  mode: 'ai' | 'manual' | 'hybrid';
-  comment?: string;
-  isActive: boolean;
-}
+
 
 interface ProcessedAnswerSheet {
   id: string;
@@ -96,7 +78,6 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
-  const [selectedSheet, setSelectedSheet] = useState<ProcessedAnswerSheet | null>(null);
   const [segmentationViewerVisible, setSegmentationViewerVisible] = useState(false);
   const [selectedSegmentationData, setSelectedSegmentationData] = useState<any>(null);
   const [selectedSheetId, setSelectedSheetId] = useState<string | null>(null);
@@ -110,11 +91,6 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
 
   const [abnormalSheetsVisible, setAbnormalSheetsVisible] = useState(false);
   const [barcodeInfoProcessorVisible, setBarcodeInfoProcessorVisible] = useState(false);
-  
-  // 新增：工作流管理状态
-  const [currentWorkflowStep, setCurrentWorkflowStep] = useState(0);
-  const [batchStudentInfoProcessorVisible, setBatchStudentInfoProcessorVisible] = useState(false);
-  const [studentInfoProcessingMode, setStudentInfoProcessingMode] = useState<'auto' | 'manual' | 'batch'>('auto');
   const [processingConfig, setProcessingConfig] = useState({
     enableAIDetection: true,
     confidenceThreshold: 0.8,
@@ -123,6 +99,7 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
     enableOCRRecognition: true,
     enableHandwritingRecognition: true
   });
+  const [showProcessingConfig, setShowProcessingConfig] = useState(false);
 
 
   // 键盘事件监听
@@ -265,6 +242,16 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
 
     const formData = new FormData();
     formData.append('exam_id', exam.id);
+    
+    // 添加处理配置
+    formData.append('processing_config', JSON.stringify({
+      enableQualityCheck: processingConfig.enableAIDetection,
+      enableIdentityRecognition: processingConfig.enableOCRRecognition,
+      enableBarcodeDetection: processingConfig.enableBarcodeDetection,
+      confidenceThreshold: processingConfig.confidenceThreshold,
+      autoApproveHighConfidence: processingConfig.autoApproveHighConfidence
+    }));
+    
     fileList.forEach(file => {
       formData.append('files', file.originFileObj as Blob);
     });
@@ -274,6 +261,11 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 300000, // 5分钟超时
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total!);
+          message.loading(`正在上传答题卡... ${percentCompleted}%`, 0);
+        }
       });
 
       message.destroy();
@@ -281,6 +273,8 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
       if (response.data.success) {
         const successResults = response.data.data?.success || [];
         const failedResults = response.data.data?.failed || [];
+        const studentMatches = response.data.data?.student_matches || [];
+        const unmatchedFiles = response.data.data?.unmatched_files || [];
         
         // 过滤掉已存在的文件，避免重复显示
         const existingFileIds = processedSheets.map(sheet => sheet.id);
@@ -289,15 +283,25 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
         );
         
         // 处理成功的文件
-        const newProcessedSheets = newSuccessResults.map((result: any) => ({
-          id: result.file_id,
-          filename: result.filename,
-          size: 0, // 后端没有返回文件大小
-          status: 'completed',
-          errorMessage: undefined,
-          previewUrl: `/api/files/view/${result.file_id}`,
-          studentInfo: result.student_info,
-        }));
+        const newProcessedSheets = newSuccessResults.map((result: any) => {
+          const matchedStudent = studentMatches.find((match: any) => match.file_id === result.file_id);
+          const isUnmatched = unmatchedFiles.some((unmatched: any) => unmatched.file_id === result.file_id);
+          
+          return {
+            id: result.file_id,
+            filename: result.filename,
+            size: result.file_size || 0,
+            status: isUnmatched ? 'pending_student_info' : 'completed',
+            errorMessage: undefined,
+            previewUrl: `/api/files/view/${result.file_id}`,
+            studentInfo: matchedStudent?.student_info || result.student_info,
+            recognitionResult: {
+              confidence: result.confidence || 0,
+              issues: result.issues || [],
+              needsReview: isUnmatched || (result.confidence && result.confidence < 0.8)
+            }
+          };
+        });
         
         // 处理失败的文件
         const failedSheets = failedResults.map((result: any) => ({
@@ -315,6 +319,8 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
         const actualNewCount = newProcessedSheets.length;
         const duplicateCount = successResults.length - actualNewCount;
         const failedCount = response.data.data?.failed_count || 0;
+        const matchedCount = studentMatches.length;
+        const unmatchedCount = unmatchedFiles.length;
 
         let messageText = '';
         if (duplicateCount > 0 && failedCount > 0) {
@@ -329,6 +335,13 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
         } else {
           messageText = `答题卡上传成功！共处理 ${actualNewCount} 份。`;
           message.success(messageText);
+        }
+        
+        // 显示学生信息匹配结果
+        if (matchedCount > 0 || unmatchedCount > 0) {
+          setTimeout(() => {
+            message.info(`学生信息识别：成功匹配 ${matchedCount} 份，需要人工确认 ${unmatchedCount} 份`);
+          }, 2000);
         }
         
         setFileList([]); // 清空上传列表
@@ -347,6 +360,8 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
       let errorMessage = '答题卡上传失败，请检查网络连接或联系管理员。';
       if (error.response && error.response.data && error.response.data.detail) {
         errorMessage = error.response.data.detail;
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = '上传超时，请检查网络连接或减少文件数量后重试。';
       }
       message.error(errorMessage);
     } finally {
@@ -658,9 +673,6 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
 
 
   const completedCount = processedSheets.filter(s => s.status === 'completed').length;
-  const errorCount = processedSheets.filter(s => s.status === 'error' && !s.errorMessage?.includes('空白答题卡')).length;
-  const blankCount = processedSheets.filter(s => s.errorMessage?.includes('空白答题卡')).length;
-  const processingCount = processedSheets.filter(s => s.status === 'processing').length;
 
   return (
     <div>
@@ -692,22 +704,33 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
         </div>
       </div>
 
-      {/* 上传说明 */}
-      <Alert
-        message="答题卡上传说明"
-        description={
-          <div className="space-y-2">
-            <p><strong>支持格式：</strong>JPG、PNG、PDF（单个文件最大10MB）</p>
-            <p><strong>建议规格：</strong>清晰度300DPI以上，确保学生信息和答题内容清晰可见</p>
-            <p><strong>批量上传：</strong>可一次选择多个文件，系统将自动识别学生信息</p>
-            <p><strong>智能分割：</strong>系统会自动识别题目结构，按题号切分主观题，便于后续阅卷</p>
-            <p><strong>质量检查：</strong>系统会自动检查答题卡质量和分割效果，标记需要人工复核的文件</p>
-          </div>
-        }
-        type="info"
-        showIcon
-        className="mb-6"
-      />
+      {/* 上传说明和统计 */}
+      <Row gutter={16} className="mb-6">
+        <Col span={16}>
+          <Alert
+            message="答题卡上传说明"
+            description={
+              <div className="space-y-2">
+                <p><strong>支持格式：</strong>JPG、PNG、PDF（单个文件最大10MB）</p>
+                <p><strong>建议规格：</strong>清晰度300DPI以上，确保学生信息和答题内容清晰可见</p>
+                <p><strong>批量上传：</strong>可一次选择多个文件，系统将自动识别学生信息</p>
+                <p><strong>智能分割：</strong>系统会自动识别题目结构，按题号切分主观题，便于后续阅卷</p>
+                <p><strong>质量检查：</strong>系统会自动检查答题卡质量和分割效果，标记需要人工复核的文件</p>
+              </div>
+            }
+            type="info"
+            showIcon
+          />
+        </Col>
+        <Col span={8}>
+          <UploadProgressStats 
+            examId={exam.id} 
+            onRefresh={() => {
+              // 可以在这里添加刷新逻辑
+            }}
+          />
+        </Col>
+      </Row>
 
       {/* 隐藏原有的批量上传区域，功能已整合到工作流中 */}
       <Row gutter={[24, 24]}>
@@ -738,6 +761,7 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
                     icon={<SettingOutlined />}
                     size="small"
                     className="text-gray-500 hover:text-blue-600"
+                    onClick={() => setShowProcessingConfig(true)}
                   />
                 </div>
               </div>
@@ -994,6 +1018,82 @@ const AnswerSheetUploadWorkspace: React.FC<AnswerSheetUploadWorkspaceProps> = ({
           // 这里可以添加更新答题卡信息的逻辑
         }}
       />
+
+      {/* 处理配置弹窗 */}
+      <Modal
+        title="处理配置"
+        open={showProcessingConfig}
+        onCancel={() => setShowProcessingConfig(false)}
+        onOk={() => {
+          setShowProcessingConfig(false);
+          message.success('配置已保存');
+        }}
+        width={600}
+      >
+        <div className="space-y-6">
+          <div>
+            <h4 className="text-base font-medium mb-3">AI识别设置</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span>启用AI质量检测</span>
+                <Switch
+                  checked={processingConfig.enableAIDetection}
+                  onChange={(checked) => setProcessingConfig(prev => ({ ...prev, enableAIDetection: checked }))}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span>启用条形码识别</span>
+                <Switch
+                  checked={processingConfig.enableBarcodeDetection}
+                  onChange={(checked) => setProcessingConfig(prev => ({ ...prev, enableBarcodeDetection: checked }))}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span>启用OCR文字识别</span>
+                <Switch
+                  checked={processingConfig.enableOCRRecognition}
+                  onChange={(checked) => setProcessingConfig(prev => ({ ...prev, enableOCRRecognition: checked }))}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span>启用手写字识别</span>
+                <Switch
+                  checked={processingConfig.enableHandwritingRecognition}
+                  onChange={(checked) => setProcessingConfig(prev => ({ ...prev, enableHandwritingRecognition: checked }))}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="text-base font-medium mb-3">自动处理设置</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span>高置信度自动通过</span>
+                <Switch
+                  checked={processingConfig.autoApproveHighConfidence}
+                  onChange={(checked) => setProcessingConfig(prev => ({ ...prev, autoApproveHighConfidence: checked }))}
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span>置信度阈值</span>
+                  <span className="text-sm text-gray-500">{(processingConfig.confidenceThreshold * 100).toFixed(0)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="0.95"
+                  step="0.05"
+                  value={processingConfig.confidenceThreshold}
+                  onChange={(e) => setProcessingConfig(prev => ({ ...prev, confidenceThreshold: parseFloat(e.target.value) }))}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 
 try:
-    from backend.config.settings import settings
+    from config.settings import settings
 except ImportError:
     from config.settings import settings
 

@@ -4,6 +4,7 @@ import { CheckCircleOutlined, BookOutlined, ReadOutlined, FileTextOutlined, User
 import { useAppContext } from '../../contexts/AppContext';
 import { Exam, ExamStatus } from '../../types/exam';
 import { message } from '../../utils/message';
+import { cn, buttonStyles, inputStyles, cardStyles, layout } from '../../design-system';
 
 interface CreateExamModalProps {
   visible: boolean;
@@ -89,7 +90,7 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-0 text-slate-800">创建新考试</h3>
-            <p className="text-sm text-gray-500 mb-0">填写基本信息，稍后可上传答题卡开始阅卷</p>
+            <p className="text-sm text-neutral-500 mb-0">填写基本信息，稍后可上传答题卡开始阅卷</p>
           </div>
         </div>
       }
@@ -195,21 +196,21 @@ const CreateExamModal: React.FC<CreateExamModalProps> = ({ visible, onClose }) =
                   <span className="text-blue-600 font-bold">1</span>
                 </div>
                 <p className="font-medium text-slate-700">上传答题卡</p>
-                <p className="text-gray-500 text-xs">批量上传学生答卷</p>
+                <p className="text-neutral-500 text-xs">批量上传学生答卷</p>
               </div>
               <div className="flex flex-col items-center p-3 bg-white rounded-lg shadow-sm">
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mb-2">
                   <span className="text-blue-600 font-bold">2</span>
                 </div>
                 <p className="font-medium text-slate-700">AI智能阅卷</p>
-                <p className="text-gray-500 text-xs">自动评分生成报告</p>
+                <p className="text-neutral-500 text-xs">自动评分生成报告</p>
               </div>
             </div>
           </div>
         </Card>
       </div>
 
-      <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+      <div className="{cn('flex justify-end gap-3')} pt-6 border-t border-neutral-200">
         <Button size="large" onClick={onClose}>
           取 消
         </Button>

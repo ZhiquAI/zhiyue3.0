@@ -304,7 +304,7 @@ class BarcodeService:
         try:
             # 导入Student模型（避免循环导入）
             try:
-                from backend.models.production_models import Student
+                from models.production_models import Student
             except ImportError:
                 from models.production_models import Student
             

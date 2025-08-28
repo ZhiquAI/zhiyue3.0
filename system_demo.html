@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智阅AI系统演示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        .api-test {
+            transition: all 0.3s ease;
+        }
+        .api-success {
+            border-color: #10b981;
+            background-color: #f0fdf4;
+        }
+        .api-error {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+        .api-loading {
+            border-color: #f59e0b;
+            background-color: #fffbeb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">智阅AI系统演示</h1>
+                    <span class="ml-4 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                        v3.0.0 重构版
+                    </span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="connection-status" class="flex items-center">
+                        <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                        <span class="ml-2 text-sm text-gray-600">检查连接中...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- System Status -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">系统状态概览</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Backend Status -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border api-test" id="backend-card">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">后端服务</h3>
+                        <div class="w-3 h-3 bg-gray-300 rounded-full" id="backend-status"></div>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-600">FastAPI + 智能阅卷系统</p>
+                    <p class="mt-1 text-xs text-gray-500" id="backend-url">http://127.0.0.1:8000</p>
+                </div>
+
+                <!-- Frontend Status -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border api-test" id="frontend-card">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">前端应用</h3>
+                        <div class="w-3 h-3 bg-gray-300 rounded-full" id="frontend-status"></div>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-600">React + Vite + TypeScript</p>
+                    <p class="mt-1 text-xs text-gray-500" id="frontend-url">http://localhost:5175</p>
+                </div>
+
+                <!-- Database Status -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border api-test" id="database-card">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">数据库</h3>
+                        <div class="w-3 h-3 bg-green-500 rounded-full" id="database-status"></div>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-600">SQLite + SQLAlchemy ORM</p>
+                    <p class="mt-1 text-xs text-gray-500">zhiyue_ai.db</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Testing Panel -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">API功能测试</h2>
+            <div class="bg-white rounded-lg shadow-sm border p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- API Tests -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">核心API端点</h3>
+                        <div class="space-y-3">
+                            <div class="api-test border rounded-lg p-4" id="health-test">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium">健康检查 /health</span>
+                                    <button onclick="testAPI('health')" class="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded">测试</button>
+                                </div>
+                                <div class="mt-2 text-xs text-gray-500" id="health-result">点击测试按钮</div>
+                            </div>
+
+                            <div class="api-test border rounded-lg p-4" id="config-test">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium">配置信息 /api/config</span>
+                                    <button onclick="testAPI('config')" class="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded">测试</button>
+                                </div>
+                                <div class="mt-2 text-xs text-gray-500" id="config-result">点击测试按钮</div>
+                            </div>
+
+                            <div class="api-test border rounded-lg p-4" id="auth-test">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium">认证端点 /auth/</span>
+                                    <button onclick="testAPI('auth')" class="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded">测试</button>
+                                </div>
+                                <div class="mt-2 text-xs text-gray-500" id="auth-result">点击测试按钮</div>
+                            </div>
+
+                            <div class="api-test border rounded-lg p-4" id="docs-test">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium">API文档 /docs</span>
+                                    <button onclick="openDocs()" class="px-3 py-1 bg-green-100 text-green-800 text-sm rounded">打开</button>
+                                </div>
+                                <div class="mt-2 text-xs text-gray-500">查看完整API文档</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Info -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">系统信息</h3>
+                        <div id="system-info" class="space-y-3">
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-700">架构版本:</span>
+                                <span class="text-gray-600">智阅AI 3.0 重构版</span>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-700">核心功能:</span>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">答题卡预处理</span>
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">信息识别验证</span>
+                                    <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">智能题目分割</span>
+                                    <span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">混合智能阅卷</span>
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">质量控制复核</span>
+                                    <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">结果整合分析</span>
+                                </div>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-700">技术栈:</span>
+                                <div class="mt-1">
+                                    <div class="text-xs text-gray-600">后端: FastAPI + SQLAlchemy + Pydantic</div>
+                                    <div class="text-xs text-gray-600">前端: React 18 + TypeScript + Vite</div>
+                                    <div class="text-xs text-gray-600">AI: OpenCV + NumPy + 多模型融合</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">快速操作</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <button onclick="window.open('http://localhost:5175', '_blank')" class="p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <div class="text-lg font-semibold">前端应用</div>
+                    <div class="text-sm opacity-90">打开React界面</div>
+                </button>
+                <button onclick="window.open('http://127.0.0.1:8000/docs', '_blank')" class="p-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <div class="text-lg font-semibold">API文档</div>
+                    <div class="text-sm opacity-90">查看接口说明</div>
+                </button>
+                <button onclick="testAllAPIs()" class="p-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    <div class="text-lg font-semibold">全面测试</div>
+                    <div class="text-sm opacity-90">测试所有功能</div>
+                </button>
+                <button onclick="refreshStatus()" class="p-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                    <div class="text-lg font-semibold">刷新状态</div>
+                    <div class="text-sm opacity-90">更新系统状态</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Log Output -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">测试日志</h2>
+            <div class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm h-64 overflow-y-auto" id="log-output">
+                <div>智阅AI系统演示 v3.0.0 - 系统就绪</div>
+                <div>正在检查系统状态...</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: 'text-green-400',
+                error: 'text-red-400',
+                warning: 'text-yellow-400',
+                success: 'text-blue-400'
+            };
+            const div = document.createElement('div');
+            div.className = colors[type] || 'text-green-400';
+            div.textContent = `[${timestamp}] ${message}`;
+            logOutput.appendChild(div);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        async function testAPI(endpoint) {
+            const testCard = document.getElementById(`${endpoint}-test`);
+            const resultDiv = document.getElementById(`${endpoint}-result`);
+            
+            testCard.className = testCard.className.replace(/api-\w+/g, '') + ' api-loading';
+            resultDiv.textContent = '测试中...';
+            log(`测试API端点: ${endpoint}`, 'info');
+
+            try {
+                let url;
+                switch(endpoint) {
+                    case 'health':
+                        url = `${API_BASE}/health`;
+                        break;
+                    case 'config':
+                        url = `${API_BASE}/api/config`;
+                        break;
+                    case 'auth':
+                        url = `${API_BASE}/auth/status`;
+                        break;
+                    default:
+                        url = `${API_BASE}/${endpoint}`;
+                }
+
+                const response = await axios.get(url, { timeout: 5000 });
+                
+                testCard.className = testCard.className.replace(/api-\w+/g, '') + ' api-success';
+                resultDiv.textContent = `✅ 成功 (${response.status})`;
+                log(`✅ ${endpoint} API测试成功`, 'success');
+                
+                return response.data;
+            } catch (error) {
+                testCard.className = testCard.className.replace(/api-\w+/g, '') + ' api-error';
+                resultDiv.textContent = `❌ ${error.message}`;
+                log(`❌ ${endpoint} API测试失败: ${error.message}`, 'error');
+                
+                return null;
+            }
+        }
+
+        async function checkSystemStatus() {
+            // Check backend
+            try {
+                const response = await axios.get(`${API_BASE}/health`, { timeout: 3000 });
+                document.getElementById('backend-status').className = 'w-3 h-3 bg-green-500 rounded-full';
+                document.getElementById('backend-card').className = document.getElementById('backend-card').className.replace(/api-\w+/g, '') + ' api-success';
+                log('✅ 后端服务连接成功', 'success');
+            } catch (error) {
+                document.getElementById('backend-status').className = 'w-3 h-3 bg-red-500 rounded-full';
+                document.getElementById('backend-card').className = document.getElementById('backend-card').className.replace(/api-\w+/g, '') + ' api-error';
+                log('❌ 后端服务连接失败', 'error');
+            }
+
+            // Check frontend
+            try {
+                const response = await fetch('http://localhost:5175', { mode: 'no-cors' });
+                document.getElementById('frontend-status').className = 'w-3 h-3 bg-green-500 rounded-full';
+                document.getElementById('frontend-card').className = document.getElementById('frontend-card').className.replace(/api-\w+/g, '') + ' api-success';
+                log('✅ 前端服务运行正常', 'success');
+            } catch (error) {
+                document.getElementById('frontend-status').className = 'w-3 h-3 bg-red-500 rounded-full';
+                document.getElementById('frontend-card').className = document.getElementById('frontend-card').className.replace(/api-\w+/g, '') + ' api-error';
+                log('❌ 前端服务连接失败', 'error');
+            }
+
+            // Update connection status
+            const backendOk = document.getElementById('backend-status').className.includes('green');
+            const frontendOk = document.getElementById('frontend-status').className.includes('green');
+            
+            const connectionStatus = document.getElementById('connection-status');
+            if (backendOk && frontendOk) {
+                connectionStatus.innerHTML = '<div class="w-3 h-3 bg-green-500 rounded-full"></div><span class="ml-2 text-sm text-gray-600">系统正常</span>';
+            } else {
+                connectionStatus.innerHTML = '<div class="w-3 h-3 bg-red-500 rounded-full"></div><span class="ml-2 text-sm text-gray-600">部分服务异常</span>';
+            }
+        }
+
+        function openDocs() {
+            window.open(`${API_BASE}/docs`, '_blank');
+            log('📖 打开API文档', 'info');
+        }
+
+        async function testAllAPIs() {
+            log('🚀 开始全面API测试', 'info');
+            
+            const endpoints = ['health', 'config', 'auth'];
+            for (const endpoint of endpoints) {
+                await testAPI(endpoint);
+                await new Promise(resolve => setTimeout(resolve, 500)); // 延迟500ms
+            }
+            
+            log('✅ 全面API测试完成', 'success');
+        }
+
+        function refreshStatus() {
+            log('🔄 刷新系统状态', 'info');
+            checkSystemStatus();
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            log('🎉 智阅AI系统演示页面加载完成', 'info');
+            checkSystemStatus();
+        });
+
+        // Auto-refresh status every 30 seconds
+        setInterval(checkSystemStatus, 30000);
+    </script>
+</body>
+</html>

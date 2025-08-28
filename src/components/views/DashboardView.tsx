@@ -12,6 +12,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import CreateExamModal from '../modals/CreateExamModal';
 import { mockNotifications } from '../../data/mockData';
 import { Exam } from '../../types/exam';
+import { cn, cardStyles, buttonStyles, layout } from '../../design-system';
 
 interface QuickAction {
   title: string;
@@ -43,8 +44,8 @@ const DashboardView: React.FC = () => {
     if (type === 'create') {
       setCreateModalVisible(true);
     } else if (type === 'startMarking') {
-      // 开始阅卷 - 直接跳转到阅卷中心
-      setCurrentView('markingCenter');
+      // 阅卷中心已移除，跳转到考试管理
+      setCurrentView('examList');
     } else if (type === 'viewAnalysis') {
       // 查看分析 - 如果有已完成的考试，进入第一个的分析
       if (completedExams.length > 0) {
@@ -55,8 +56,8 @@ const DashboardView: React.FC = () => {
         setCurrentView('dataAnalysis');
       }
     } else if (type === 'handle' && exam) {
-      // 处理待办事项的点击 - 统一跳转到阅卷中心，由阅卷中心决定具体的工作流步骤
-      setCurrentView('markingCenter');
+      // 处理待办事项的点击 - 阅卷中心已移除，跳转到考试管理
+      setCurrentView('examList');
       setSubViewInfo({ view: null, exam, source: null });
     }
   };
@@ -67,8 +68,8 @@ const DashboardView: React.FC = () => {
       setCurrentView('dataAnalysis');
       setSubViewInfo({ view: 'analysis', exam, source: null });
     } else {
-      // 其他状态的考试都跳转到阅卷中心，由阅卷中心决定具体的工作流步骤
-      setCurrentView('markingCenter');
+      // 其他状态的考试跳转到考试管理
+      setCurrentView('examList');
       setSubViewInfo({ view: null, exam, source: null });
     }
   };
@@ -78,11 +79,11 @@ const DashboardView: React.FC = () => {
       case '待配置':
         return <FileTextOutlined className="text-orange-600" />;
       case '待阅卷':
-        return <UploadOutlined className="text-blue-600" />;
+        return <UploadOutlined className="text-primary-600" />;
       case '阅卷中':
         return <EditOutlined className="text-green-600" />;
       default:
-        return <ClockCircleOutlined className="text-gray-600" />;
+        return <ClockCircleOutlined className="text-neutral-600" />;
     }
   };
 
@@ -104,7 +105,7 @@ const DashboardView: React.FC = () => {
       title: '创建考试',
       description: '上传试卷文件，配置考试信息，开启智能阅卷流程',
       icon: <UploadOutlined />,
-      color: 'bg-blue-100 text-blue-600',
+      color: 'bg-primary-100 text-primary-600',
       onClick: () => handleNavigate('create'),
       tips: '支持PDF、图片格式，AI自动识别题目结构'
     },
@@ -116,6 +117,14 @@ const DashboardView: React.FC = () => {
       onClick: () => handleNavigate('startMarking'),
       disabled: markingExams.length === 0,
       tips: markingExams.length > 0 ? '包含答题卡上传、智能分割、评分设置等完整流程' : '暂无待阅卷任务'
+    },
+    {
+      title: '🚀 体验优化版',
+      description: '全新优化的阅卷界面，50%性能提升，更智能的批量处理',
+      icon: <EditOutlined />,
+      color: 'bg-orange-100 text-orange-600',
+      onClick: () => window.open('/optimized-demo', '_blank'),
+      tips: '⚡ 智能批量处理 | 📊 实时质量监控 | 🛡️ 异常自动恢复'
     },
     {
       title: '数据分析',
@@ -135,7 +144,7 @@ const DashboardView: React.FC = () => {
       <Card title="快捷操作" className="mb-6">
         <Row gutter={[16, 16]}>
           {quickActions.map((action, index) => (
-            <Col xs={24} sm={12} lg={8} key={index}>
+            <Col xs={24} sm={12} lg={6} key={index}>
               <Card 
                 hoverable={!action.disabled} 
                 className={`h-full ${action.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -150,9 +159,9 @@ const DashboardView: React.FC = () => {
                   />
                   <div className="ml-3 sm:ml-4 flex-1 min-w-0">
                     <h3 className="font-semibold text-sm sm:text-base m-0 truncate">{action.title}</h3>
-                    <p className="text-gray-500 text-xs sm:text-sm m-0 line-clamp-2">{action.description}</p>
+                    <p className="text-neutral-500 text-xs sm:text-sm m-0 line-clamp-2">{action.description}</p>
                     {action.tips && (
-                      <p className="text-blue-600 text-xs mt-1 line-clamp-1">
+                      <p className="text-primary-600 text-xs mt-1 line-clamp-1">
                         💡 {action.tips}
                       </p>
                     )}
@@ -179,7 +188,7 @@ const DashboardView: React.FC = () => {
                 children: (
                   <div>
                     <p className="text-sm sm:text-base mb-1">{item.text}</p>
-                    <p className="text-xs text-gray-400">{item.time}</p>
+                    <p className="text-xs text-neutral-400">{item.time}</p>
                   </div>
                 )
               }))}
@@ -220,11 +229,11 @@ const DashboardView: React.FC = () => {
                         <div className="flex flex-col">
                           <a 
                             onClick={() => handleExamAction(item)}
-                            className="font-semibold text-sm sm:text-base text-gray-800 mb-1 hover:text-blue-600 line-clamp-1"
+                            className="font-semibold text-sm sm:text-base text-neutral-800 mb-1 hover:text-primary-600 line-clamp-1"
                           >
                             {item.name || '未命名考试'}
                           </a>
-                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-500">
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-neutral-500">
                             <Tag color="orange" className="text-xs">{item.status}</Tag>
                             <span className="truncate">{item.subject}</span>
                             <span className="hidden sm:inline">·</span>
@@ -233,10 +242,10 @@ const DashboardView: React.FC = () => {
                         </div>
                       }
                       description={
-                        <div className="text-gray-400 text-xs mt-2">
+                        <div className="text-neutral-400 text-xs mt-2">
                           <div className="truncate">创建于: {item.createdAt}</div>
                           {item.status === '待阅卷' && (
-                            <div className="text-blue-600 mt-1">• 等待上传答题卡</div>
+                            <div className="text-primary-600 mt-1">• 等待上传答题卡</div>
                           )}
                           {item.status === '阅卷中' && item.tasks && item.tasks.total > 0 && (
                             <div className="text-green-600 mt-1">
@@ -250,7 +259,7 @@ const DashboardView: React.FC = () => {
                 )}
               />
             ) : (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-neutral-500">
                 <ClockCircleOutlined className="text-4xl mb-2" />
                 <p>暂无待办事项</p>
                 <Button type="primary" onClick={() => handleNavigate('create')}>

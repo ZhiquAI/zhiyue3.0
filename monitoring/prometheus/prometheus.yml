@@ -1,0 +1,67 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'zhiyue-production'
+    replica: 'prometheus-1'
+
+rule_files:
+  - "rules/*.yml"
+
+scrape_configs:
+  # 智阅3.0后端服务
+  - job_name: 'zhiyue-backend'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+    metrics_path: '/api/websocket/health'
+    scrape_interval: 5s
+    scrape_timeout: 3s
+    params:
+      format: ['prometheus']
+
+  # 系统指标
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # Redis指标
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 10s
+
+  # PostgreSQL指标
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+
+  # Prometheus自监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Grafana监控
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: '/metrics'
+
+  # 智阅WebSocket指标
+  - job_name: 'zhiyue-websocket'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+    metrics_path: '/api/websocket/metrics'
+    scrape_interval: 5s
+    scrape_timeout: 3s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# 远程写入配置（可选，用于长期存储）
+# remote_write:
+#   - url: "http://victoria-metrics:8428/api/v1/write"

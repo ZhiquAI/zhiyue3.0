@@ -1,5 +1,5 @@
 // 性能优化工具
-import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 
 // 防抖Hook
 export const useDebounce = <T extends (...args: any[]) => any>(
@@ -118,4 +118,139 @@ export const useSafeState = <T>(initialState: T) => {
   }, []);
 
   return [state, safeSetState] as const;
+};
+
+// Web Vitals 性能监控
+export interface PerformanceMetrics {
+  lcp: number; // Largest Contentful Paint
+  fid: number; // First Input Delay  
+  cls: number; // Cumulative Layout Shift
+  fcp: number; // First Contentful Paint
+  ttfb: number; // Time to First Byte
+}
+
+export const observeWebVitals = (callback: (metrics: Partial<PerformanceMetrics>) => void) => {
+  if ('PerformanceObserver' in window) {
+    // LCP 监控
+    const lcpObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      const lastEntry = entries[entries.length - 1] as PerformanceEntry;
+      callback({ lcp: lastEntry.startTime });
+    });
+    
+    try {
+      lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+    } catch (e) {
+      console.warn('LCP observer not supported');
+    }
+
+    // FCP 监控
+    const fcpObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      entries.forEach((entry) => {
+        if (entry.name === 'first-contentful-paint') {
+          callback({ fcp: entry.startTime });
+        }
+      });
+    });
+
+    try {
+      fcpObserver.observe({ type: 'paint', buffered: true });
+    } catch (e) {
+      console.warn('FCP observer not supported');
+    }
+  }
+};
+
+// 代码分割工具
+export const lazyWithRetry = (componentImport: () => Promise<any>, retryCount = 3) => {
+  return React.lazy(() => {
+    let attempts = 0;
+    
+    const tryImport = (): Promise<any> => {
+      return componentImport().catch((error) => {
+        attempts++;
+        if (attempts < retryCount) {
+          return new Promise((resolve, reject) => {
+            setTimeout(() => {
+              tryImport().then(resolve).catch(reject);
+            }, 1000 * attempts);
+          });
+        }
+        throw error;
+      });
+    };
+
+    return tryImport();
+  });
+};
+
+// 资源预加载
+export const preloadResource = (url: string, as: string = 'script'): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.href = url;
+    link.as = as;
+    
+    link.onload = () => resolve();
+    link.onerror = () => reject(new Error(`Failed to preload ${url}`));
+    
+    document.head.appendChild(link);
+  });
+};
+
+// 长任务检测
+export const observeLongTasks = (callback: (duration: number) => void): PerformanceObserver | null => {
+  if (!('PerformanceObserver' in window)) {
+    return null;
+  }
+
+  const observer = new PerformanceObserver((list) => {
+    const entries = list.getEntries();
+    entries.forEach((entry: any) => {
+      if (entry.duration > 50) { // 长任务阈值50ms
+        callback(entry.duration);
+      }
+    });
+  });
+
+  try {
+    observer.observe({ entryTypes: ['longtask'] });
+    return observer;
+  } catch (e) {
+    console.warn('Long task observer not supported');
+    return null;
+  }
+};
+
+// 内存监控Hook
+export const useMemoryMonitor = () => {
+  const [memoryInfo, setMemoryInfo] = useState<{
+    usedJSHeapSize: number;
+    totalJSHeapSize: number;
+    jsHeapSizeLimit: number;
+    usage: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const updateMemoryInfo = () => {
+      const memory = (performance as any).memory;
+      if (memory) {
+        setMemoryInfo({
+          usedJSHeapSize: memory.usedJSHeapSize,
+          totalJSHeapSize: memory.totalJSHeapSize,
+          jsHeapSizeLimit: memory.jsHeapSizeLimit,
+          usage: memory.usedJSHeapSize / memory.jsHeapSizeLimit
+        });
+      }
+    };
+
+    updateMemoryInfo();
+    const interval = setInterval(updateMemoryInfo, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return memoryInfo;
 };

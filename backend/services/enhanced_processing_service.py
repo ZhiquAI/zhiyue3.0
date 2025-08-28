@@ -12,9 +12,9 @@ import io
 from .gemini_ocr_service import GeminiOCRService
 from .template_matching_service import TemplateMatchingService
 from .quality_assessment_service import QualityAssessmentService
-from ..models.production_models import AnswerSheet
-from ..database import get_db
-from ..config import settings
+from models.production_models import AnswerSheet
+from db_connection import get_db
+from config import settings
 
 class EnhancedProcessingService:
     """增强的答题卡处理服务"""

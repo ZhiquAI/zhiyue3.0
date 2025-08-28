@@ -2,15 +2,17 @@
 OCR识别服务 - 更新为使用Gemini 2.5 Pro
 """
 
-import asyncio
 import logging
-from typing import Dict, List, Any, Optional
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 import time
 
 from sqlalchemy.orm import Session
 from models.file_storage import FileStorage, PaperDocument, AnswerSheetFile
-from models.production_models import AnswerSheet
+from models.production_models import AnswerSheet, AnswerSheetTemplate
+from PIL import Image
+import io
+import base64
 from services.gemini_ocr_service import GeminiOCRService
 from services.bubble_sheet_service import BubbleSheetService
 from services.barcode_service import BarcodeService
@@ -26,6 +28,8 @@ class OCRService:
         self.gemini_ocr = GeminiOCRService()
         self.bubble_sheet_service = BubbleSheetService()
         self.barcode_service = BarcodeService()
+
+
         
     async def process_paper_document(self, file_record: FileStorage) -> Dict[str, Any]:
         """处理试卷文档OCR - 使用Gemini"""
@@ -36,7 +40,9 @@ class OCRService:
             image_path = Path(settings.STORAGE_BASE_PATH) / file_record.file_path
             
             # 使用Gemini进行试卷识别
-            ocr_results = await self.gemini_ocr.process_paper_document(str(image_path))
+            ocr_results = await self.gemini_ocr.process_paper_document(
+                str(image_path)
+            )
             ocr_results['processing_time'] = time.time() - start_time
             
             # 创建或更新试卷文档记录
@@ -55,7 +61,8 @@ class OCRService:
             # 更新OCR结果
             paper_doc.ocr_status = 'completed'
             paper_doc.ocr_result = ocr_results
-            paper_doc.ocr_confidence = int(ocr_results.get('quality_assessment', {}).get('confidence', 0.8) * 100)
+            paper_doc.ocr_confidence = int(
+                ocr_results.get('quality_assessment', {}).get('confidence', 0.8) * 100)
             
             # 解析题目信息
             questions = ocr_results.get('questions', [])
@@ -65,7 +72,9 @@ class OCRService:
             paper_doc.page_count = 1  # 单页处理
             
             # 评估图像质量
-            quality_score = ocr_results.get('quality_assessment', {}).get('clarity_score', 8)
+            quality_score = ocr_results.get('quality_assessment', {}).get(
+                'clarity_score', 8
+            )
             paper_doc.image_quality_score = quality_score * 10  # 转换为100分制
             paper_doc.clarity_score = quality_score * 10
             
@@ -116,7 +125,9 @@ class OCRService:
             barcode_results = self.barcode_service.recognize_barcodes(str(image_path))
             
             # 使用Gemini进行答题卡识别
-            ocr_results = await self.gemini_ocr.process_answer_sheet(str(image_path))
+            ocr_results = await self.gemini_ocr.process_answer_sheet(
+                str(image_path)
+            )
             
             # 如果有条形码识别结果，优先使用条形码信息
             if barcode_results:
@@ -138,17 +149,23 @@ class OCRService:
             # 进行涂卡分析（如果检测到客观题）
             if ocr_results.get('objective_answers'):
                 try:
-                    bubble_analysis = self.bubble_sheet_service.analyze_bubble_sheet(
-                        str(image_path), ocr_results
+                    bubble_analysis = (
+                        self.bubble_sheet_service.analyze_bubble_sheet(
+                            str(image_path), ocr_results
+                        )
                     )
                     # 使用涂卡分析增强OCR结果
-                    ocr_results = self.bubble_sheet_service.enhance_ocr_with_bubble_analysis(
-                        ocr_results, bubble_analysis
+                    ocr_results = (
+                        self.bubble_sheet_service.enhance_ocr_with_bubble_analysis(
+                            ocr_results, bubble_analysis
+                        )
                     )
                     
                     # 验证答案一致性
-                    validation_result = self.bubble_sheet_service.validate_bubble_answers(
-                        ocr_results.get('objective_answers', {}), bubble_analysis
+                    validation_result = (
+                        self.bubble_sheet_service.validate_bubble_answers(
+                            ocr_results.get('objective_answers', {}), bubble_analysis
+                        )
                     )
                     ocr_results['bubble_validation'] = validation_result
                     
@@ -165,8 +182,9 @@ class OCRService:
             
             # 提取涂卡分析数据
             bubble_analysis = ocr_results.get('bubble_sheet_analysis', {})
-            bubble_quality = ocr_results.get('quality_assessment', {}).get('bubble_quality_score', 0.0)
-            recognition_confidence = ocr_results.get('confidence', 0.8)
+            bubble_quality = ocr_results.get('quality_assessment', {}).get(
+                'bubble_quality_score', 0.0
+            )
             
             if not answer_sheet:
                 answer_sheet = AnswerSheet(
@@ -197,6 +215,126 @@ class OCRService:
             # 合并答案
             all_answers = {**objective_answers, **subjective_answers}
             answer_sheet.extracted_answers = all_answers
+            
+            self.db.commit()
+            
+            logger.info(f"Answer sheet OCR completed with Gemini: {file_record.id}")
+            return {
+                'status': 'success',
+                'ocr_result': ocr_results,
+                'processing_time': ocr_results['processing_time']
+            }
+            
+        except Exception as e:
+            logger.error(f"Answer sheet OCR failed: {str(e)}")
+            
+            # 更新错误状态
+            file_record.processing_status = 'failed'
+            file_record.error_message = f"Gemini OCR error: {str(e)}"
+            self.db.commit()
+            
+            return {
+                'status': 'error',
+                'error': str(e),
+                'ocr_engine': 'gemini-2.5-pro'
+            }
+
+    async def grade_subjective_questions(self, answer_sheet_id: int) -> Dict[str, Any]:
+        """对指定答题卡的所有主观题进行智能评分"""
+        start_time = time.time()
+        try:
+            answer_sheet = self.db.query(AnswerSheet).filter(AnswerSheet.id == answer_sheet_id).first()
+            if not answer_sheet:
+                raise Exception(f"AnswerSheet with id {answer_sheet_id} not found")
+
+            file_record = (
+                self.db.query(AnswerSheetFile)
+                .filter(AnswerSheetFile.id == answer_sheet.file_id)
+                .first()
+            )
+            if not file_record:
+                raise Exception(f"AnswerSheetFile for AnswerSheet id {answer_sheet_id} not found")
+
+            template = (
+                self.db.query(AnswerSheetTemplate)
+                .filter(AnswerSheetTemplate.id == answer_sheet.template_id)
+                .first()
+            )
+            if not template or not template.regions:
+                logger.warning(
+                f"No template or regions found for AnswerSheet id {answer_sheet_id}, "
+                f"skipping subjective grading."
+            )
+                return {'status': 'skipped', 'message': 'No template or regions found'}
+
+            image_path = Path(settings.STORAGE_BASE_PATH) / file_record.file_path
+            with Image.open(image_path) as img:
+                subjective_regions = [region for region in template.regions if region.get('type') == 'subjective']
+                
+                if not subjective_regions:
+                    logger.info(f"No subjective questions found in template for AnswerSheet id {answer_sheet_id}")
+                    return {'status': 'success', 'message': 'No subjective questions to grade'}
+
+                for region in subjective_regions:
+                    question_number = region.get('question_number')
+                    if not question_number:
+                        continue
+
+                    # 裁剪题目区域
+                    box = (
+                        region['x'], 
+                        region['y'], 
+                        region['x'] + region['width'], 
+                        region['y'] + region['height']
+                    )
+                    question_img = img.crop(box)
+                    
+                    # 转换为base64
+                    buffer = io.BytesIO()
+                    question_img.save(buffer, format='JPEG')
+                    img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+                    question_info = {
+                        'question_number': question_number,
+                        'max_score': region.get('max_score', 10),
+                        # Future: Populate standard_answer and scoring_rubric from DB
+                    }
+
+                    # 调用Gemini进行评分
+                    grading_result = await self.gemini_ocr.grade_single_question(
+                        img_base64, question_info
+                    )
+
+                    # 更新评分结果到AnswerSheet
+                    if 'subjective_grades' not in answer_sheet.recognition_result:
+                        answer_sheet.recognition_result['subjective_grades'] = {}
+                    
+                    answer_sheet.recognition_result['subjective_grades'][question_number] = grading_result
+
+            # 更新数据库
+            answer_sheet.grading_status = 'completed'
+            self.db.commit()
+
+            processing_time = time.time() - start_time
+            logger.info(
+                f"Subjective grading completed for AnswerSheet {answer_sheet_id} "
+                f"in {processing_time:.2f}s"
+            )
+            return {
+                'status': 'success',
+                'graded_questions': len(subjective_regions),
+                'processing_time': processing_time
+            }
+
+        except Exception as e:
+            logger.error(f"Subjective grading failed for AnswerSheet {answer_sheet_id}: {str(e)}")
+            # 更新错误状态
+            answer_sheet = self.db.query(AnswerSheet).filter(AnswerSheet.id == answer_sheet_id).first()
+            if answer_sheet:
+                answer_sheet.grading_status = 'failed'
+                answer_sheet.error_message = f"Grading error: {str(e)}"
+                self.db.commit()
+            raise
             
             # 质量检查
             quality_assessment = ocr_results.get('quality_assessment', {})

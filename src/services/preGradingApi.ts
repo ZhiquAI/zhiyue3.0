@@ -2,107 +2,13 @@ import {
   PreGradingConfiguration, 
   StandardizedAnswerSheet, 
   BatchProcessingResult,
-  PreGradingApiResponse,
   QualityMetrics,
   StudentIdentity
 } from '../types/preGrading';
-
-// API基础配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+import { apiClient } from './httpClient';
+import { BaseApiResponse } from '../types/api';
 
 class PreGradingApiClient {
-  private baseUrl: string;
-  private headers: HeadersInit;
-
-  constructor() {
-    this.baseUrl = `${API_BASE_URL}/api`;
-    this.headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-  }
-
-  // 通用请求方法
-  private async request<T>(
-    endpoint: string, 
-    options: RequestInit = {}
-  ): Promise<PreGradingApiResponse<T>> {
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    // 获取认证token
-    const token = localStorage.getItem('auth_token');
-    const authHeaders: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...this.headers,
-          ...authHeaders,
-          ...options.headers
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
-    }
-  }
-
-  // 文件上传请求
-  private async uploadRequest<T>(
-    endpoint: string,
-    files: File[],
-    additionalData?: Record<string, unknown>
-  ): Promise<PreGradingApiResponse<T>> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const formData = new FormData();
-
-    // 添加文件
-    files.forEach((file) => {
-      formData.append(`files`, file);
-    });
-
-    // 添加额外数据
-    if (additionalData) {
-      Object.entries(additionalData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-          formData.append(key, stringValue);
-        }
-      });
-    }
-
-    // 获取认证token
-    const token = localStorage.getItem('auth_token');
-    const authHeaders: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          ...authHeaders
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Upload request failed:', error);
-      throw error;
-    }
-  }
 
   // ==================== 工作流管理 API ====================
 
@@ -112,14 +18,12 @@ class PreGradingApiClient {
   async initializeWorkflow(
     examId: string, 
     configuration: PreGradingConfiguration
-  ): Promise<PreGradingApiResponse<{ workflowId: string }>> {
-    return this.request(`/pre-grading/workflows`, {
-      method: 'POST',
-      body: JSON.stringify({
-        examId,
-        configuration
-      })
+  ): Promise<{ workflowId: string }> {
+    const response = await apiClient.post<BaseApiResponse<{ workflowId: string }>>('/pre-grading/workflows', {
+      examId,
+      configuration
     });
+    return response.data.data;
   }
 
   /**
@@ -127,13 +31,19 @@ class PreGradingApiClient {
    */
   async getWorkflowStatus(
     workflowId: string
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     status: string;
     progress: number;
     currentStage: string;
     statistics: Record<string, number>;
-  }>> {
-    return this.request(`/pre-grading/workflows/${workflowId}/status`);
+  }> {
+    const response = await apiClient.get<BaseApiResponse<{
+      status: string;
+      progress: number;
+      currentStage: string;
+      statistics: Record<string, number>;
+    }>>(`/pre-grading/workflows/${workflowId}/status`);
+    return response.data.data;
   }
 
   /**
@@ -142,11 +52,8 @@ class PreGradingApiClient {
   async updateWorkflowConfiguration(
     workflowId: string,
     configuration: Partial<PreGradingConfiguration>
-  ): Promise<PreGradingApiResponse<void>> {
-    return this.request(`/pre-grading/workflows/${workflowId}/configuration`, {
-      method: 'PATCH',
-      body: JSON.stringify(configuration)
-    });
+  ): Promise<void> {
+    await apiClient.patch(`/pre-grading/workflows/${workflowId}/configuration`, configuration);
   }
 
   // ==================== 学生信息管理 API ====================
@@ -157,13 +64,23 @@ class PreGradingApiClient {
   async importStudents(
     examId: string,
     file: File
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     imported: number;
     failed: number;
     duplicates: number;
     errors: string[];
-  }>> {
-    return this.uploadRequest(`/pre-grading/students/import`, [file], { examId });
+  }> {
+    const formData = new FormData();
+    formData.append('files', file);
+    formData.append('examId', examId);
+    
+    const response = await apiClient.upload<BaseApiResponse<{
+      imported: number;
+      failed: number;
+      duplicates: number;
+      errors: string[];
+    }>>('/pre-grading/students/import', formData);
+    return response.data.data;
   }
 
   /**
@@ -176,19 +93,24 @@ class PreGradingApiClient {
       status?: string;
       search?: string;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     students: StudentIdentity[];
     total: number;
     statistics: Record<string, number>;
-  }>> {
-    const params = new URLSearchParams();
+  }> {
+    const params = new URLSearchParams({ examId });
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
     }
     
-    return this.request(`/pre-grading/students/${examId}?${params.toString()}`);
+    const response = await apiClient.get<BaseApiResponse<{
+      students: StudentIdentity[];
+      total: number;
+      statistics: Record<string, number>;
+    }>>(`/pre-grading/students?${params}`);
+    return response.data.data;
   }
 
   /**
@@ -197,11 +119,12 @@ class PreGradingApiClient {
   async addStudent(
     examId: string,
     student: Omit<StudentIdentity, 'verificationStatus' | 'confidence' | 'verificationMethods'>
-  ): Promise<PreGradingApiResponse<StudentIdentity>> {
-    return this.request(`/pre-grading/students/${examId}`, {
-      method: 'POST',
-      body: JSON.stringify(student)
+  ): Promise<StudentIdentity> {
+    const response = await apiClient.post<BaseApiResponse<StudentIdentity>>('/pre-grading/students', {
+      examId,
+      ...student
     });
+    return response.data.data;
   }
 
   /**
@@ -211,11 +134,12 @@ class PreGradingApiClient {
     examId: string,
     studentId: string,
     updates: Partial<StudentIdentity>
-  ): Promise<PreGradingApiResponse<StudentIdentity>> {
-    return this.request(`/pre-grading/students/${examId}/${studentId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates)
+  ): Promise<StudentIdentity> {
+    const response = await apiClient.put<BaseApiResponse<StudentIdentity>>(`/pre-grading/students/${studentId}`, {
+      examId,
+      ...updates
     });
+    return response.data.data;
   }
 
   /**
@@ -224,18 +148,16 @@ class PreGradingApiClient {
   async deleteStudent(
     examId: string,
     studentId: string
-  ): Promise<PreGradingApiResponse<void>> {
-    return this.request(`/pre-grading/students/${examId}/${studentId}`, {
-      method: 'DELETE'
-    });
+  ): Promise<void> {
+    await apiClient.delete(`/pre-grading/students/${studentId}?examId=${examId}`);
   }
 
   // ==================== 答题卡模板管理 API ====================
 
   /**
-   * 获取答题卡模板列表
+   * 获取模板列表
    */
-  async getTemplates(): Promise<PreGradingApiResponse<{
+  async getTemplates(): Promise<{
     templates: Array<{
       id: string;
       name: string;
@@ -247,12 +169,25 @@ class PreGradingApiClient {
       status: 'active' | 'draft';
       createdAt: string;
     }>;
-  }>> {
-    return this.request('/pre-grading/templates');
+  }> {
+    const response = await apiClient.get<BaseApiResponse<{
+      templates: Array<{
+        id: string;
+        name: string;
+        type: 'standard' | 'custom';
+        questionCount: number;
+        objectiveCount: number;
+        subjectiveCount: number;
+        layout: string;
+        status: 'active' | 'draft';
+        createdAt: string;
+      }>;
+    }>>('/pre-grading/templates');
+    return response.data.data;
   }
 
   /**
-   * 创建答题卡模板
+   * 创建新模板
    */
   async createTemplate(
     template: {
@@ -262,17 +197,17 @@ class PreGradingApiClient {
       objectiveCount: number;
       subjectiveCount: number;
       layout: string;
-             configuration: Record<string, unknown>;
+      configuration: Record<string, unknown>;
     }
-  ): Promise<PreGradingApiResponse<{ templateId: string }>> {
-    return this.request('/pre-grading/templates', {
-      method: 'POST',
-      body: JSON.stringify(template)
-    });
+  ): Promise<{ templateId: string }> {
+    const response = await apiClient.post<BaseApiResponse<{ templateId: string }>>('/pre-grading/templates', template);
+    return response.data.data;
   }
 
+  // ==================== 答题卡生成与上传 API ====================
+
   /**
-   * 生成答题卡PDF
+   * 生成答题卡
    */
   async generateAnswerSheets(
     examId: string,
@@ -282,22 +217,22 @@ class PreGradingApiClient {
       includeBarcode?: boolean;
       includeQRCode?: boolean;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     jobId: string;
     downloadUrl?: string;
     estimatedTime: number;
-  }>> {
-    return this.request('/pre-grading/templates/generate', {
-      method: 'POST',
-      body: JSON.stringify({
-        examId,
-        templateId,
-        ...options
-      })
+  }> {
+    const response = await apiClient.post<BaseApiResponse<{
+      jobId: string;
+      downloadUrl?: string;
+      estimatedTime: number;
+    }>>('/pre-grading/answer-sheets/generate', {
+      examId,
+      templateId,
+      ...options
     });
+    return response.data.data;
   }
-
-  // ==================== 答题卡上传处理 API ====================
 
   /**
    * 批量上传答题卡
@@ -310,11 +245,20 @@ class PreGradingApiClient {
       enableIdentityRecognition?: boolean;
       qualityThreshold?: number;
     }
-  ): Promise<PreGradingApiResponse<BatchProcessingResult>> {
-    return this.uploadRequest('/pre-grading/upload', files, {
-      examId,
-      ...options
-    });
+  ): Promise<BatchProcessingResult> {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    formData.append('examId', examId);
+    if (options) {
+      Object.entries(options).forEach(([key, value]) => {
+        if (value !== undefined) {
+          formData.append(key, String(value));
+        }
+      });
+    }
+    
+    const response = await apiClient.upload<BaseApiResponse<BatchProcessingResult>>('/pre-grading/answer-sheets/upload', formData);
+    return response.data.data;
   }
 
   /**
@@ -322,40 +266,45 @@ class PreGradingApiClient {
    */
   async getUploadProgress(
     batchId: string
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     progress: number;
     completed: number;
     failed: number;
     processing: number;
     estimatedRemaining: number;
-  }>> {
-    return this.request(`/pre-grading/upload/${batchId}/progress`);
+  }> {
+    const response = await apiClient.get<BaseApiResponse<{
+      progress: number;
+      completed: number;
+      failed: number;
+      processing: number;
+      estimatedRemaining: number;
+    }>>(`/pre-grading/upload/progress/${batchId}`);
+    return response.data.data;
   }
 
   /**
-   * 取消上传任务
+   * 取消上传
    */
-  async cancelUpload(
-    batchId: string
-  ): Promise<PreGradingApiResponse<void>> {
-    return this.request(`/pre-grading/upload/${batchId}/cancel`, {
-      method: 'POST'
-    });
+  async cancelUpload(batchId: string): Promise<void> {
+    await apiClient.delete(`/pre-grading/upload/${batchId}`);
   }
 
-  // ==================== 图像质量检测 API ====================
+  // ==================== 图像质量分析 API ====================
 
   /**
-   * 单个文件质量检测
+   * 单张图像质量分析
    */
-  async analyzeImageQuality(
-    file: File
-  ): Promise<PreGradingApiResponse<QualityMetrics>> {
-    return this.uploadRequest('/pre-grading/quality/analyze', [file]);
+  async analyzeImageQuality(file: File): Promise<QualityMetrics> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await apiClient.upload<BaseApiResponse<QualityMetrics>>('/pre-grading/quality/analyze', formData);
+    return response.data.data;
   }
 
   /**
-   * 批量质量检测
+   * 批量质量分析
    */
   async batchAnalyzeQuality(
     sheetIds: string[],
@@ -363,45 +312,52 @@ class PreGradingApiClient {
       enableEnhancement?: boolean;
       qualityThreshold?: number;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     jobId: string;
     results: Array<{
       sheetId: string;
       quality: QualityMetrics;
       enhanced?: boolean;
     }>;
-  }>> {
-    return this.request('/pre-grading/quality/batch-analyze', {
-      method: 'POST',
-      body: JSON.stringify({
-        sheetIds,
-        ...options
-      })
+  }> {
+    const response = await apiClient.post<BaseApiResponse<{
+      jobId: string;
+      results: Array<{
+        sheetId: string;
+        quality: QualityMetrics;
+        enhanced?: boolean;
+      }>;
+    }>>('/pre-grading/quality/batch-analyze', {
+      sheetIds,
+      ...options
     });
+    return response.data.data;
   }
 
   /**
-   * 图像增强处理
+   * 图像增强
    */
   async enhanceImage(
     sheetId: string,
     options?: {
       enhanceContrast?: boolean;
-      reducenoise?: boolean;
+      reduceNoise?: boolean;
       correctSkew?: boolean;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     enhancedImageUrl: string;
     qualityImprovement: number;
     processingTime: number;
-  }>> {
-    return this.request(`/pre-grading/quality/${sheetId}/enhance`, {
-      method: 'POST',
-      body: JSON.stringify(options)
-    });
+  }> {
+    const response = await apiClient.post<BaseApiResponse<{
+      enhancedImageUrl: string;
+      qualityImprovement: number;
+      processingTime: number;
+    }>>(`/pre-grading/quality/enhance/${sheetId}`, options);
+    return response.data.data;
   }
 
-  // ==================== 身份识别验证 API ====================
+  // ==================== 身份识别 API ====================
 
   /**
    * 批量身份识别
@@ -413,21 +369,26 @@ class PreGradingApiClient {
       confidenceThreshold?: number;
       enableManualVerification?: boolean;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     jobId: string;
     results: Array<{
       sheetId: string;
       identity: StudentIdentity;
       matchedStudent?: StudentIdentity;
     }>;
-  }>> {
-    return this.request('/pre-grading/identity/batch-recognize', {
-      method: 'POST',
-      body: JSON.stringify({
-        sheetIds,
-        ...options
-      })
+  }> {
+    const response = await apiClient.post<BaseApiResponse<{
+      jobId: string;
+      results: Array<{
+        sheetId: string;
+        identity: StudentIdentity;
+        matchedStudent?: StudentIdentity;
+      }>;
+    }>>('/pre-grading/identity/batch-recognize', {
+      sheetIds,
+      ...options
     });
+    return response.data.data;
   }
 
   /**
@@ -437,20 +398,17 @@ class PreGradingApiClient {
     sheetId: string,
     studentId: string,
     verificationNote?: string
-  ): Promise<PreGradingApiResponse<void>> {
-    return this.request(`/pre-grading/identity/${sheetId}/manual-verify`, {
-      method: 'POST',
-      body: JSON.stringify({
-        studentId,
-        verificationNote
-      })
+  ): Promise<void> {
+    await apiClient.post(`/pre-grading/identity/manual-verify/${sheetId}`, {
+      studentId,
+      verificationNote
     });
   }
 
   // ==================== 结构分析 API ====================
 
   /**
-   * 批量结构分析（题目分割）
+   * 批量结构分析
    */
   async batchStructureAnalysis(
     sheetIds: string[],
@@ -459,29 +417,38 @@ class PreGradingApiClient {
       enableAISegmentation?: boolean;
       confidenceThreshold?: number;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     jobId: string;
     results: Array<{
       sheetId: string;
       questionStructure: {
         totalQuestions: number;
-                 objectiveQuestions: unknown[];
-         subjectiveRegions: unknown[];
+        objectiveQuestions: unknown[];
+        subjectiveRegions: unknown[];
         detectionConfidence: number;
       };
     }>;
-  }>> {
-    return this.request('/pre-grading/structure/batch-analyze', {
-      method: 'POST',
-      body: JSON.stringify({
-        sheetIds,
-        ...options
-      })
+  }> {
+    const response = await apiClient.post<BaseApiResponse<{
+      jobId: string;
+      results: Array<{
+        sheetId: string;
+        questionStructure: {
+          totalQuestions: number;
+          objectiveQuestions: unknown[];
+          subjectiveRegions: unknown[];
+          detectionConfidence: number;
+        };
+      }>;
+    }>>('/pre-grading/structure/batch-analyze', {
+      sheetIds,
+      ...options
     });
+    return response.data.data;
   }
 
   /**
-   * 手动调整题目分割
+   * 调整题目分割
    */
   async adjustQuestionSegmentation(
     sheetId: string,
@@ -494,17 +461,16 @@ class PreGradingApiClient {
         height: number;
       };
     }[]
-  ): Promise<PreGradingApiResponse<void>> {
-    return this.request(`/pre-grading/structure/${sheetId}/adjust`, {
-      method: 'POST',
-      body: JSON.stringify({ adjustments })
+  ): Promise<void> {
+    await apiClient.post(`/pre-grading/structure/adjust/${sheetId}`, {
+      adjustments
     });
   }
 
-  // ==================== 数据验证 API ====================
+  // ==================== 验证与导出 API ====================
 
   /**
-   * 综合数据验证
+   * 验证答题卡
    */
   async validateAnswerSheets(
     examId: string,
@@ -513,7 +479,7 @@ class PreGradingApiClient {
       identityVerificationRequired?: boolean;
       structureValidationRequired?: boolean;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     validationReport: {
       totalSheets: number;
       validSheets: number;
@@ -528,15 +494,28 @@ class PreGradingApiClient {
       qualityDistribution: Record<string, number>;
       recommendations: string[];
     };
-  }>> {
-    return this.request(`/pre-grading/validation/${examId}`, {
-      method: 'POST',
-      body: JSON.stringify(options)
-    });
+  }> {
+    const response = await apiClient.post<BaseApiResponse<{
+      validationReport: {
+        totalSheets: number;
+        validSheets: number;
+        invalidSheets: number;
+        issues: Array<{
+          sheetId: string;
+          type: string;
+          severity: string;
+          message: string;
+          suggestion: string;
+        }>;
+        qualityDistribution: Record<string, number>;
+        recommendations: string[];
+      };
+    }>>(`/pre-grading/validate/${examId}`, options);
+    return response.data.data;
   }
 
   /**
-   * 获取处理过的答题卡列表
+   * 获取处理后的答题卡
    */
   async getProcessedAnswerSheets(
     examId: string,
@@ -545,25 +524,34 @@ class PreGradingApiClient {
       hasIssues?: boolean;
       qualityRange?: [number, number];
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     sheets: StandardizedAnswerSheet[];
     total: number;
     statistics: Record<string, number>;
-  }>> {
-    const params = new URLSearchParams();
+  }> {
+    const params = new URLSearchParams({ examId });
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined) {
-          params.append(key, Array.isArray(value) ? value.join(',') : String(value));
+          if (Array.isArray(value)) {
+            params.append(key, value.join(','));
+          } else {
+            params.append(key, String(value));
+          }
         }
       });
     }
     
-    return this.request(`/pre-grading/sheets/${examId}?${params.toString()}`);
+    const response = await apiClient.get<BaseApiResponse<{
+      sheets: StandardizedAnswerSheet[];
+      total: number;
+      statistics: Record<string, number>;
+    }>>(`/pre-grading/processed-sheets?${params}`);
+    return response.data.data;
   }
 
   /**
-   * 重新处理答题卡
+   * 重试处理
    */
   async retryProcessing(
     sheetId: string,
@@ -571,20 +559,19 @@ class PreGradingApiClient {
       stage?: 'quality' | 'identity' | 'structure' | 'all';
       forceReprocess?: boolean;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     jobId: string;
     estimatedTime: number;
-  }>> {
-    return this.request(`/pre-grading/sheets/${sheetId}/retry`, {
-      method: 'POST',
-      body: JSON.stringify(options)
-    });
+  }> {
+    const response = await apiClient.post<BaseApiResponse<{
+      jobId: string;
+      estimatedTime: number;
+    }>>(`/pre-grading/retry/${sheetId}`, options);
+    return response.data.data;
   }
 
-  // ==================== 导出功能 API ====================
-
   /**
-   * 导出处理结果
+   * 导出结果
    */
   async exportResults(
     examId: string,
@@ -592,26 +579,28 @@ class PreGradingApiClient {
     options?: {
       includeImages?: boolean;
       includeStatistics?: boolean;
-             filterOptions?: Record<string, unknown>;
+      filterOptions?: Record<string, unknown>;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     downloadUrl: string;
     fileSize: number;
     expiresAt: string;
-  }>> {
-    return this.request(`/pre-grading/export/${examId}`, {
-      method: 'POST',
-      body: JSON.stringify({
-        format,
-        ...options
-      })
+  }> {
+    const response = await apiClient.post<BaseApiResponse<{
+      downloadUrl: string;
+      fileSize: number;
+      expiresAt: string;
+    }>>(`/pre-grading/export/${examId}`, {
+      format,
+      ...options
     });
+    return response.data.data;
   }
 
-  // ==================== 监控和统计 API ====================
+  // ==================== 统计分析 API ====================
 
   /**
-   * 获取处理统计信息
+   * 获取处理统计
    */
   async getProcessingStatistics(
     examId: string,
@@ -619,7 +608,7 @@ class PreGradingApiClient {
       startTime: string;
       endTime: string;
     }
-  ): Promise<PreGradingApiResponse<{
+  ): Promise<{
     overview: {
       totalProcessed: number;
       successRate: number;
@@ -633,20 +622,35 @@ class PreGradingApiClient {
     }>;
     qualityDistribution: Record<string, number>;
     issueAnalysis: Record<string, number>;
-  }>> {
-    const params = new URLSearchParams();
+  }> {
+    const params = new URLSearchParams({ examId });
     if (timeRange) {
       params.append('startTime', timeRange.startTime);
       params.append('endTime', timeRange.endTime);
     }
     
-    return this.request(`/pre-grading/statistics/${examId}?${params.toString()}`);
+    const response = await apiClient.get<BaseApiResponse<{
+      overview: {
+        totalProcessed: number;
+        successRate: number;
+        avgProcessingTime: number;
+        avgQualityScore: number;
+      };
+      timeline: Array<{
+        timestamp: string;
+        processed: number;
+        errors: number;
+      }>;
+      qualityDistribution: Record<string, number>;
+      issueAnalysis: Record<string, number>;
+    }>>(`/pre-grading/statistics?${params}`);
+    return response.data.data;
   }
 }
 
-// 创建单例实例
+// 导出实例
 export const preGradingApi = new PreGradingApiClient();
 
-// 导出类型供其他地方使用
+// 导出类型
 export type { PreGradingApiClient };
 export default preGradingApi;

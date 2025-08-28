@@ -1,0 +1,307 @@
+{
+  "test_summary": {
+    "test_mode": "MOCK_MODE",
+    "execution_time": "2025-08-22T09:38:54.051133",
+    "total_duration_seconds": 1.5150458812713623,
+    "total_tests": 21,
+    "passed": 15,
+    "failed": 6,
+    "errors": 0,
+    "warnings": 0,
+    "success_rate": 0.7142857142857143
+  },
+  "performance_metrics": {
+    "avg_test_execution_time": 7.702403016135928,
+    "max_test_execution_time": 30.0,
+    "tests_per_second": 13.86096636385539
+  },
+  "test_categories": {
+    "system_health": 1,
+    "end_to_end_workflows": 5,
+    "performance_tests": 3,
+    "security_tests": 3,
+    "compatibility_tests": 2,
+    "user_scenarios": 3,
+    "data_consistency": 2,
+    "failure_recovery": 2
+  },
+  "key_metrics": {
+    "api_response_time_avg": "444ms",
+    "concurrent_users_supported": 18,
+    "throughput_items_per_second": "52.3",
+    "system_availability": "99.67%",
+    "security_protection_rate": "94.8%",
+    "data_consistency_rate": "99.5%"
+  },
+  "detailed_results": [
+    {
+      "scenario_id": "system_health",
+      "status": "PASS",
+      "execution_time": 2.0,
+      "details": {
+        "cpu_percent": 28.401535608154074,
+        "memory_percent": 78.3438621582371,
+        "disk_percent": 80.84643277359875,
+        "services_status": "all_healthy"
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:53.041868"
+    },
+    {
+      "scenario_id": "complete_grading_workflow",
+      "status": "PASS",
+      "execution_time": 2.5,
+      "details": {
+        "score": 84.01778580801374,
+        "confidence": 0.8228076864842161,
+        "quality_assessment": true
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:53.243023"
+    },
+    {
+      "scenario_id": "batch_processing_workflow",
+      "status": "PASS",
+      "execution_time": 15.3,
+      "details": {
+        "requested_count": 20,
+        "processed_count": 19,
+        "throughput": 1.2418300653594772
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:53.444542"
+    },
+    {
+      "scenario_id": "quality_control_workflow",
+      "status": "PASS",
+      "execution_time": 3.1,
+      "details": {
+        "report_generated": true,
+        "assessment_completed": true,
+        "anomalies_detected": 0
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:53.646199"
+    },
+    {
+      "scenario_id": "model_training_workflow",
+      "status": "PASS",
+      "execution_time": 8.7,
+      "details": {
+        "models_api": true,
+        "records_api": true,
+        "types_api": true,
+        "available_models": 5
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:53.847722"
+    },
+    {
+      "scenario_id": "adaptive_workflow",
+      "status": "PASS",
+      "execution_time": 4.2,
+      "details": {
+        "dashboard_api": true,
+        "stats_api": true,
+        "adaptive_features": true
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.048743"
+    },
+    {
+      "scenario_id": "concurrent_performance",
+      "status": "PASS",
+      "execution_time": 5.2,
+      "details": {
+        "concurrent_users": 20,
+        "success_rate": 0.976610752032972,
+        "avg_response_time": 0.6349743105622274,
+        "throughput": 31.497337242338723
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.049299"
+    },
+    {
+      "scenario_id": "large_dataset",
+      "status": "PASS",
+      "execution_time": 25.950463338854487,
+      "details": {
+        "requested_count": 50,
+        "processed_count": 46,
+        "throughput": 1.7726080416886516
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.049455"
+    },
+    {
+      "scenario_id": "memory_leak",
+      "status": "PASS",
+      "execution_time": 30.0,
+      "details": {
+        "initial_memory": 61.471610928858034,
+        "final_memory": 64.94111219944824,
+        "memory_increase": 3.4695012705902073
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.049534"
+    },
+    {
+      "scenario_id": "sql_injection",
+      "status": "FAIL",
+      "execution_time": 5.0,
+      "details": {
+        "payloads_tested": 4,
+        "vulnerabilities_found": 1,
+        "protection_rate": 0.75
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.049647"
+    },
+    {
+      "scenario_id": "xss_attacks",
+      "status": "FAIL",
+      "execution_time": 3.0,
+      "details": {
+        "payloads_tested": 4,
+        "attacks_blocked": 3,
+        "protection_rate": 0.75
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.049716"
+    },
+    {
+      "scenario_id": "authentication",
+      "status": "PASS",
+      "execution_time": 2.0,
+      "details": {
+        "endpoints_tested": 4,
+        "unauthorized_blocked": 4,
+        "protection_rate": 1.0
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.049787"
+    },
+    {
+      "scenario_id": "api_compatibility",
+      "status": "PASS",
+      "execution_time": 2.0,
+      "details": {
+        "formats_tested": 2,
+        "compatible_formats": 2
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.049888"
+    },
+    {
+      "scenario_id": "data_format_compatibility",
+      "status": "FAIL",
+      "execution_time": 3.0,
+      "details": {
+        "cases_tested": 3,
+        "compatible_cases": 2,
+        "compatibility_rate": 0.6666666666666666
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.050028"
+    },
+    {
+      "scenario_id": "teacher_grading_scenario",
+      "status": "FAIL",
+      "execution_time": 12.5,
+      "details": {
+        "total_steps": 4,
+        "completed_steps": 3,
+        "success_rate": 0.75
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.050156"
+    },
+    {
+      "scenario_id": "student_result_scenario",
+      "status": "PASS",
+      "execution_time": 3.2,
+      "details": {
+        "has_score": true,
+        "has_confidence": true,
+        "has_feedback": true,
+        "result_complete": true
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.050358"
+    },
+    {
+      "scenario_id": "admin_monitoring_scenario",
+      "status": "PASS",
+      "execution_time": 4.1,
+      "details": {
+        "total_endpoints": 4,
+        "accessible_endpoints": 4,
+        "access_rate": 1.0
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.050500"
+    },
+    {
+      "scenario_id": "scoring_consistency",
+      "status": "FAIL",
+      "execution_time": 10.0,
+      "details": {
+        "score_std": 1.7437331727992857,
+        "confidence_std": 0.10567138583330055,
+        "score_consistency": true,
+        "confidence_consistency": false,
+        "test_count": 10
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.050784"
+    },
+    {
+      "scenario_id": "concurrent_data_consistency",
+      "status": "PASS",
+      "execution_time": 5.0,
+      "details": {
+        "concurrent_operations": 10,
+        "successful_operations": 9,
+        "consistency_rate": 0.9
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.050866"
+    },
+    {
+      "scenario_id": "service_recovery",
+      "status": "PASS",
+      "execution_time": 10.0,
+      "details": {
+        "recovery_attempts": 5,
+        "successful_recoveries": 4,
+        "recovery_rate": 0.8
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.050918"
+    },
+    {
+      "scenario_id": "error_handling",
+      "status": "FAIL",
+      "execution_time": 5.0,
+      "details": {
+        "scenarios_tested": 3,
+        "properly_handled": 2,
+        "handling_rate": 0.6666666666666666
+      },
+      "error_message": null,
+      "timestamp": "2025-08-22 09:38:54.051001"
+    }
+  ],
+  "recommendations": [
+    "❌ 测试失败率较高，需要全面检查",
+    "🚨 建议暂停生产部署，优先修复问题",
+    "🔧 重点关注核心功能的稳定性",
+    "📋 制定详细的问题修复计划",
+    "🧪 加强测试覆盖率和质量保证",
+    "📚 建议完善技术文档和操作手册",
+    "👥 组织团队进行系统培训",
+    "🔄 建立定期的回归测试机制",
+    "📊 设置生产环境监控和告警",
+    "🎯 制定性能基准和SLA标准"
+  ]
+}

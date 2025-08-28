@@ -1,4 +1,4 @@
-from database import engine
+from db_connection import engine
 from sqlalchemy import text
 
 print("开始迁移answer_sheet_templates表...")

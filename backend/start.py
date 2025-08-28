@@ -7,12 +7,12 @@ import uvicorn
 import sys
 import os
 from pathlib import Path
+from config.settings import settings
 
 # 将项目根目录添加到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from config.settings import settings
 
 def main():
     """启动服务"""
@@ -38,20 +38,25 @@ def main():
     
     print("🚀 启动智阅AI后端服务...")
     print(f"📊 调试模式: {settings.DEBUG}")
-    print(f"🗄️  数据库: {'SQLite (开发)' if 'sqlite' in settings.DATABASE_URL else 'PostgreSQL (生产)'}")
+    db_type = ('SQLite (开发)' if 'sqlite' in settings.DATABASE_URL 
+               else 'PostgreSQL (生产)')
+    print(f"🗄️  数据库: {db_type}")
     print(f"📁 存储路径: {settings.STORAGE_BASE_PATH}")
-    print(f"🔗 访问地址: http://localhost:8000")
-    print(f"📖 API文档: http://localhost:8000/docs")
+    # 获取端口配置
+    port = int(os.getenv('PORT', 8000))
+    print(f"🔗 访问地址: http://localhost:{port}")
+    print(f"📖 API文档: http://localhost:{port}/docs")
     
     # 启动服务
     uvicorn.run(
         "backend.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=settings.DEBUG,
         log_level=settings.LOG_LEVEL.lower(),
         access_log=True
     )
+
 
 if __name__ == "__main__":
     main()

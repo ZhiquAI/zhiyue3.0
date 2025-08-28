@@ -1,0 +1,190 @@
+groups:
+  - name: zhiyue.business.rules
+    rules:
+      # 业务指标告警
+      - alert: ExamCreationFailureRate
+        expr: (rate(exam_creation_failed_total[5m]) / rate(exam_creation_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: zhiyue-backend
+          category: business
+        annotations:
+          summary: "考试创建失败率过高"
+          description: "最近5分钟考试创建失败率为 {{ $value | humanizePercentage }}，超过5%阈值"
+
+      - alert: AIGradingAccuracyLow
+        expr: ai_grading_accuracy_rate < 0.90
+        for: 3m
+        labels:
+          severity: critical
+          service: zhiyue-ai
+          category: business
+        annotations:
+          summary: "AI评分准确率过低"
+          description: "AI评分准确率为 {{ $value | humanizePercentage }}，低于90%阈值"
+
+      - alert: UserComplaintSpike
+        expr: increase(user_complaints_total[15m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+          service: zhiyue-backend
+          category: business
+        annotations:
+          summary: "用户投诉数量激增"
+          description: "最近15分钟用户投诉数量增加了 {{ $value }} 个"
+
+  - name: zhiyue.technical.rules
+    rules:
+      # 技术指标告警
+      - alert: APIResponseTimeHigh
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 3m
+        labels:
+          severity: warning
+          service: zhiyue-backend
+          category: performance
+        annotations:
+          summary: "API响应时间过长"
+          description: "95%分位数API响应时间为 {{ $value }}秒，超过2秒阈值"
+
+      - alert: DatabaseConnectionHigh
+        expr: (pg_stat_activity_count / pg_settings_max_connections) > 0.8
+        for: 2m
+        labels:
+          severity: critical
+          service: postgresql
+          category: database
+        annotations:
+          summary: "数据库连接数过高"
+          description: "数据库连接使用率为 {{ $value | humanizePercentage }}，超过80%阈值"
+
+      - alert: WebSocketDisconnectionRateHigh
+        expr: rate(websocket_disconnections_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: zhiyue-websocket
+          category: connectivity
+        annotations:
+          summary: "WebSocket断连率过高"
+          description: "WebSocket断连率为 {{ $value | humanizePercentage }}，超过10%阈值"
+
+      - alert: SystemErrorRateHigh
+        expr: (rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])) > 0.01
+        for: 1m
+        labels:
+          severity: critical
+          service: zhiyue-backend
+          category: errors
+        annotations:
+          summary: "系统错误率过高"
+          description: "系统错误率为 {{ $value | humanizePercentage }}，超过1%阈值"
+
+  - name: zhiyue.infrastructure.rules
+    rules:
+      # 基础设施告警
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: node-exporter
+          category: infrastructure
+        annotations:
+          summary: "CPU使用率过高"
+          description: "实例 {{ $labels.instance }} CPU使用率为 {{ $value }}%，超过80%阈值"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 3m
+        labels:
+          severity: critical
+          service: node-exporter
+          category: infrastructure
+        annotations:
+          summary: "内存使用率过高"
+          description: "实例 {{ $labels.instance }} 内存使用率为 {{ $value | humanizePercentage }}，超过85%阈值"
+
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) > 0.90
+        for: 2m
+        labels:
+          severity: critical
+          service: node-exporter
+          category: infrastructure
+        annotations:
+          summary: "磁盘使用率过高"
+          description: "实例 {{ $labels.instance }} 磁盘 {{ $labels.mountpoint }} 使用率为 {{ $value | humanizePercentage }}，超过90%阈值"
+
+      - alert: HighNetworkLatency
+        expr: avg_over_time(node_ping_rtt_seconds[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          service: node-exporter
+          category: infrastructure
+        annotations:
+          summary: "网络延迟过高"
+          description: "实例 {{ $labels.instance }} 网络延迟为 {{ $value }}秒，超过100ms阈值"
+
+  - name: zhiyue.websocket.rules
+    rules:
+      # WebSocket专用告警
+      - alert: WebSocketConnectionPoolFull
+        expr: websocket_connection_pool_utilization > 0.9
+        for: 1m
+        labels:
+          severity: critical
+          service: zhiyue-websocket
+          category: capacity
+        annotations:
+          summary: "WebSocket连接池使用率过高"
+          description: "WebSocket连接池使用率为 {{ $value | humanizePercentage }}，超过90%阈值"
+
+      - alert: WebSocketMessageQueueLarge
+        expr: websocket_message_queue_size > 1000
+        for: 2m
+        labels:
+          severity: warning
+          service: zhiyue-websocket
+          category: performance
+        annotations:
+          summary: "WebSocket消息队列过大"
+          description: "WebSocket消息队列大小为 {{ $value }}，超过1000条消息"
+
+      - alert: WebSocketAvgResponseTimeHigh
+        expr: websocket_avg_response_time_seconds > 1.0
+        for: 3m
+        labels:
+          severity: warning
+          service: zhiyue-websocket
+          category: performance
+        annotations:
+          summary: "WebSocket平均响应时间过长"
+          description: "WebSocket平均响应时间为 {{ $value }}秒，超过1秒阈值"
+
+  - name: zhiyue.service.health.rules
+    rules:
+      # 服务健康检查
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "服务不可用"
+          description: "服务 {{ $labels.job }} 在实例 {{ $labels.instance }} 上不可用"
+
+      - alert: PrometheusTargetDown
+        expr: up{job="prometheus"} == 0
+        for: 0m
+        labels:
+          severity: critical
+          service: prometheus
+          category: monitoring
+        annotations:
+          summary: "Prometheus目标不可达"
+          description: "Prometheus无法抓取目标 {{ $labels.instance }}"

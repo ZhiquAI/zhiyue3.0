@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>最终登录测试</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin: 20px 0; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🔑 智阅AI登录测试</h1>
+    
+    <div class="info result">
+        <strong>测试说明：</strong><br>
+        • 后端地址: http://localhost:8002<br>
+        • 用户名: demo<br>
+        • 密码: demo<br>
+        • 支持任何用户名 + 密码 "demo"
+    </div>
+
+    <form id="testForm">
+        <div class="form-group">
+            <label for="username">用户名:</label>
+            <input type="text" id="username" value="demo" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">密码:</label>
+            <input type="password" id="password" value="demo" required>
+        </div>
+
+        <button type="submit">🚀 测试登录</button>
+        <button type="button" onclick="testConnection()">🔗 测试连接</button>
+        <button type="button" onclick="clearResults()">🧹 清空结果</button>
+    </form>
+
+    <div id="results"></div>
+
+    <script>
+        function addResult(title, content, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>${title}</strong><br><pre>${content}</pre>`;
+            document.getElementById('results').appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testConnection() {
+            addResult('🔗 连接测试', '正在测试后端连接...', 'info');
+            
+            try {
+                const response = await fetch('http://localhost:8002/health');
+                const data = await response.json();
+                addResult('✅ 连接测试成功', JSON.stringify(data, null, 2), 'success');
+            } catch (error) {
+                addResult('❌ 连接测试失败', error.message, 'error');
+            }
+        }
+
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            addResult('🚀 开始登录测试', `用户名: ${username}\n密码: ${password}`, 'info');
+            
+            try {
+                // 第一步：发送登录请求
+                const loginData = { username, password };
+                addResult('📤 发送请求', JSON.stringify(loginData, null, 2), 'info');
+                
+                const response = await fetch('http://localhost:8002/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(loginData)
+                });
+
+                addResult('📥 收到响应', `状态: ${response.status} ${response.statusText}\n请求头: ${JSON.stringify([...response.headers.entries()], null, 2)}`, 'info');
+
+                // 第二步：解析响应
+                const responseText = await response.text();
+                addResult('📄 原始响应', responseText, 'info');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${responseText}`);
+                }
+
+                // 第三步：解析JSON
+                const data = JSON.parse(responseText);
+                addResult('✅ 登录成功', JSON.stringify(data, null, 2), 'success');
+
+                // 第四步：保存token
+                if (data.access_token) {
+                    localStorage.setItem('auth_token', data.access_token);
+                    localStorage.setItem('user_info', JSON.stringify(data.user));
+                    addResult('💾 保存成功', 'Token和用户信息已保存到localStorage', 'success');
+                    
+                    // 第五步：提供跳转链接
+                    addResult('🎉 测试完成', '<a href="http://localhost:5175" target="_blank" style="color: blue; text-decoration: underline;">点击进入主应用</a>', 'success');
+                }
+
+            } catch (error) {
+                addResult('❌ 登录失败', error.message, 'error');
+            }
+        });
+
+        // 页面加载时自动测试连接
+        window.addEventListener('load', () => {
+            testConnection();
+        });
+    </script>
+</body>
+</html>

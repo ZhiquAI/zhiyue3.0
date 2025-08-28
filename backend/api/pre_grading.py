@@ -11,7 +11,7 @@ import uuid
 import logging
 from datetime import datetime
 
-from database import get_db
+from db_connection import get_db
 from models.production_models import User
 from models.grading_models import PreGradingWorkflow
 from auth import get_current_user

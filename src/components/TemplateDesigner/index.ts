@@ -10,7 +10,6 @@
 export { default as EnhancedTemplateDesigner } from './EnhancedTemplateDesigner';
 export { default as TemplateDesigner } from './TemplateDesigner';
 export { default as AnswerSheetTemplateEditor } from './AnswerSheetTemplateEditor';
-export { default as AnswerSheetTemplateDesignerV2 } from './AnswerSheetTemplateDesignerV2';
 
 // 导出类型定义
 export type {

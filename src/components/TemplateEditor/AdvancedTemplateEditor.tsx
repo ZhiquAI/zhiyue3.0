@@ -646,7 +646,7 @@ const AdvancedTemplateEditor: React.FC<AdvancedTemplateEditorProps> = ({
   
   return (
     <Modal
-      title={`${mode === 'create' ? '创建' : '编辑'}答题卡模板 - 高级编辑器`}
+      title={`${mode === 'create' ? '答题卡模板设计器' : '编辑答题卡模板'} - 高级编辑器`}
       open={visible}
       onCancel={onClose}
       width={1600}

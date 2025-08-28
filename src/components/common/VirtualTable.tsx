@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { Table, TableProps } from 'antd';
 import { FixedSizeList as List } from 'react-window';
+import { cn } from '../../design-system';
 
 interface VirtualTableProps extends TableProps<any> {
   height?: number;

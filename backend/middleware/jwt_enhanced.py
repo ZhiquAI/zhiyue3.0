@@ -1,6 +1,6 @@
 """增强的JWT验证和权限管理模块"""
 
-import jwt
+from jose import jwt, JWTError, ExpiredSignatureError
 import redis
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
@@ -95,12 +95,12 @@ class JWTManager:
             
             return payload
             
-        except jwt.ExpiredSignatureError:
+        except ExpiredSignatureError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="令牌已过期"
             )
-        except jwt.InvalidTokenError as e:
+        except JWTError as e:
             logger.warning(f"无效令牌: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

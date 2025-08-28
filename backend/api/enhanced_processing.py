@@ -9,12 +9,12 @@ from PIL import Image
 import io
 from datetime import datetime
 
-from ..services.enhanced_processing_service import EnhancedProcessingService
-from ..services.multimodal_student_info_service import MultimodalStudentInfoService
-from ..services.adaptive_grading_engine import AdaptiveGradingEngine
-from ..services.enhanced_question_segmentation import EnhancedQuestionSegmentation
-from ..models.answer_sheet import AnswerSheet
-from ..database import get_db
+from services.enhanced_processing_service import EnhancedProcessingService
+from services.multimodal_student_info_service import MultimodalStudentInfoService
+from services.adaptive_grading_engine import AdaptiveGradingEngine
+from services.enhanced_question_segmentation import EnhancedQuestionSegmentation
+from models.answer_sheet import AnswerSheet
+from db_connection import get_db
 from sqlalchemy.orm import Session
 from fastapi import Depends
 

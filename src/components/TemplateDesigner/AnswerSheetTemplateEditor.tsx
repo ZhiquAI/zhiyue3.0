@@ -427,7 +427,7 @@ const AnswerSheetTemplateEditor: React.FC<AnswerSheetTemplateEditorProps> = ({
           <div className="flex items-center">
             <FormOutlined className="mr-2" />
             <span className="text-lg font-semibold">
-              {mode === 'create' ? '创建答题卡模板' : '编辑答题卡模板'}
+              {mode === 'create' ? '答题卡模板设计器' : '编辑答题卡模板'}
             </span>
           </div>
           <div className="flex gap-2">

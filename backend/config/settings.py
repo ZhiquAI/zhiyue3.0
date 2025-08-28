@@ -76,9 +76,8 @@ class Settings:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE = os.getenv("LOG_FILE", "./logs/app.log")
     
-    # 队列配置
-    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/1")
-    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/2")
+    # 后台任务配置（使用FastAPI BackgroundTasks）
+    BACKGROUND_TASK_TIMEOUT = int(os.getenv("BACKGROUND_TASK_TIMEOUT", "300"))  # 5分钟
     
     # 监控配置
     SENTRY_DSN = os.getenv("SENTRY_DSN")

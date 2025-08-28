@@ -1,41 +1,41 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Card,
-  Button,
-  Select,
-  Input,
-  Form,
-  Space,
-  Divider,
-  Row,
-  Col,
-  Modal,
-  message,
-  Tooltip,
-  InputNumber,
-  Radio,
-  Tag,
   Alert,
-  Upload
+  Button,
+  Card,
+  Col,
+  Divider,
+  Form,
+  Input,
+  InputNumber,
+  Layout,
+  message,
+  Modal,
+  Radio,
+  Row,
+  Select,
+  Space,
+  Tooltip,
+  Typography,
+  Upload,
 } from 'antd';
 import {
-  PlusOutlined,
-  DeleteOutlined,
-  SaveOutlined,
-  EyeOutlined,
-  UndoOutlined,
-  RedoOutlined,
-  CopyOutlined,
-  SettingOutlined,
-  DragOutlined,
   BorderOutlined,
+  CheckSquareOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  DragOutlined,
+  EditOutlined,
+  ExpandOutlined,
+  RedoOutlined,
+  SaveOutlined,
+  UndoOutlined,
   UploadOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
-  ExpandOutlined
 } from '@ant-design/icons';
-import { Stage, Layer, Rect, Text, Transformer, Group, Image as KonvaImage } from 'react-konva';
 import Konva from 'konva';
+import { Group, Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
 import useImage from 'use-image';
 
 // 类型定义
@@ -81,8 +81,9 @@ interface TemplateDesignerProps {
   onClose: () => void;
   onSave: (template: TemplateConfig) => void;
   initialTemplate?: TemplateConfig;
-  mode?: 'create' | 'edit';
 }
+
+const { Sider, Content } = Layout;
 
 // 背景图片组件
 const BackgroundImage: React.FC<{ src: string; width: number; height: number }> = ({ src, width, height }) => {
@@ -90,13 +91,7 @@ const BackgroundImage: React.FC<{ src: string; width: number; height: number }> 
   return image ? <KonvaImage image={image} width={width} height={height} opacity={0.5} /> : null;
 };
 
-const TemplateDesigner: React.FC<TemplateDesignerProps> = ({
-  visible,
-  onClose,
-  onSave,
-  initialTemplate,
-  mode = 'create'
-}) => {
+const TemplateDesigner: React.FC<TemplateDesignerProps> = ({ visible, onClose, onSave, initialTemplate }) => {
   const [form] = Form.useForm();
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -110,7 +105,7 @@ const TemplateDesigner: React.FC<TemplateDesignerProps> = ({
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [history, setHistory] = useState<Region[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [previewMode, setPreviewMode] = useState(false);
+
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [scale, setScale] = useState(1);
@@ -502,524 +497,160 @@ const TemplateDesigner: React.FC<TemplateDesignerProps> = ({
     }
   };
   
-  // 获取区域颜色
-  const getRegionColor = (type: Region['type'], subType?: Region['subType']) => {
-    switch (type) {
-      case 'question':
-        switch (subType) {
-          case 'choice': return '#1890ff';
-          case 'subjective': return '#52c41a';
-          case 'fill_blank': return '#faad14';
-          case 'essay': return '#722ed1';
-          default: return '#1890ff';
-        }
-      case 'student_info': return '#f5222d';
-      case 'barcode': return '#fa8c16';
-      case 'timing_point': return '#ff4d4f';
-      case 'header': return '#13c2c2';
-      case 'footer': return '#eb2f96';
-      default: return '#666666';
-    }
-  };
+
   
   return (
     <Modal
-      title={`${mode === 'create' ? '创建' : '编辑'}答题卡模板`}
+      title="答题卡模板设计器"
       open={visible}
       onCancel={onClose}
-      width={1400}
+      width="95vw"
       style={{ top: 20 }}
       footer={[
-        <Button key="cancel" onClick={onClose}>
-          取消
-        </Button>,
-        <Button key="preview" icon={<EyeOutlined />} onClick={() => setPreviewMode(!previewMode)}>
-          {previewMode ? '编辑模式' : '预览模式'}
-        </Button>,
-        <Button key="save" type="primary" icon={<SaveOutlined />} onClick={handleSave}>
-          保存模板
-        </Button>
+        <Button key="cancel" onClick={onClose}>取消</Button>,
+        <Button key="save" type="primary" icon={<SaveOutlined />} onClick={handleSave}>保存模板</Button>,
       ]}
+      destroyOnClose
     >
-      <Row gutter={16}>
-        {/* 左侧工具栏 */}
-        <Col span={6}>
-          <Card title="模板信息" size="small" style={{ marginBottom: 16 }}>
-            <Form form={form} layout="vertical" size="small">
-              <Form.Item
-                name="name"
-                label="模板名称"
-                rules={[{ required: true, message: '请输入模板名称' }]}
-              >
-                <Input placeholder="请输入模板名称" />
-              </Form.Item>
-              
-              <Form.Item name="description" label="模板描述">
-                <Input.TextArea rows={2} placeholder="请输入模板描述" />
-              </Form.Item>
-              
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item name="subject" label="科目">
-                    <Select placeholder="选择科目" allowClear>
-                      <Select.Option value="语文">语文</Select.Option>
-                      <Select.Option value="数学">数学</Select.Option>
-                      <Select.Option value="英语">英语</Select.Option>
-                      <Select.Option value="物理">物理</Select.Option>
-                      <Select.Option value="化学">化学</Select.Option>
-                      <Select.Option value="生物">生物</Select.Option>
-                      <Select.Option value="历史">历史</Select.Option>
-                      <Select.Option value="地理">地理</Select.Option>
-                      <Select.Option value="政治">政治</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="gradeLevel" label="年级">
-                    <Select placeholder="选择年级" allowClear>
-                      <Select.Option value="小学">小学</Select.Option>
-                      <Select.Option value="初中">初中</Select.Option>
-                      <Select.Option value="高中">高中</Select.Option>
-                      <Select.Option value="大学">大学</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
-              
-              <Form.Item name="examType" label="考试类型">
-                <Select placeholder="选择考试类型" allowClear>
-                  <Select.Option value="期中考试">期中考试</Select.Option>
-                  <Select.Option value="期末考试">期末考试</Select.Option>
-                  <Select.Option value="月考">月考</Select.Option>
-                  <Select.Option value="模拟考试">模拟考试</Select.Option>
-                  <Select.Option value="单元测试">单元测试</Select.Option>
-                </Select>
-              </Form.Item>
-            </Form>
-          </Card>
-          
-          {/* 页面设置 */}
-          <Card title="页面设置" size="small" style={{ marginBottom: 16 }}>
-            <Row gutter={8}>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>宽度(mm)</div>
-                <InputNumber
-                  size="small"
-                  value={pageConfig.width}
-                  onChange={(value) => setPageConfig(prev => ({ ...prev, width: value || 210 }))}
-                  min={100}
-                  max={500}
-                  style={{ width: '100%' }}
-                />
-              </Col>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>高度(mm)</div>
-                <InputNumber
-                  size="small"
-                  value={pageConfig.height}
-                  onChange={(value) => setPageConfig(prev => ({ ...prev, height: value || 297 }))}
-                  min={100}
-                  max={500}
-                  style={{ width: '100%' }}
-                />
-              </Col>
-            </Row>
-            <div style={{ marginTop: 8 }}>分辨率(DPI)</div>
-            <InputNumber
-              size="small"
-              value={pageConfig.dpi}
-              onChange={(value) => setPageConfig(prev => ({ ...prev, dpi: value || 300 }))}
-              min={150}
-              max={600}
-              style={{ width: '100%' }}
-            />
-            
-            <Divider style={{ margin: '12px 0' }} />
-            
-            <div style={{ marginBottom: 8 }}>背景图片</div>
-            <Upload
-              accept="image/*"
-              beforeUpload={handleBackgroundUpload}
-              showUploadList={false}
+      <Layout style={{ height: 'calc(100vh - 150px)', background: '#fff' }}>
+        <Sider width={280} style={{ background: '#fff', padding: 16, borderRight: '1px solid #f0f0f0', overflowY: 'auto', height: '100%' }}>
+          <Typography.Title level={5}>基本信息</Typography.Title>
+          <Form form={form} layout="vertical">
+            <Form.Item name="name" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]}>
+              <Input placeholder="请输入模板名称" />
+            </Form.Item>
+            <Form.Item name="description" label="模板描述">
+              <Input.TextArea rows={2} placeholder="请输入模板描述" />
+            </Form.Item>
+            <Form.Item name="subject" label="科目">
+              <Select placeholder="选择科目">
+                <Select.Option value="chinese">语文</Select.Option>
+                <Select.Option value="math">数学</Select.Option>
+                <Select.Option value="english">英语</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="gradeLevel" label="年级">
+              <Select placeholder="选择年级">
+                <Select.Option value="g1">一年级</Select.Option>
+                <Select.Option value="g7">七年级</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="examType" label="考试类型">
+              <Select placeholder="选择考试类型">
+                <Select.Option value="midterm">期中</Select.Option>
+                <Select.Option value="final">期末</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item label="背景图片">
+              <Upload beforeUpload={handleBackgroundUpload} showUploadList={false}>
+                <Button icon={<UploadOutlined />} style={{ width: '100%' }}>上传答题卡底图</Button>
+              </Upload>
+            </Form.Item>
+          </Form>
+          <Divider />
+          <Typography.Title level={5}>工具箱</Typography.Title>
+          <Row gutter={[16, 16]}>
+            <Col span={12}>
+              <Button block icon={<DragOutlined />} onClick={() => createRegion('timing_point')}>定位点</Button>
+            </Col>
+            <Col span={12}>
+              <Button block icon={<BorderOutlined />} onClick={() => createRegion('barcode')}>条码区</Button>
+            </Col>
+            <Col span={12}>
+              <Button block icon={<CheckSquareOutlined />} onClick={() => createRegion('question', 'choice')}>客观题</Button>
+            </Col>
+            <Col span={12}>
+              <Button block icon={<EditOutlined />} onClick={() => createRegion('question', 'subjective')}>主观题</Button>
+            </Col>
+          </Row>
+        </Sider>
+        <Content style={{ background: '#f0f2f5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <div style={{ marginBottom: 16 }}>
+            <Space>
+              <Tooltip title="撤销 (Cmd+Z)">
+                <Button icon={<UndoOutlined />} onClick={undo} disabled={historyIndex <= 0} />
+              </Tooltip>
+              <Tooltip title="重做 (Cmd+Y)">
+                <Button icon={<RedoOutlined />} onClick={redo} disabled={historyIndex >= history.length - 1} />
+              </Tooltip>
+              <Tooltip title="复制 (Cmd+D)">
+                <Button icon={<CopyOutlined />} onClick={() => selectedId && duplicateRegion(selectedId)} disabled={!selectedId} />
+              </Tooltip>
+              <Tooltip title="删除 (Delete)">
+                <Button icon={<DeleteOutlined />} onClick={() => selectedId && deleteRegion(selectedId)} disabled={!selectedId} />
+              </Tooltip>
+              <Divider type="vertical" />
+              <Tooltip title="放大">
+                <Button icon={<ZoomInOutlined />} onClick={() => handleZoom(true)} />
+              </Tooltip>
+              <Tooltip title="缩小">
+                <Button icon={<ZoomOutOutlined />} onClick={() => handleZoom(false)} />
+              </Tooltip>
+              <Tooltip title="适应画布">
+                <Button icon={<ExpandOutlined />} onClick={handleFitCanvas} />
+              </Tooltip>
+            </Space>
+          </div>
+          <div style={{ background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Stage
+              ref={stageRef}
+              width={canvasWidth}
+              height={canvasHeight}
+              scaleX={scale}
+              scaleY={scale}
+              x={stagePos.x}
+              y={stagePos.y}
+              draggable={currentTool === 'select' && !selectedId}
+              onDragStart={handleStageDragStart}
+              onDragEnd={handleStageDragEnd}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              style={{ 
+                backgroundColor: 'white', 
+                cursor: isPanning ? 'grabbing' : (currentTool === 'select' ? 'grab' : 'crosshair')
+              }}
             >
-              <Button size="small" icon={<UploadOutlined />} block>
-                上传背景图
-              </Button>
-            </Upload>
-            
-            {backgroundImage && (
-              <Button
-                size="small"
-                danger
-                onClick={() => setBackgroundImage(null)}
-                style={{ marginTop: 8, width: '100%' }}
-              >
-                移除背景图
-              </Button>
-            )}
-          </Card>
-          
-          {/* 工具栏 */}
-          {!previewMode && (
-            <Card title="绘制工具" size="small" style={{ marginBottom: 16 }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Button
-                  type={currentTool === 'select' ? 'primary' : 'default'}
-                  icon={<DragOutlined />}
-                  onClick={() => setCurrentTool('select')}
-                  block
-                >
-                  选择工具
-                </Button>
-                
-                <Divider style={{ margin: '8px 0' }}>题目区域</Divider>
-                
-                <Row gutter={[8, 8]}>
-                  <Col span={12}>
-                    <Button
-                      type={currentTool === 'question_choice' ? 'primary' : 'default'}
-                      onClick={() => setCurrentTool('question_choice')}
-                      block
-                      size="small"
-                      style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-                    >
-                      <div>📝</div>
-                      <div style={{ fontSize: '10px' }}>选择题</div>
-                    </Button>
-                  </Col>
-                  <Col span={12}>
-                    <Button
-                      type={currentTool === 'question_subjective' ? 'primary' : 'default'}
-                      onClick={() => setCurrentTool('question_subjective')}
-                      block
-                      size="small"
-                      style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-                    >
-                      <div>✏️</div>
-                      <div style={{ fontSize: '10px' }}>主观题</div>
-                    </Button>
-                  </Col>
-                  <Col span={12}>
-                    <Button
-                      type={currentTool === 'question_fill_blank' ? 'primary' : 'default'}
-                      onClick={() => setCurrentTool('question_fill_blank')}
-                      block
-                      size="small"
-                      style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-                    >
-                      <div>📄</div>
-                      <div style={{ fontSize: '10px' }}>填空题</div>
-                    </Button>
-                  </Col>
-                  <Col span={12}>
-                    <Button
-                      type={currentTool === 'question_essay' ? 'primary' : 'default'}
-                      onClick={() => setCurrentTool('question_essay')}
-                      block
-                      size="small"
-                      style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-                    >
-                      <div>📖</div>
-                      <div style={{ fontSize: '10px' }}>作文题</div>
-                    </Button>
-                  </Col>
-                </Row>
-                
-                <Divider style={{ margin: '8px 0' }}>识别区域</Divider>
-                
-                <Row gutter={[8, 8]}>
-                  <Col span={12}>
-                    <Button
-                      type={currentTool === 'timing_point' ? 'primary' : 'default'}
-                      onClick={() => setCurrentTool('timing_point')}
-                      block
-                      size="small"
-                      style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-                    >
-                      <div>🎯</div>
-                      <div style={{ fontSize: '10px' }}>定位点</div>
-                    </Button>
-                  </Col>
-                  <Col span={12}>
-                    <Button
-                      type={currentTool === 'barcode' ? 'primary' : 'default'}
-                      onClick={() => setCurrentTool('barcode')}
-                      block
-                      size="small"
-                      style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-                    >
-                      <div>📊</div>
-                      <div style={{ fontSize: '10px' }}>条码区</div>
-                    </Button>
-                  </Col>
-                  <Col span={12}>
-                    <Button
-                      type={currentTool === 'student_info' ? 'primary' : 'default'}
-                      onClick={() => setCurrentTool('student_info')}
-                      block
-                      size="small"
-                      style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-                    >
-                      <div>👤</div>
-                      <div style={{ fontSize: '10px' }}>学生信息</div>
-                    </Button>
-                  </Col>
-                  <Col span={12}>
-                    <Button
-                      type={currentTool === 'header' ? 'primary' : 'default'}
-                      onClick={() => setCurrentTool('header')}
-                      block
-                      size="small"
-                      style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-                    >
-                      <div>📋</div>
-                      <div style={{ fontSize: '10px' }}>页眉</div>
-                    </Button>
-                  </Col>
-                </Row>
-              </Space>
-            </Card>
-          )}
-          
-          {/* 操作按钮 */}
-          {!previewMode && (
-            <Card title="操作" size="small">
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Row gutter={8}>
-                  <Col span={12}>
-                    <Tooltip title="撤销">
-                      <Button
-                        icon={<UndoOutlined />}
-                        onClick={undo}
-                        disabled={historyIndex <= 0}
-                        block
-                        size="small"
-                      >
-                        撤销
-                      </Button>
-                    </Tooltip>
-                  </Col>
-                  <Col span={12}>
-                    <Tooltip title="重做">
-                      <Button
-                        icon={<RedoOutlined />}
-                        onClick={redo}
-                        disabled={historyIndex >= history.length - 1}
-                        block
-                        size="small"
-                      >
-                        重做
-                      </Button>
-                    </Tooltip>
-                  </Col>
-                </Row>
-                
-                {selectedId && (
-                  <Row gutter={8}>
-                    <Col span={12}>
-                      <Button
-                        icon={<CopyOutlined />}
-                        onClick={() => duplicateRegion(selectedId)}
-                        block
-                        size="small"
-                      >
-                        复制
-                      </Button>
-                    </Col>
-                    <Col span={12}>
-                      <Button
-                        icon={<DeleteOutlined />}
-                        onClick={() => deleteRegion(selectedId)}
-                        danger
-                        block
-                        size="small"
-                      >
-                        删除
-                      </Button>
-                    </Col>
-                  </Row>
-                )}
-              </Space>
-            </Card>
-          )}
-        </Col>
-        
-        {/* 中间画布区域 */}
-        <Col span={12}>
-          <Card 
-            title={
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>模板设计</span>
-                <Space>
-                  <Tooltip title="缩小">
-                    <Button size="small" icon={<ZoomOutOutlined />} onClick={() => handleZoom(false)} />
-                  </Tooltip>
-                  <span style={{ fontSize: '12px', minWidth: '50px', textAlign: 'center' }}>
-                    {Math.round(scale * 100)}%
-                  </span>
-                  <Tooltip title="放大">
-                    <Button size="small" icon={<ZoomInOutlined />} onClick={() => handleZoom(true)} />
-                  </Tooltip>
-                  <Tooltip title="适应画布">
-                    <Button size="small" icon={<ExpandOutlined />} onClick={handleFitCanvas} />
-                  </Tooltip>
-                </Space>
-              </div>
-            }
-            size="small" 
-            style={{ height: '70vh', overflow: 'hidden' }}
-          >
-            <div style={{ 
-              width: '100%', 
-              height: '100%', 
-              overflow: 'auto',
-              border: '1px solid #d9d9d9',
-              borderRadius: '6px',
-              backgroundColor: '#fafafa'
-            }}>
-              <Stage
-                ref={stageRef}
-                width={canvasWidth}
-                height={canvasHeight}
-                scaleX={scale}
-                scaleY={scale}
-                x={stagePos.x}
-                y={stagePos.y}
-                draggable={currentTool === 'select' && !selectedId}
-                onDragStart={handleStageDragStart}
-                onDragEnd={handleStageDragEnd}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                style={{ 
-                  backgroundColor: 'white', 
-                  cursor: isPanning ? 'grabbing' : (currentTool === 'select' ? 'grab' : 'crosshair')
-                }}
-              >
-                <Layer ref={layerRef}>
-                  {/* 页面边框 */}
-                  <Rect
-                    x={0}
-                    y={0}
-                    width={canvasWidth}
-                    height={canvasHeight}
-                    stroke="#d9d9d9"
-                    strokeWidth={2}
-                    fill="white"
-                  />
-                  
-                  {/* 背景图片 */}
-                  {backgroundImage && (
-                    <BackgroundImage 
-                      src={backgroundImage} 
-                      width={canvasWidth} 
-                      height={canvasHeight} 
-                    />
-                  )}
-                  
-                  {/* 渲染所有区域 */}
-                  {regions.map((region) => (
-                    <Group key={region.id}>
-                      <Rect
-                        id={region.id}
-                        x={region.x}
-                        y={region.y}
-                        width={region.width}
-                        height={region.height}
-                        fill={getRegionColor(region.type, region.subType) + '20'}
-                        stroke={getRegionColor(region.type, region.subType)}
-                        strokeWidth={selectedId === region.id ? 3 : 1}
-                        draggable={!previewMode}
-                        onClick={() => handleRegionClick(region.id)}
-                        onTransformEnd={() => handleTransformEnd(region.id)}
-                        onDragEnd={() => handleTransformEnd(region.id)}
-                      />
-                      <Text
-                        x={region.x + 5}
-                        y={region.y + 5}
-                        text={region.label}
-                        fontSize={12}
-                        fill={getRegionColor(region.type, region.subType)}
-                        fontStyle="bold"
-                        listening={false}
-                      />
-                    </Group>
-                  ))}
-                  
-                  {/* Transformer */}
-                  {!previewMode && <Transformer ref={transformerRef} />}
-                </Layer>
-              </Stage>
-            </div>
-          </Card>
-        </Col>
-        
-        {/* 右侧属性面板 */}
-        <Col span={6}>
-          <Card title="区域列表" size="small" style={{ marginBottom: 16 }}>
-            <div style={{ maxHeight: '200px', overflow: 'auto' }}>
-              {regions.length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}>
-                  暂无区域
-                </div>
-              ) : (
-                regions.map((region) => (
-                  <div
+              <Layer ref={layerRef}>
+                {backgroundImage && <BackgroundImage src={backgroundImage} width={canvasWidth} height={canvasHeight} />}
+                {regions.map(region => (
+                  <Group
                     key={region.id}
-                    style={{
-                      padding: '8px',
-                      marginBottom: '4px',
-                      border: selectedId === region.id ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      backgroundColor: selectedId === region.id ? '#f0f8ff' : 'white'
-                    }}
-                    onClick={() => setSelectedId(region.id)}
+                    id={region.id}
+                    x={region.x}
+                    y={region.y}
+                    width={region.width}
+                    height={region.height}
+                    draggable
+                    onClick={() => handleRegionClick(region.id)}
+                    onTap={() => handleRegionClick(region.id)}
+                    onTransformEnd={() => handleTransformEnd(region.id)}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <Tag color={getRegionColor(region.type, region.subType)}>
-                          {region.label}
-                        </Tag>
-                      </div>
-                      {!previewMode && (
-                        <Space size="small">
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<CopyOutlined />}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              duplicateRegion(region.id);
-                            }}
-                          />
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<DeleteOutlined />}
-                            danger
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteRegion(region.id);
-                            }}
-                          />
-                        </Space>
-                      )}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                      位置: ({Math.round(region.x)}, {Math.round(region.y)})
-                      <br />
-                      尺寸: {Math.round(region.width)} × {Math.round(region.height)}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-          
-          {/* 选中区域属性 */}
-          {selectedId && !previewMode && (
-            <Card title="区域属性" size="small">
+                    <Rect
+                      width={region.width}
+                      height={region.height}
+                      fill="rgba(0, 128, 255, 0.2)"
+                      stroke="rgba(0, 128, 255, 0.8)"
+                      strokeWidth={2}
+                    />
+                    <Text
+                      text={region.label}
+                      fontSize={12}
+                      fill="#333"
+                      padding={5}
+                      listening={false}
+                    />
+                  </Group>
+                ))}
+                <Transformer ref={transformerRef} />
+              </Layer>
+            </Stage>
+          </div>
+        </Content>
+        <Sider width={280} style={{ background: '#fff', padding: 16, borderLeft: '1px solid #f0f0f0', overflowY: 'auto', height: '100%' }}>
+          <Typography.Title level={5}>属性配置</Typography.Title>
+          {selectedId ? (
+            <div>
               {(() => {
                 const selectedRegion = regions.find(r => r.id === selectedId);
                 if (!selectedRegion) return null;
@@ -1285,6 +916,12 @@ const TemplateDesigner: React.FC<TemplateDesignerProps> = ({
                   </div>
                 );
               })()} 
+            </div>
+          ) : (
+            <Card>
+              <div style={{ textAlign: 'center', color: '#999' }}>
+                <p>请先选择一个区域</p>
+              </div>
             </Card>
           )}
           
@@ -1303,8 +940,8 @@ const TemplateDesigner: React.FC<TemplateDesignerProps> = ({
             showIcon
             style={{ marginTop: 16 }}
           />
-        </Col>
-      </Row>
+        </Sider>
+      </Layout>
     </Modal>
   );
 };

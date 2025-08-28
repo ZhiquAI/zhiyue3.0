@@ -2,7 +2,6 @@
 文件存储服务 - 处理文件上传、存储和管理
 """
 
-import os
 import hashlib
 import uuid
 import shutil
@@ -16,17 +15,24 @@ import logging
 from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException
 try:
-    from backend.models.file_storage import FileStorage, PaperDocument, AnswerSheet, ProcessingQueue
-    from backend.models.production_models import Student
-    from backend.services.barcode_service import BarcodeService
-    from backend.config.settings import settings
-except ImportError:
-    from models.file_storage import FileStorage, PaperDocument, AnswerSheetFile, ProcessingQueue
+    from models.file_storage import FileStorage, ProcessingQueue
     from models.production_models import Student, AnswerSheet
     from services.barcode_service import BarcodeService
     from config.settings import settings
+    from utils.file_security import (
+        FileSecurityValidator, get_max_file_size
+    )
+except ImportError:
+    from models.file_storage import FileStorage, ProcessingQueue
+    from models.production_models import Student, AnswerSheet
+    from services.barcode_service import BarcodeService
+    from config.settings import settings
+    from utils.file_security import (
+        FileSecurityValidator, get_max_file_size
+    )
 
 logger = logging.getLogger(__name__)
+
 
 class FileStorageService:
     """文件存储服务类"""
@@ -37,6 +43,7 @@ class FileStorageService:
         self.max_file_size = settings.MAX_FILE_SIZE
         self.allowed_extensions = settings.ALLOWED_FILE_EXTENSIONS
         self.barcode_service = BarcodeService()
+        self.security_validator = FileSecurityValidator()
         
         # 确保存储目录存在
         self._ensure_storage_directories()
@@ -88,27 +95,39 @@ class FileStorageService:
         }
         return mime_map.get(extension, 'application/octet-stream')
     
-    def _validate_file(self, file: UploadFile) -> Dict[str, Any]:
-        """验证上传文件"""
-        # 检查文件扩展名
-        file_extension = Path(file.filename).suffix.lower()
-        if file_extension not in self.allowed_extensions:
+    def _validate_file(self, file: UploadFile,
+                       file_category: str = None) -> Dict[str, Any]:
+        """验证上传文件（使用增强的安全验证）"""
+        try:
+            # 使用安全验证器进行全面验证
+            max_size = None
+            if file_category:
+                max_size = get_max_file_size(file_category)
+            else:
+                max_size = self.max_file_size
+            
+            validation_result = self.security_validator.validate_file(
+                file=file,
+                allowed_types=self.allowed_extensions,
+                max_size=max_size
+            )
+            
+            logger.info(
+                f"File validation passed: {file.filename}, "
+                f"size: {validation_result['file_size']}, "
+                f"type: {validation_result['mime_type']}"
+            )
+            
+            return validation_result
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"File validation error: {str(e)}")
             raise HTTPException(
                 status_code=400,
-                detail=f"不支持的文件类型: {file_extension}"
+                detail=f"文件验证失败: {str(e)}"
             )
-        
-        # 检查文件大小
-        if hasattr(file, 'size') and file.size > self.max_file_size:
-            raise HTTPException(
-                status_code=400,
-                detail=f"文件大小超过限制: {file.size} > {self.max_file_size}"
-            )
-        
-        return {
-            'extension': file_extension,
-            'original_filename': file.filename
-        }
     
     def _generate_storage_path(self, file_category: str, file_purpose: str, 
                              file_extension: str) -> Path:
@@ -232,7 +251,8 @@ class FileStorageService:
         return priority_map.get(task_type, 5)
     
     async def batch_upload_answer_sheets(self, files: List[UploadFile], 
-                                 exam_id: str, uploaded_by: str) -> Dict[str, Any]:
+                                 exam_id: str, uploaded_by: str, 
+                                 processing_config: Dict[str, Any] = None) -> Dict[str, Any]:
         """批量上传答题卡"""
         results = {
             'success': [],

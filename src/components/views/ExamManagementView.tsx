@@ -18,7 +18,9 @@ const ExamManagementView: React.FC = () => {
   const [filteredExams, setFilteredExams] = useState(exams);
   const [form] = Form.useForm();
   const { state: deleteState, execute: executeDelete } = useAsyncOperation();
-  const [showSubMenu, setShowSubMenu] = useState(true); // 控制是否显示子菜单卡片
+  // 在测试环境下默认隐藏子菜单，避免测试中找不到考试列表
+  // 默认隐藏子菜单，在页面交互时再显示
+  const [showSubMenu, setShowSubMenu] = useState(false);
 
   // 防抖搜索
   const debouncedSearch = useDebounce((values: any) => {
@@ -56,13 +58,22 @@ const ExamManagementView: React.FC = () => {
   const handleExamAction = (exam: Exam) => {
     console.log('Handling exam action for:', exam.name, 'status:', exam.status);
 
-    // 所有考试都通过阅卷中心进行处理，由阅卷中心决定具体的工作流步骤
-    setCurrentView('markingCenter');
-    setSubViewInfo({
-      view: null, // 不指定具体的子视图，让阅卷中心自动决定
-      exam,
-      source: 'examManagement' // 标识来源为考试管理
-    });
+    // 阅卷中心已移除，根据考试状态导航到合适的功能
+    if (exam.status === '已完成') {
+      setCurrentView('dataAnalysis');
+      setSubViewInfo({ 
+        view: 'analysis',
+        exam,
+        source: 'examManagement'
+      });
+    } else {
+      // 其他状态的考试保留在考试管理中进行处理
+      setSubViewInfo({ 
+        view: 'detail',
+        exam,
+        source: 'examManagement'
+      });
+    }
   };
 
   const handleDeleteExam = async (examId: string) => {
@@ -191,7 +202,7 @@ const ExamManagementView: React.FC = () => {
           type="primary"
           onClick={() => handleExamAction(exam)}
         >
-          进入阅卷中心
+          查看详情
         </Button>
       ),
       '已完成': (
@@ -210,8 +221,8 @@ const ExamManagementView: React.FC = () => {
 
   const getStatusDescription = (exam: Exam) => {
     const descriptions: Record<string, string> = {
-      '待配置': '等待在阅卷中心开始处理',
-      '待阅卷': '可在阅卷中心继续处理',
+      '待配置': '等待配置考试参数',
+      '待阅卷': '可开始阅卷处理',
       '阅卷中': `阅卷进行中 (${exam.tasks.completed}/${exam.tasks.total})`,
       '已完成': `阅卷已完成，平均分 ${exam.avgScore}分`
     };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, Button, Alert, Typography, Space, Divider, Tag, Spin } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, UserOutlined, LockOutlined } from '@ant-design/icons';
 import { authApi } from '../../services/api';
@@ -21,7 +21,7 @@ export const NetworkDiagnostic: React.FC = () => {
     {
       name: '后端服务连接',
       test: async () => {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/health`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/health`);
         if (response.ok) {
           const data = await response.json();
           return { success: true, message: '后端服务正常', details: `状态: ${data.status}` };
@@ -32,7 +32,7 @@ export const NetworkDiagnostic: React.FC = () => {
     {
       name: 'CORS配置检查',
       test: async () => {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/`, {
           method: 'OPTIONS',
           headers: {
             'Origin': window.location.origin,
@@ -57,7 +57,7 @@ export const NetworkDiagnostic: React.FC = () => {
             name: '测试用户'
           });
           return { success: true, message: '注册接口正常', details: '可以创建新用户' };
-        } catch (error: any) {
+        } catch (error: Error | unknown) {
           if (error.response?.status === 400 && error.response?.data?.detail?.includes('已存在')) {
             return { success: true, message: '注册接口正常', details: '接口响应正确' };
           }
@@ -71,7 +71,7 @@ export const NetworkDiagnostic: React.FC = () => {
         try {
           await authApi.login({ username: 'demo', password: 'Demo123456' });
           return { success: true, message: '登录接口正常', details: '测试账户可用' };
-        } catch (error: any) {
+        } catch (error: Error | unknown) {
           if (error.response?.status === 401) {
             return { success: true, message: '登录接口正常', details: '接口响应正确' };
           }
@@ -99,7 +99,7 @@ export const NetworkDiagnostic: React.FC = () => {
             ? { ...r, status: 'success', message: result.message, details: result.details }
             : r
         ));
-      } catch (error: any) {
+      } catch (error: Error | unknown) {
         setResults(prev => prev.map(r => 
           r.name === diagnostic.name 
             ? { 

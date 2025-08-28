@@ -1,0 +1,9 @@
+{
+  "max_score": 100,
+  "expected_keywords": [
+    "历史",
+    "知识",
+    "答案"
+  ],
+  "scoring_rubric": "根据内容准确性和完整性评分"
+}

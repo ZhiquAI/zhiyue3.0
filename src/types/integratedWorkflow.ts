@@ -156,7 +156,7 @@ export const WORKFLOW_STAGES: Array<{
   {
     key: 'template_setup',
     title: '模板配置',
-    description: '选择或创建答题卡模板',
+    description: '选择模板或使用答题卡模板设计器',
     icon: 'FileTextOutlined',
     required: true,
     dependencies: ['student_setup']

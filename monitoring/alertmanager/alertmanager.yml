@@ -1,0 +1,146 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@zhiyue-ai.com'
+  smtp_auth_username: 'alerts@zhiyue-ai.com'
+  smtp_auth_password: 'your-smtp-password'
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+    # 严重告警立即通知
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 15m
+
+    # 业务告警
+    - match:
+        category: business
+      receiver: 'business-team'
+      group_wait: 30s
+      repeat_interval: 30m
+
+    # 技术告警
+    - match:
+        category: performance
+      receiver: 'tech-team'
+      group_wait: 1m
+      repeat_interval: 1h
+
+    # 基础设施告警
+    - match:
+        category: infrastructure
+      receiver: 'ops-team'
+      group_wait: 2m
+      repeat_interval: 2h
+
+    # WebSocket特殊处理
+    - match:
+        service: zhiyue-websocket
+      receiver: 'websocket-team'
+      group_wait: 30s
+      repeat_interval: 30m
+
+receivers:
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://127.0.0.1:5001/'
+
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'admin@zhiyue-ai.com'
+        subject: '【严重】智阅3.0系统告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          【严重告警】
+          
+          告警时间: {{ range .Alerts }}{{ .StartsAt.Format "2006-01-02 15:04:05" }}{{ end }}
+          告警服务: {{ .GroupLabels.service }}
+          告警级别: {{ .GroupLabels.severity }}
+          
+          告警详情:
+          {{ range .Alerts }}
+          - 告警名称: {{ .Annotations.summary }}
+          - 告警描述: {{ .Annotations.description }}
+          - 标签信息: {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }} {{ end }}
+          {{ end }}
+          
+          请立即处理！
+    webhook_configs:
+      - url: 'http://your-webhook-url/critical'
+        send_resolved: true
+
+  - name: 'business-team'
+    email_configs:
+      - to: 'business@zhiyue-ai.com'
+        subject: '智阅3.0业务告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          业务告警通知
+          
+          告警时间: {{ range .Alerts }}{{ .StartsAt.Format "2006-01-02 15:04:05" }}{{ end }}
+          告警服务: {{ .GroupLabels.service }}
+          
+          {{ range .Alerts }}
+          告警摘要: {{ .Annotations.summary }}
+          详细描述: {{ .Annotations.description }}
+          {{ end }}
+
+  - name: 'tech-team'
+    email_configs:
+      - to: 'tech@zhiyue-ai.com'
+        subject: '智阅3.0技术告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          技术告警通知
+          
+          告警时间: {{ range .Alerts }}{{ .StartsAt.Format "2006-01-02 15:04:05" }}{{ end }}
+          告警分类: {{ .GroupLabels.category }}
+          告警服务: {{ .GroupLabels.service }}
+          
+          {{ range .Alerts }}
+          告警摘要: {{ .Annotations.summary }}
+          详细描述: {{ .Annotations.description }}
+          {{ end }}
+
+  - name: 'ops-team'
+    email_configs:
+      - to: 'ops@zhiyue-ai.com'
+        subject: '智阅3.0基础设施告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          基础设施告警通知
+          
+          告警时间: {{ range .Alerts }}{{ .StartsAt.Format "2006-01-02 15:04:05" }}{{ end }}
+          基础设施: {{ .GroupLabels.service }}
+          
+          {{ range .Alerts }}
+          告警摘要: {{ .Annotations.summary }}
+          详细描述: {{ .Annotations.description }}
+          {{ end }}
+
+  - name: 'websocket-team'
+    email_configs:
+      - to: 'websocket@zhiyue-ai.com'
+        subject: '智阅3.0 WebSocket告警 - {{ .GroupLabels.alertname }}'
+        body: |
+          WebSocket实时通信告警
+          
+          告警时间: {{ range .Alerts }}{{ .StartsAt.Format "2006-01-02 15:04:05" }}{{ end }}
+          连接类型: {{ .GroupLabels.category }}
+          
+          {{ range .Alerts }}
+          告警摘要: {{ .Annotations.summary }}
+          详细描述: {{ .Annotations.description }}
+          {{ end }}
+          
+          请检查WebSocket连接状态和性能指标。
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']

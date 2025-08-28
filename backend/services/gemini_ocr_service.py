@@ -7,8 +7,7 @@ import asyncio
 import logging
 import base64
 import json
-from typing import Dict, List, Any, Optional, Tuple
-from pathlib import Path
+from typing import Dict, List, Any
 from PIL import Image
 import io
 
@@ -36,9 +35,10 @@ class GeminiOCRService:
             processed_image = await self._preprocess_image(image_path)
             
             # 使用Gemini进行多模态识别
+            prompt = self._get_task_prompt("answer_sheet")
             recognition_result = await self._recognize_with_gemini(
                 processed_image, 
-                task_type="answer_sheet"
+                prompt=prompt
             )
             
             # 后处理和验证
@@ -58,9 +58,10 @@ class GeminiOCRService:
             processed_image = await self._preprocess_image(image_path)
             
             # 使用Gemini进行试卷分析
+            prompt = self._get_task_prompt("paper_document")
             recognition_result = await self._recognize_with_gemini(
                 processed_image, 
-                task_type="paper_document"
+                prompt=prompt
             )
             
             # 解析题目结构
@@ -120,12 +121,79 @@ class GeminiOCRService:
         
         return img
     
-    async def _recognize_with_gemini(self, image_base64: str, task_type: str) -> Dict[str, Any]:
+    async def _recognize_with_gemini(self, image_base64: str, prompt: str) -> Dict[str, Any]:
         """使用Gemini进行图像识别"""
         import aiohttp
         
-        # 根据任务类型选择提示词
-        prompt = self._get_task_prompt(task_type)
+        # 构建请求
+        request_data = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": image_base64
+                            }
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": self.temperature,
+                "topK": 40,
+                "topP": 0.8,
+                "maxOutputTokens": self.max_tokens
+            },
+            "safetySettings": [
+                {
+                    "category": "HARM_CATEGORY_HARASSMENT",
+                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                },
+                {
+                    "category": "HARM_CATEGORY_HATE_SPEECH", 
+                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                },
+                {
+                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    "threshold": "BLOCK_HIGH_ONLY"
+                },
+                {
+                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                }
+            ]
+        }
+        
+        # 发送请求
+        url = f"{self.base_url}/models/{self.model}:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": self.api_key
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=request_data, headers=headers) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise Exception(f"Gemini API error: {response.status} - {error_text}")
+                
+                result = await response.json()
+                
+                if not result.get('candidates'):
+                    raise Exception("No response from Gemini")
+                
+                content = result['candidates'][0]['content']['parts'][0]['text']
+                
+                try:
+                    # 尝试解析JSON响应
+                    return json.loads(content)
+                except json.JSONDecodeError:
+                    # 如果不是JSON，包装为文本响应
+                    return {"text": content, "raw_response": True}
+        
+
         
         # 构建请求
         request_data = {
@@ -195,6 +263,88 @@ class GeminiOCRService:
                     # 如果不是JSON，包装为文本响应
                     return {"text": content, "raw_response": True}
     
+    async def grade_single_question(
+        self, image_base64: str, question_info: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """对单个主观题的图像进行评分"""
+        try:
+            prompt = self._get_grading_prompt(question_info)
+            
+            recognition_result = await self._recognize_with_gemini(
+                image_base64,
+                prompt=prompt
+            )
+            
+            # TODO: 添加对评分结果的解析和验证
+            
+            logger.info(
+                f"Subjective question grading completed for question: "
+                f"{question_info.get('question_number')}"
+            )
+            return recognition_result
+            
+        except Exception as e:
+            logger.error(f"Subjective question grading failed: {str(e)}")
+            raise
+        try:
+            prompt = self._get_grading_prompt(question_info)
+            
+            recognition_result = await self._recognize_with_gemini(
+                image_base64,
+                prompt=prompt
+            )
+            
+            # TODO: 添加对评分结果的解析和验证
+            
+            logger.info(
+                f"Subjective question grading completed for question: "
+                f"{question_info.get('question_number')}"
+            )
+            return recognition_result
+            
+        except Exception as e:
+            logger.error(f"Subjective question grading failed: {str(e)}")
+            raise
+
+    def _get_grading_prompt(self, question_info: Dict[str, Any]) -> str:
+        """生成主观题评分的提示词"""
+        question_number = question_info.get('question_number', '未知题号')
+        max_score = question_info.get('max_score', '未知分数')
+        # TODO: 未来可以从数据库中获取标准答案和评分细则
+        standard_answer = question_info.get('standard_answer', '暂无')
+        scoring_rubric = question_info.get('scoring_rubric', '暂无')
+
+        return f"""
+        你是一个经验丰富的AI阅卷老师，你的任务是根据提供的学生答案截图、题目信息和评分标准，对主观题进行智能评分。
+
+        **任务要求:**
+        1.  **识别答案:** 请仔细识别截图中的手写或打印的学生答案。
+        2.  **比对分析:** 将识别出的答案与标准答案（如果提供）进行比对，并根据评分细则（如果提供）进行分析。
+        3.  **给出分数:** 根据分析结果，给出一个具体的分数（0到满分之间）。
+        4.  **撰写评语:** 给出详细的评语，解释得分或失分的原因，指出答案的优点和不足之处。
+        5.  **JSON格式输出:** 必须将评分结果以严格的JSON格式返回，不要包含任何额外的解释或Markdown标记。
+
+        **题目信息:**
+        -   **题号:** {question_number}
+        -   **满分:** {max_score}
+        -   **参考答案:** {standard_answer}
+        -   **评分细则:** {scoring_rubric}
+
+        **学生答案截图:**
+        [图像位于下方]
+
+        **输出JSON格式示例:**
+        ```json
+        {{
+            "score": 8,
+            "feedback": "知识点基本正确，但部分细节描述不够准确，导致扣分。例如，在解释XX概念时，未能完全阐述其核心要素。书写清晰，卷面整洁。",
+            "recognized_text": "学生在图片中书写的全部文字内容。"
+        }}
+        ```
+
+        请开始你的评分工作。
+        """
+
     def _get_task_prompt(self, task_type: str) -> str:
         """根据任务类型获取专用提示词"""
         

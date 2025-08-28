@@ -35,6 +35,7 @@ vi.mock('../../utils/message', () => ({
 // Mock file upload
 Object.defineProperty(window, 'File', {
   value: class MockFile {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     constructor(parts: any[], filename: string, properties?: any) {
       this.name = filename;
       this.size = parts.reduce((acc, part) => acc + part.length, 0);
@@ -53,6 +54,7 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 describe('ChoiceGrading', () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const mockAnswerSheets = [
     {
       id: 1,
@@ -82,6 +84,7 @@ describe('ChoiceGrading', () => {
     }
   ];
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const mockGradingStandards = {
     answer_key: ['A', 'B', 'C', 'D'],
     scoring_rules: {
@@ -103,7 +106,7 @@ describe('ChoiceGrading', () => {
     );
 
     // 检查页面标题
-    expect(screen.getByText('智能评分系统')).toBeInTheDocument();
+    expect(await screen.findByText('智能评分系统')).toBeInTheDocument();
   });
 
   it('should display answer sheet upload area', async () => {
@@ -263,9 +266,7 @@ describe('ChoiceGrading', () => {
     );
 
     // 检查错误处理
-    await waitFor(() => {
-      expect(screen.getByText('智能评分系统')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('智能评分系统')).toBeInTheDocument();
   });
 
   it('should validate answer format', async () => {
@@ -312,9 +313,7 @@ describe('ChoiceGrading', () => {
     );
 
     // 检查实时状态更新
-    await waitFor(() => {
-      expect(screen.getByText('智能评分系统')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('智能评分系统')).toBeInTheDocument();
   });
 
   it('should handle scoring rule configuration', async () => {
