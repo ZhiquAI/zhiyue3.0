@@ -23,7 +23,7 @@ pytest-postgresql==5.0.0
 pytest-sqlite==1.0.0
 
 # HTTP测试
-requests==2.31.0
+requests==2.32.5
 httpx==0.25.2
 
 # WebSocket测试
