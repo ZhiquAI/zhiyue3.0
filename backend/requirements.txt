@@ -33,7 +33,7 @@ pyzbar==0.1.9
 opencv-python==4.8.1.78
 
 # Gemini AI
-google-generativeai==0.3.0
+google-generativeai==0.8.5
 
 # 缓存和会话存储(已在上面定义)
 
