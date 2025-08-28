@@ -52,7 +52,7 @@ psutil==5.9.6
 
 # 开发和测试
 pytest==7.4.3
-pytest-asyncio==0.21.1
+pytest-asyncio==0.26.0
 pytest-cov==4.1.0
 black==23.10.1
 isort==5.12.0
