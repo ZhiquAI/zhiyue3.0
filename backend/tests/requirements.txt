@@ -12,7 +12,7 @@ pytest-benchmark==4.0.0
 pytest-xdist==3.3.1  # 并行测试
 
 # 超时控制
-pytest-timeout==2.2.0
+pytest-timeout==2.4.0
 
 # Mock和fixtures
 pytest-mock==3.12.0
