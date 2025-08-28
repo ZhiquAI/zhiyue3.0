@@ -38,6 +38,7 @@ import { message } from '../utils/message';
 
 // API基础URL配置 - 使用代理路径
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const API_TIMEOUT = 30000;
 
 // 创建标准化API客户端
 const apiClient = createServiceClient(API_BASE_URL, {
